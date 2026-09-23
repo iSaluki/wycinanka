@@ -3,6 +3,7 @@ import { exports } from 'cloudflare:workers';
 import { describe, expect, it } from 'vitest';
 import { LESSONS, lessonCardIds } from '../../src/content/course';
 import { localDay } from '../../src/shared/progress';
+import { cleanUp } from '../../src/worker/index';
 import { migrate } from '../../src/worker/migrate';
 import { MIGRATIONS } from '../../src/worker/migrations';
 
@@ -73,6 +74,25 @@ describe('schema', () => {
       MIGRATIONS.pop();
       await env.DB.batch([env.DB.prepare('DROP TABLE zz_test'), env.DB.prepare('DELETE FROM d1_migrations WHERE name = ?1').bind(name)]);
     }
+  });
+});
+
+describe('housekeeping', () => {
+  it('removes expired sessions and stale throttle rows, and keeps live ones', async () => {
+    const now = Date.now();
+    const { c, username } = await signedUp();
+    const user = await env.DB.prepare('SELECT id FROM users WHERE username = ?1').bind(username).first<{ id: string }>();
+    await env.DB.batch([
+      env.DB.prepare('INSERT INTO sessions (id_hash, user_id, created_at, expires_at) VALUES (?1, ?2, ?3, ?4)').bind('expired-test', user!.id, now - 10, now - 1),
+      env.DB.prepare('INSERT INTO auth_throttle (key, count, window_start, locked_until) VALUES (?1, 1, ?2, 0)').bind('stale-test', now - 2 * 86_400_000),
+      env.DB.prepare('INSERT INTO auth_throttle (key, count, window_start, locked_until) VALUES (?1, 1, ?2, 0)').bind('fresh-test', now),
+    ]);
+    await cleanUp(env, now);
+    const count = async (sql: string, key: string) => (await env.DB.prepare(sql).bind(key).first<{ n: number }>())!.n;
+    expect(await count('SELECT COUNT(*) AS n FROM sessions WHERE id_hash = ?1', 'expired-test')).toBe(0);
+    expect(await count('SELECT COUNT(*) AS n FROM auth_throttle WHERE key = ?1', 'stale-test')).toBe(0);
+    expect(await count('SELECT COUNT(*) AS n FROM auth_throttle WHERE key = ?1', 'fresh-test')).toBe(1);
+    expect((await c.call('GET', '/api/auth/me')).json.user.username).toBe(username);
   });
 });
 
