@@ -49,3 +49,21 @@ describe('helpers', () => {
     expect(levenshtein('', 'abc')).toBe(3);
   });
 });
+
+import { preferForm } from '../../src/app/lib/exercises';
+
+describe('speaker-gendered forms', () => {
+  it('shows the feminine past tense to a woman and keeps both accepted', () => {
+    const item = { pl: 'byłem', altPl: ['byłam'] };
+    expect(preferForm(item, 'f')).toEqual({ pl: 'byłam', altPl: ['byłem'] });
+    expect(preferForm(item, 'm')).toBe(item);
+    expect(preferForm({ pl: 'czytałam', altPl: ['czytałem'] }, 'm').pl).toBe('czytałem');
+    expect(preferForm({ pl: 'Wczoraj byłem w pracy.', altPl: ['Wczoraj byłam w pracy.', 'Byłem wczoraj w pracy.'] }, 'f').pl).toBe(
+      'Wczoraj byłam w pracy.',
+    );
+  });
+  it('leaves words without gendered forms alone', () => {
+    const item = { pl: 'dziś', altPl: ['dzisiaj'] };
+    expect(preferForm(item, 'f')).toBe(item);
+  });
+});

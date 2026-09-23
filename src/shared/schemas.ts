@@ -2,9 +2,8 @@ import { z } from 'zod';
 
 /** Shared request/response contracts. The Worker validates every body with these (strict: unknown keys rejected). */
 
-export const USERNAME_RE = /^[a-zA-Z0-9_.-]{3,24}$/;
-export const PASSWORD_MIN = 10;
-export const PASSWORD_MAX = 128;
+import { PASSWORD_MAX, USERNAME_RE } from './limits';
+export { PASSWORD_MAX, PASSWORD_MIN, USERNAME_RE } from './limits';
 
 const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Expected a date as YYYY-MM-DD');
 const contentId = z.string().regex(/^[a-z0-9:-]{1,64}$/);

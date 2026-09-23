@@ -88,6 +88,31 @@ function translateToEnglish(s: Sentence): Exercise {
   return { kind: 'type', cardId: s.id, prompt: s.pl, accepted: accEn(s), lang: 'en' };
 }
 
+const MASC_ENDINGS = ['łem', 'łeś', 'łbym', 'łbyś', 'liśmy', 'libyśmy'];
+const FEM_ENDINGS = ['łam', 'łaś', 'łabym', 'łabyś', 'łyśmy', 'łybyśmy'];
+const hasEnding = (s: string, endings: string[]) => tokenise(s.toLowerCase()).some((w) => endings.some((e) => w.endsWith(e)));
+
+/**
+ * Polish past and conditional forms depend on the speaker's gender. Content stores both
+ * (e.g. byłem / byłam); show the learner the form that matches them. Both stay accepted.
+ */
+export function preferForm<T extends { pl: string; altPl?: string[] }>(x: T, speaker?: 'm' | 'f'): T {
+  if (!speaker || !x.altPl?.length) return x;
+  const [want, avoid] = speaker === 'f' ? [FEM_ENDINGS, MASC_ENDINGS] : [MASC_ENDINGS, FEM_ENDINGS];
+  if (!hasEnding(x.pl, avoid) || hasEnding(x.pl, want)) return x;
+  const alt = x.altPl.find((a) => hasEnding(a, want) && !hasEnding(a, avoid));
+  return alt ? { ...x, pl: alt, altPl: [x.pl, ...x.altPl.filter((a) => a !== alt)] } : x;
+}
+
+export function lessonForSpeaker(lesson: Lesson, speaker?: 'm' | 'f'): Lesson {
+  if (!speaker) return lesson;
+  return {
+    ...lesson,
+    items: lesson.items.map((i) => preferForm(i, speaker)),
+    sentences: lesson.sentences.map((x) => preferForm(x, speaker)),
+  };
+}
+
 /**
  * Build the sequence for a lesson: meet the words, read the spotlight, then practise with
  * recognition before production, and finish with the dialogue.
@@ -147,16 +172,18 @@ export function lessonExercises(lesson: Lesson): Exercise[] {
 }
 
 /** One exercise for a review card. Mature cards are asked productively (typed); young ones by recognition. */
-export function reviewExercise(src: CardSource, reps: number, cardId: string): Exercise {
+export function reviewExercise(src: CardSource, reps: number, cardId: string, speaker?: 'm' | 'f'): Exercise {
   if (src.kind === 'item') {
     const near = nearbyLessons(src.lesson);
-    if (reps >= 2) return typePolish(src.item);
-    return chooseMeaning(src.item, near.flatMap((l) => l.items.map((i) => i.en)), reps === 1);
+    const item = preferForm(src.item, speaker);
+    if (reps >= 2) return typePolish(item);
+    return chooseMeaning(item, near.flatMap((l) => l.items.map((i) => i.en)), reps === 1);
   }
   if (src.kind === 'sentence') {
     const pool = nearbyLessons(src.lesson).flatMap((l) => l.sentences.flatMap((s) => tokenise(s.pl)));
-    if (reps >= 3) return translateToEnglish(src.sentence);
-    return reps % 2 === 0 ? buildPolish(src.sentence, pool) : buildFromAudio(src.sentence, pool);
+    const sentence = preferForm(src.sentence, speaker);
+    if (reps >= 3) return translateToEnglish(sentence);
+    return reps % 2 === 0 ? buildPolish(sentence, pool) : buildFromAudio(sentence, pool);
   }
   return wordExercise(src.word, reps, cardId);
 }

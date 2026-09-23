@@ -82,11 +82,10 @@ On first visit the learner picks a starting point:
 | **I know some basics** — greetings, numbers, a few phrases | Placement check, or jump to Unit 5 |
 | **I get by** — I can hold a simple conversation | Placement check, or jump to A2 |
 
-The **placement check** is 18 questions spanning A0→B1 (sounds, vocabulary, cases, aspect,
-conditional). It is adaptive-lite: it stops early after three consecutive misses in a band. The result
-unlocks units below the placement and marks them as "tested out" (their words go into the review deck in a
-"known" state so they still come back occasionally). Nothing is ever locked: any unit can be opened from the
-course map; the map only *suggests* the next lesson.
+The **placement check** is up to 18 questions spanning A0→B1 (sounds, vocabulary, cases, aspect,
+conditional), grouped into six bands. It stops as soon as a band can no longer reach two-thirds correct, and suggests
+the first unit of that band. Nothing is ever locked: every unit can be opened from the course map; the map only
+*suggests* the next lesson, and units below the suggested start are labelled as ones the learner probably knows.
 
 ### 2.2 A lesson (5–8 minutes)
 
@@ -118,8 +117,9 @@ correctness and speed, with a manual override.
 - **Sounds** — the alphabet and sound board (tap any letter/digraph), plus minimal-pair listening games.
 - **Grammar** — reference cards: cases (with interactive declension explorer), verb conjugation groups,
   aspect, numbers, formal address.
-- **Profile** — streak, XP history, level, daily goal, settings (speech rate, theme, reduce motion),
-  account (change password, export data, delete account).
+- **Profile** — streak, XP history, level, daily goal, settings (speech rate, theme, reduce motion, and whether the
+  learner is a man or a woman, so past-tense and conditional forms are shown in their own gender), account (change
+  password, export data, delete account).
 
 ---
 
@@ -312,3 +312,21 @@ top status bar, single column, bottom tab bar. Lessons are full-screen focus mod
 
 Passkeys (WebAuthn) as a passwordless option; Turnstile on sign-up if bots appear; speech-recognition
 pronunciation scoring (Chrome only today); B1/B2 units; reading texts with tap-to-translate; offline PWA.
+
+---
+
+## 10. Implementation status
+
+Delivered in the first release:
+
+- Everything in sections 2–7, including all 18 units, the 500-word frequency deck, sounds, grammar reference and
+  placement check.
+- Tests: 38 unit tests, 26 Worker integration tests against a real local D1, and 9 Playwright end-to-end tests
+  (full lessons answered from the content, guest → account import, placement, review, mobile layout, CSP).
+
+Deviations from the plan:
+
+- PBKDF2 defaults to 30,000 iterations to fit the free plan's CPU budget (see section 5); raise to 100,000 on a paid plan.
+- The placement check suggests a starting unit rather than pre-loading earlier units' words into the review deck;
+  learners who skip ahead can still open any earlier lesson.
+- `/api/auth/me` returns `{ "user": null }` for guests instead of a 401, since being a guest is a normal state.

@@ -1,0 +1,2 @@
+# Copy to .dev.vars for local development. Generate a real one with: openssl rand -base64 48
+PEPPER=local-dev-pepper-change-me-0123456789abcdef

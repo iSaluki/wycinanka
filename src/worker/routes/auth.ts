@@ -4,7 +4,7 @@ import { passwordProblem, PASSWORD_MESSAGES } from '../../shared/password';
 import { dummyHash, hashPassword, verifyPassword } from '../crypto';
 import { iterations, type AppEnv } from '../env';
 import { clientIp, HttpError, readJson } from '../http';
-import { clearSessionCookie, createSession, currentUser, revokeSession } from '../session';
+import { clearSessionCookie, COOKIE, createSession, currentUser, revokeSession } from '../session';
 import { clear, hit, lockedFor, POLICIES, retryMinutes } from '../throttle';
 import { snapshot } from '../store';
 
@@ -86,11 +86,12 @@ auth.post('/logout', async (c) => {
   return c.json({ ok: true });
 });
 
+/** Who is signed in. Guests get `{ user: null }` rather than an error, since being a guest is normal. */
 auth.get('/me', async (c) => {
   const user = await currentUser(c);
   if (!user) {
-    clearSessionCookie(c);
-    throw new HttpError(401, 'Not signed in.');
+    if (c.req.header('cookie')?.includes(COOKIE)) clearSessionCookie(c);
+    return c.json({ user: null });
   }
   return c.json({ user: { username: user.username, createdAt: user.createdAt } });
 });

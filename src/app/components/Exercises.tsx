@@ -1,0 +1,452 @@
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import type { DialogueLine, Item, Spotlight } from '../../content/types';
+import { POLISH_LETTERS } from '../../shared/grade';
+import type { Exercise } from '../lib/exercises';
+import { speak } from '../lib/speech';
+import { GENDER_LABEL, Rich, Speak } from './common';
+
+type Of<K extends Exercise['kind']> = Extract<Exercise, { kind: K }>;
+
+export interface AnswerProps<E> {
+  ex: E;
+  locked: boolean;
+  /** The learner's current answer, or null if they have not given one yet. */
+  onAnswer: (a: string | null) => void;
+  /** Result shown after checking, so options can be coloured. */
+  checked?: { pass: boolean; answer: string | null };
+}
+
+/* ---------- Choose ---------- */
+
+export function Choose({ ex, locked, onAnswer, checked }: AnswerProps<Of<'choose'>>) {
+  const [picked, setPicked] = useState<string | null>(null);
+  useEffect(() => setPicked(null), [ex]);
+  const pick = (o: string) => {
+    if (locked) return;
+    setPicked(o);
+    onAnswer(o);
+  };
+  useEffect(() => {
+    const onKey = (e: globalThis.KeyboardEvent) => {
+      const n = Number(e.key);
+      if (n >= 1 && n <= ex.options.length && !(e.target instanceof HTMLInputElement)) pick(ex.options[n - 1]);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  });
+  const optsArePolish = ex.promptLang === 'en';
+  return (
+    <>
+      <div className="instruction">{ex.audio ? 'Listen. What does it mean?' : optsArePolish ? 'Choose the Polish' : 'What does this mean?'}</div>
+      <div className="prompt-row">
+        {ex.promptLang === 'pl' && <Speak text={ex.prompt} autoPlay={ex.audio} />}
+        {ex.audio && <Speak text={ex.prompt} slow />}
+        {ex.audio && !checked ? (
+          <span className="muted">Tap to hear it again</span>
+        ) : (
+          <span className={ex.promptLang === 'pl' ? 'prompt-pl' : 'prompt-en'} lang={ex.promptLang}>
+            {ex.prompt}
+          </span>
+        )}
+      </div>
+      <div className={`options ${ex.options.every((o) => o.length < 22) ? 'grid-2' : ''}`} role="group" aria-label="Answers">
+        {ex.options.map((o, i) => {
+          const state = checked ? (o === ex.answer ? 'right' : o === picked ? 'wrong' : '') : '';
+          return (
+            <button
+              key={o}
+              type="button"
+              className={`option ${optsArePolish ? 'pl-opt' : ''} ${state}`}
+              aria-pressed={picked === o}
+              disabled={locked && !state}
+              onClick={() => pick(o)}
+              lang={optsArePolish ? 'pl' : 'en'}
+            >
+              <span className="key" aria-hidden="true">
+                {i + 1}
+              </span>
+              {o}
+            </button>
+          );
+        })}
+      </div>
+    </>
+  );
+}
+
+/* ---------- Type ---------- */
+
+export function TypeAnswer({ ex, locked, onAnswer }: AnswerProps<Of<'type'>>) {
+  const [value, setValue] = useState('');
+  const ref = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    setValue('');
+    ref.current?.focus({ preventScroll: true });
+  }, [ex]);
+  const insert = (ch: string) => {
+    const el = ref.current;
+    if (!el || locked) return;
+    const start = el.selectionStart ?? value.length;
+    const end = el.selectionEnd ?? value.length;
+    const next = value.slice(0, start) + ch + value.slice(end);
+    setValue(next);
+    onAnswer(next.trim() ? next : null);
+    requestAnimationFrame(() => {
+      el.focus();
+      el.setSelectionRange(start + ch.length, start + ch.length);
+    });
+  };
+  const toPolish = ex.lang === 'pl';
+  return (
+    <>
+      <div className="instruction">{toPolish ? 'Write this in Polish' : 'Write this in English'}</div>
+      <div className="prompt-row">
+        {!toPolish && <Speak text={ex.prompt} />}
+        <span className={toPolish ? 'prompt-en' : 'prompt-pl'} lang={toPolish ? 'en' : 'pl'}>
+          {ex.prompt}
+        </span>
+      </div>
+      <input
+        ref={ref}
+        className={`answer-input ${toPolish ? '' : 'en'}`}
+        value={value}
+        onChange={(e) => {
+          setValue(e.target.value);
+          onAnswer(e.target.value.trim() ? e.target.value : null);
+        }}
+        readOnly={locked}
+        lang={toPolish ? 'pl' : 'en'}
+        aria-label={toPolish ? 'Your answer in Polish' : 'Your answer in English'}
+        autoComplete="off"
+        autoCorrect="off"
+        autoCapitalize="off"
+        spellCheck={false}
+        enterKeyHint="done"
+        maxLength={200}
+      />
+      {toPolish && (
+        <div className="diacritics" aria-label="Polish letters">
+          {POLISH_LETTERS.map((l) => (
+            <button key={l} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => insert(l)} aria-label={`Insert ${l}`} lang="pl">
+              {l}
+            </button>
+          ))}
+        </div>
+      )}
+    </>
+  );
+}
+
+/* ---------- Build ---------- */
+
+export function Build({ ex, locked, onAnswer }: AnswerProps<Of<'build'>>) {
+  const [chosen, setChosen] = useState<number[]>([]);
+  useEffect(() => setChosen([]), [ex]);
+  const update = (next: number[]) => {
+    setChosen(next);
+    onAnswer(next.length ? next.map((i) => ex.tiles[i]).join(' ') : null);
+  };
+  return (
+    <>
+      <div className="instruction">{ex.audio ? 'Build what you hear' : 'Build this in Polish'}</div>
+      <div className="prompt-row">
+        {ex.audio ? (
+          <>
+            <Speak text={ex.audio} autoPlay />
+            <Speak text={ex.audio} slow />
+          </>
+        ) : (
+          <span className="prompt-en">{ex.prompt}</span>
+        )}
+      </div>
+      <div className="build-line" aria-label="Your sentence" aria-live="polite">
+        {chosen.map((i, pos) => (
+          <button
+            key={`${i}-${pos}`}
+            type="button"
+            className="tile placed"
+            lang="pl"
+            disabled={locked}
+            onClick={() => update(chosen.filter((_, p) => p !== pos))}
+            aria-label={`Remove ${ex.tiles[i]}`}
+          >
+            {ex.tiles[i]}
+          </button>
+        ))}
+      </div>
+      <div className="bank" aria-label="Words to use">
+        {ex.tiles.map((t, i) => (
+          <button
+            key={i}
+            type="button"
+            className={`tile ${chosen.includes(i) ? 'used' : ''}`}
+            lang="pl"
+            disabled={locked || chosen.includes(i)}
+            aria-hidden={chosen.includes(i)}
+            onClick={() => update([...chosen, i])}
+          >
+            {t}
+          </button>
+        ))}
+      </div>
+    </>
+  );
+}
+
+/* ---------- Gap ---------- */
+
+export function Gap({ ex, locked, onAnswer, checked }: AnswerProps<Of<'gap'>>) {
+  const [picked, setPicked] = useState<string | null>(null);
+  useEffect(() => setPicked(null), [ex]);
+  const [before, after] = ex.text.split('___');
+  const pick = (o: string) => {
+    if (locked) return;
+    setPicked(o);
+    onAnswer(o);
+  };
+  return (
+    <>
+      <div className="instruction">Fill the gap</div>
+      <p className="gap-text" lang="pl">
+        {before}
+        <span className="gap-slot">{picked ?? ' '}</span>
+        {after}
+      </p>
+      <p className="muted">{ex.en}</p>
+      <div className="options grid-2" role="group" aria-label="Choices">
+        {ex.options.map((o, i) => {
+          const state = checked ? (o === ex.answer ? 'right' : o === picked ? 'wrong' : '') : '';
+          return (
+            <button
+              key={o}
+              type="button"
+              className={`option pl-opt ${state}`}
+              aria-pressed={picked === o}
+              disabled={locked && !state}
+              onClick={() => pick(o)}
+              lang="pl"
+            >
+              <span className="key" aria-hidden="true">
+                {i + 1}
+              </span>
+              {o}
+            </button>
+          );
+        })}
+      </div>
+    </>
+  );
+}
+
+/* ---------- Match ---------- */
+
+export function Match({
+  ex,
+  onDone,
+  onMiss,
+}: {
+  ex: Of<'match'>;
+  onDone: (misses: number) => void;
+  onMiss: (cardId: string) => void;
+}) {
+  const left = useMemo(() => [...ex.pairs].sort(() => Math.random() - 0.5), [ex]);
+  const right = useMemo(() => [...ex.pairs].sort(() => Math.random() - 0.5), [ex]);
+  const [sel, setSel] = useState<{ side: 'pl' | 'en'; id: string } | null>(null);
+  const [gone, setGone] = useState<Set<string>>(new Set());
+  const [shake, setShake] = useState<string | null>(null);
+  const misses = useRef(0);
+
+  const choose = (side: 'pl' | 'en', id: string) => {
+    if (gone.has(id)) return;
+    if (side === 'pl') speak(ex.pairs.find((p) => p.cardId === id)!.pl);
+    if (!sel || sel.side === side) {
+      setSel({ side, id });
+      return;
+    }
+    if (sel.id === id) {
+      const next = new Set(gone).add(id);
+      setGone(next);
+      setSel(null);
+      if (next.size === ex.pairs.length) setTimeout(() => onDone(misses.current), 450);
+    } else {
+      misses.current++;
+      onMiss(side === 'pl' ? id : sel.id);
+      setShake(`${side}:${id}`);
+      setTimeout(() => setShake(null), 330);
+      setSel(null);
+    }
+  };
+
+  const btn = (side: 'pl' | 'en', p: (typeof ex.pairs)[number]) => (
+    <button
+      key={p.cardId}
+      type="button"
+      className={`option ${side === 'pl' ? 'pl-opt' : ''} ${gone.has(p.cardId) ? 'right gone' : ''} ${shake === `${side}:${p.cardId}` ? 'wrong shake' : ''}`}
+      aria-pressed={sel?.side === side && sel.id === p.cardId}
+      onClick={() => choose(side, p.cardId)}
+      disabled={gone.has(p.cardId)}
+      lang={side}
+    >
+      {side === 'pl' ? p.pl : p.en}
+    </button>
+  );
+
+  return (
+    <>
+      <div className="instruction">Match the pairs</div>
+      <div className="match">
+        <div className="col">{left.map((p) => btn('pl', p))}</div>
+        <div className="col">{right.map((p) => btn('en', p))}</div>
+      </div>
+    </>
+  );
+}
+
+/* ---------- Meet ---------- */
+
+export function Meet({ items, onDone }: { items: Item[]; onDone: () => void }) {
+  const [i, setI] = useState(0);
+  const item = items[i];
+  const last = i === items.length - 1;
+  const onKey = (e: KeyboardEvent) => {
+    if (e.key === 'ArrowRight' && !last) setI(i + 1);
+    if (e.key === 'ArrowLeft' && i > 0) setI(i - 1);
+  };
+  return (
+    <div className="meet" onKeyDown={onKey}>
+      <div className="row between">
+        <div className="instruction">
+          New words · {i + 1} of {items.length}
+        </div>
+        <div className="dots" aria-hidden="true">
+          {items.map((_, k) => (
+            <span key={k} className={k <= i ? 'on' : ''} />
+          ))}
+        </div>
+      </div>
+      <article className="meet-card" key={item.id}>
+        {item.g && <span className="gender">{GENDER_LABEL[item.g]}</span>}
+        <div className="row wrap">
+          <span className="pl" lang="pl">
+            {item.pl}
+          </span>
+        </div>
+        <div className="row">
+          <Speak text={item.pl} autoPlay />
+          <Speak text={item.pl} slow />
+        </div>
+        <div className="en">{item.en}</div>
+        {item.hint && <p className="hint">{item.hint}</p>}
+      </article>
+      <div className="row between">
+        <button type="button" className="btn quiet" onClick={() => setI(i - 1)} disabled={i === 0}>
+          Back
+        </button>
+        <button type="button" className="btn" onClick={() => (last ? onDone() : setI(i + 1))}>
+          {last ? 'Start practising' : 'Next word'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ---------- Spotlight ---------- */
+
+/** Spotlight table columns that hold English descriptions rather than Polish forms. */
+const ENGLISH_COLUMN = /^(|sounds like|gender|talking to|number|time|ending|form)$/i;
+
+export function SpotlightView({ s }: { s: Spotlight }) {
+  return (
+    <section className="spotlight">
+      <div className="instruction">Grammar spotlight</div>
+      <h2>{s.title}</h2>
+      {s.body.map((p, i) => (
+        <p key={i}>
+          <Rich text={p} />
+        </p>
+      ))}
+      {s.table && (
+        <div className="table-wrap">
+          <table className="plain">
+            <thead>
+              <tr>
+                {s.table.head.map((h, i) => (
+                  <th key={i} scope="col">
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {s.table.rows.map((r, i) => (
+                <tr key={i}>
+                  {r.map((c, j) => {
+                    const pl = !ENGLISH_COLUMN.test(s.table!.head[j] ?? '');
+                    return (
+                      <td key={j} className={pl ? 'pl' : ''} lang={pl ? 'pl' : undefined}>
+                        {c}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {s.examples && (
+        <div className="examples">
+          {s.examples.map(([pl, en]) => (
+            <div className="example" key={pl}>
+              <Speak text={pl} />
+              <div>
+                <div className="pl" lang="pl">
+                  {pl}
+                </div>
+                <div className="muted">{en}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+/* ---------- Dialogue ---------- */
+
+export function Dialogue({ lines }: { lines: DialogueLine[] }) {
+  const [shown, setShown] = useState(1);
+  const [english, setEnglish] = useState(true);
+  const speakers = [...new Set(lines.map((l) => l.who))];
+  useEffect(() => {
+    speak(lines[shown - 1].pl);
+  }, [shown, lines]);
+  return (
+    <section className="dialogue">
+      <div className="row between wrap">
+        <div className="instruction">Dialogue</div>
+        <button type="button" className="link-btn" onClick={() => setEnglish(!english)} aria-pressed={english}>
+          {english ? 'Hide English' : 'Show English'}
+        </button>
+      </div>
+      {lines.slice(0, shown).map((l, i) => (
+        <div key={i} className={`bubble ${speakers.indexOf(l.who) === 1 ? 'me' : ''}`}>
+          <span className="who">{l.who}</span>
+          <div className="row">
+            <span className="pl" lang="pl" style={{ flex: 1 }}>
+              {l.pl}
+            </span>
+            <Speak text={l.pl} />
+          </div>
+          {english && <span className="en">{l.en}</span>}
+        </div>
+      ))}
+      {shown < lines.length && (
+        <button type="button" className="btn quiet" onClick={() => setShown(shown + 1)}>
+          Next line
+        </button>
+      )}
+    </section>
+  );
+}

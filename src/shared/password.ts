@@ -1,4 +1,4 @@
-import { PASSWORD_MAX, PASSWORD_MIN } from './schemas';
+import { PASSWORD_MAX, PASSWORD_MIN } from './limits';
 
 /**
  * NIST SP 800-63B style policy: length, not a known-common password, not the username.

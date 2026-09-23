@@ -7,3 +7,5 @@ coverage/
 test-results/
 playwright-report/
 .DS_Store
+.shots/
+e2e/zz-*.spec.ts

@@ -109,7 +109,7 @@ describe('registration and sign-in', () => {
     await c.call('POST', '/api/auth/logout', {});
     const replay = client();
     replay.cookie = stolen;
-    expect((await replay.call('GET', '/api/auth/me')).status).toBe(401);
+    expect((await replay.call('GET', '/api/auth/me')).json.user).toBeNull();
   });
 
   it('gives the same error for a wrong password and an unknown user', async () => {
@@ -169,7 +169,7 @@ describe('request hardening', () => {
 
   it('sends security headers and never caches API responses', async () => {
     const r = await client().call('GET', '/api/auth/me');
-    expect(r.status).toBe(401);
+    expect(r.json).toEqual({ user: null });
     expect(r.headers.get('cache-control')).toBe('no-store');
     expect(r.headers.get('x-content-type-options')).toBe('nosniff');
     expect(r.headers.get('x-frame-options')).toBe('DENY');
@@ -272,8 +272,8 @@ describe('account', () => {
     await other.call('POST', '/api/auth/login', { username, password: PASSWORD });
     expect((await c.call('POST', '/api/account/password', { currentPassword: 'wrong wrong wrong', newPassword: 'a brand new passphrase' })).status).toBe(403);
     expect((await c.call('POST', '/api/account/password', { currentPassword: PASSWORD, newPassword: 'a brand new passphrase' })).status).toBe(200);
-    expect((await c.call('GET', '/api/auth/me')).status).toBe(200);
-    expect((await other.call('GET', '/api/auth/me')).status).toBe(401);
+    expect((await c.call('GET', '/api/auth/me')).json.user.username).toBe(username);
+    expect((await other.call('GET', '/api/auth/me')).json.user).toBeNull();
     expect((await client().call('POST', '/api/auth/login', { username, password: 'a brand new passphrase' })).status).toBe(200);
   });
 
@@ -297,7 +297,7 @@ describe('account', () => {
       const n = await env.DB.prepare(`SELECT COUNT(*) AS n FROM ${table} WHERE ${col} = ?1`).bind(user!.id).first<{ n: number }>();
       expect(n!.n, table).toBe(0);
     }
-    expect((await c.call('GET', '/api/auth/me')).status).toBe(401);
+    expect((await c.call('GET', '/api/auth/me')).json.user).toBeNull();
   });
 });
 

@@ -7,6 +7,10 @@ export default defineConfig({
     outDir: 'dist/client',
     emptyOutDir: true,
     sourcemap: false,
+    // Keep every asset a real file: the CSP does not allow data: fonts.
+    assetsInlineLimit: 0,
+    // Course content ships with the app (no API reads for lessons), so the main chunk is large by design.
+    chunkSizeWarningLimit: 700,
   },
   server: {
     // `npm run dev` serves the UI; run `npx wrangler dev` alongside it for the API.
