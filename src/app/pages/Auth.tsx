@@ -80,7 +80,7 @@ export function AuthPage({ mode }: { mode: 'signin' | 'signup' }) {
   return (
     <Shell aside={false}>
       <div className="stack-lg" style={{ maxWidth: 460 }}>
-        <PageHead eyebrow={signup ? 'Free account' : 'Welcome back'} title={signup ? 'Save your progress' : 'Sign in'}>
+        <PageHead pl={signup ? 'Załóż konto' : 'Zaloguj się'} en={signup ? 'Create a free account' : 'Sign in'}>
           {signup
             ? 'Pick a username and password — no email or real name needed. Your rosette, review deck and streak will follow you to any device.'
             : 'Pick up where you left off.'}
@@ -128,7 +128,7 @@ export function AuthPage({ mode }: { mode: 'signin' | 'signup' }) {
               <p>{error.message}</p>
             </div>
           )}
-          <button className="btn" type="submit" disabled={busy || !username || !password}>
+          <button className="btn red" type="submit" disabled={busy || !username || !password}>
             {busy ? (signup ? 'Creating your account…' : 'Signing in…') : signup ? 'Create account' : 'Sign in'}
           </button>
           <p className="muted" style={{ fontSize: 15 }}>

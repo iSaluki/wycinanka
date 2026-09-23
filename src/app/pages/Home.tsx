@@ -1,11 +1,13 @@
 import { useMemo } from 'react';
 import { getUnitOfLesson, TOTAL_LESSONS } from '../../content/course';
 import { FREQUENCY } from '../../content/frequency';
-import { GoalRing, Speak } from '../components/common';
+import { respell } from '../../shared/phonetics';
+import { GoalRing, Label, SectionHead, Speak } from '../components/common';
 import { IconArrow } from '../components/icons';
 import { Rosette } from '../components/Rosette';
-import { Mark, Shell } from '../components/Shell';
+import { Shell } from '../components/Shell';
 import { useStats } from '../lib/derived';
+import { trickyCards, troubleSpots } from '../lib/reinforce';
 import { Link, navigate, useTitle } from '../lib/router';
 import { nextDue, useApp } from '../lib/store';
 
@@ -40,12 +42,14 @@ export function Home() {
   const unit = next ? getUnitOfLesson(next.id) : undefined;
   const upcoming = nextDue(progress);
   const fresh = stats.done.size === 0;
+  const spots = useMemo(() => troubleSpots(progress).slice(0, 3), [progress]);
+  const tricky = useMemo(() => trickyCards(progress).length, [progress]);
 
   return (
     <Shell>
       <div className="stack-lg">
-        <header className="hello stack" style={{ gap: 6 }}>
-          <div className="eyebrow">{user ? `Signed in as ${user.username}` : 'Learning as a guest'}</div>
+        <header className="hello stack" style={{ gap: 8 }}>
+          <Label pl={user ? user.username : 'gość'} en={user ? 'signed in' : 'guest — progress is not saved'} />
           <h1>
             <span className="pl-greeting" lang="pl">
               {pl}
@@ -58,65 +62,102 @@ export function Home() {
         </header>
 
         <section className="rosette-wrap only-narrow" aria-label="Your rosette">
-          <div style={{ width: 'min(260px, 70vw)' }}>
+          <div style={{ width: 'min(280px, 76vw)' }}>
             <Rosette done={stats.done} next={next?.id} />
           </div>
           <p className="rosette-caption">
             <span lang="pl" className="pl">
               Twoja wycinanka
             </span>{' '}
-            — every lesson cuts a new layer.
+            — every lesson glues on another layer.
           </p>
         </section>
 
         {next && unit ? (
-          <section className="continue" aria-labelledby="continue-title">
-            <div className="petal-deco" aria-hidden="true">
-              <Mark />
-            </div>
-            <div className="eyebrow">
-              {fresh ? 'Start here' : 'Up next'} · Unit {unit.n} · {unit.level}
-            </div>
+          <section className="next-up" aria-labelledby="continue-title">
+            <Label pl={fresh ? 'zaczynamy' : 'dalej'} en={`${fresh ? "let's begin" : 'up next'} · Unit ${unit.n} · ${unit.title}`} />
             <h2 id="continue-title">{next.title}</h2>
-            <p>{next.goal}</p>
-            <button className="btn" onClick={() => navigate(`/lesson/${next.id}`)}>
-              {fresh ? 'Start your first lesson' : 'Continue'} <IconArrow width={20} height={20} />
+            <p className="muted">{next.goal}</p>
+            <button className="btn red" onClick={() => navigate(`/lesson/${next.id}`)}>
+              {fresh ? 'Start the first lesson' : 'Continue'} <IconArrow width={20} height={20} />
             </button>
           </section>
         ) : (
-          <section className="continue">
-            <div className="eyebrow">Course complete</div>
-            <h2 lang="pl">Gratulacje!</h2>
-            <p>You've cut every layer of your rosette. Keep your Polish alive with daily review and the frequency list.</p>
+          <section className="next-up">
+            <Label pl="gratulacje" en="course complete" />
+            <h2>You've made the whole wycinanka.</h2>
+            <p className="muted">Keep your Polish alive with daily review, your trouble spots and the frequency list.</p>
           </section>
         )}
 
-        <div className="tiles-2">
+        {(spots.length > 0 || tricky > 0) && (
+          <section className="stack" aria-labelledby="trouble-title">
+            <SectionHead pl="Słabe punkty" en="trouble spots" />
+            <p className="muted" style={{ marginTop: -4 }}>
+              Where your mistakes cluster. Each session starts with the rule, then drills the cards you find hardest.
+            </p>
+            <ul className="trouble">
+              {spots.map((t) => (
+                <li key={t.skill.id}>
+                  <span className="name">
+                    {t.skill.name}
+                    <span className="diamonds" aria-label={`difficulty ${Math.min(5, Math.round(t.score))} of 5`}>
+                      {[1, 2, 3, 4, 5].map((k) => (
+                        <span key={k} className={k <= Math.round(t.score) ? 'on' : ''} />
+                      ))}
+                    </span>
+                  </span>
+                  <span className="why">
+                    <i lang="pl" className="pl">
+                      {t.skill.namePl}
+                    </i>{' '}
+                    · {t.cardIds.length} cards{t.lapses ? `, forgotten ${t.lapses} time${t.lapses === 1 ? '' : 's'}` : ''}
+                  </span>
+                  <Link to={`/practice/skill/${t.skill.id}`} className="btn small">
+                    Practise
+                  </Link>
+                </li>
+              ))}
+              {tricky > 0 && (
+                <li>
+                  <span className="name">Tricky words</span>
+                  <span className="why">{tricky} cards you've forgotten twice or more</span>
+                  <Link to="/practice/tricky/all" className="btn small">
+                    Practise
+                  </Link>
+                </li>
+              )}
+            </ul>
+          </section>
+        )}
+
+        <div className="split">
           <Link to="/review" className="mini-card">
-            <div className="eyebrow">Review</div>
+            <Label pl="powtórka" en="review" />
             <div className="big-number">{stats.due}</div>
             <p className="muted">
               {stats.due > 0
-                ? `card${stats.due === 1 ? '' : 's'} ready to review. Short, daily reviews are what make words stick.`
+                ? `card${stats.due === 1 ? '' : 's'} due. A few minutes a day is what makes words stick.`
                 : upcoming
                   ? `Nothing due. Next review ${relative(upcoming - Date.now())}.`
                   : 'Finish a lesson and its words join your review deck.'}
             </p>
           </Link>
-          <div className="mini-card word-of-day">
-            <div className="eyebrow">Word of the day · #{word.rank}</div>
+          <div className="mini-card">
+            <Label pl="słowo dnia" en={`word of the day · #${word.rank}`} />
             <div className="row">
-              <span className="pl wotd" lang="pl">
+              <span className="wotd" lang="pl">
                 {word.pl}
               </span>
               <Speak text={word.pl} />
             </div>
+            <div className="say">say “{respell(word.pl)}”</div>
             <p className="muted">
               {word.en} · <i>{word.pos}</i>
             </p>
             {word.ex && (
-              <p style={{ fontSize: 15 }}>
-                <span className="pl" lang="pl">
+              <p style={{ fontSize: 16 }}>
+                <span className="pl" lang="pl" style={{ fontSize: 19 }}>
                   {word.ex[0]}
                 </span>{' '}
                 <span className="muted">— {word.ex[1]}</span>
@@ -125,33 +166,35 @@ export function Home() {
           </div>
         </div>
 
-        <div className="card only-narrow">
+        <div className="only-narrow">
           <GoalRing value={stats.todayXp} goal={stats.goal} />
         </div>
 
         {!user && !fresh && (
           <div className="banner">
             <p>
-              Guest progress isn't saved and disappears when you close this tab. <Link to="/signup">Create a free account</Link> to keep it —
-              everything you've done today comes with you.
+              Guest progress disappears when you close this tab. <Link to="/signup">Create a free account</Link> to keep it — everything
+              you've done today comes with you.
             </p>
           </div>
         )}
 
-        <div className="tiles-2">
+        <div className="split">
           <Link to="/sounds" className="mini-card">
-            <div className="eyebrow">Sounds</div>
-            <h3>
-              <span lang="pl">sz, ś, cz, ć…</span>
-            </h3>
-            <p className="muted">Hear the sounds English doesn't have, then test your ear with minimal pairs.</p>
+            <Label pl="wymowa" en="pronunciation" />
+            <h3>The alphabet and its sounds</h3>
+            <p className="muted">All 32 letters, the sounds English doesn't have, and an ear-training game.</p>
           </Link>
-          <Link to="/placement" className="mini-card">
-            <div className="eyebrow">Already know some Polish?</div>
-            <h3>Take the placement check</h3>
-            <p className="muted">18 quick questions. We'll suggest where to start.</p>
+          <Link to="/tools" className="mini-card">
+            <Label pl="narzędzia" en="tools" />
+            <h3>How do I say this?</h3>
+            <p className="muted">Type any Polish word — or just “cz” — and see how to say it. Plus numbers, prices, the clock and a phrasebook.</p>
           </Link>
         </div>
+
+        <p className="muted" style={{ fontSize: 15 }}>
+          Already know some Polish? <Link to="/placement">Take the placement check</Link> — 18 quick questions.
+        </p>
       </div>
     </Shell>
   );

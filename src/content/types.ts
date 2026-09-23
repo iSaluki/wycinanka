@@ -12,6 +12,8 @@ export interface Item {
   /** Pronunciation or usage note shown on the intro card. */
   hint?: string;
   g?: Gender;
+  /** Example words (phonics lessons). */
+  ex?: string[];
 }
 
 /** A full sentence: used for building, translating and listening. */
@@ -58,6 +60,8 @@ export interface Lesson {
   drills: Drill[];
   spotlight?: Spotlight;
   dialogue?: DialogueLine[];
+  /** A phonics lesson: items are letters and sounds rather than words. */
+  phonics?: boolean;
 }
 
 export interface Unit {

@@ -52,32 +52,31 @@ export function Rich({ text }: { text: string }) {
 }
 
 export function GoalRing({ value, goal }: { value: number; goal: number }) {
-  const r = 30;
+  const r = 27;
   const circ = 2 * Math.PI * r;
   const pct = Math.min(1, value / goal);
   return (
     <div className={`goal ${pct >= 1 ? 'done' : ''}`}>
-      <svg viewBox="0 0 72 72" aria-hidden="true">
-        <circle className="track" cx="36" cy="36" r={r} strokeWidth="8" fill="none" />
+      <svg viewBox="0 0 64 64" aria-hidden="true">
+        <circle className="track" cx="32" cy="32" r={r} strokeWidth="9" fill="none" />
         <circle
           className="fill"
-          cx="36"
-          cy="36"
+          cx="32"
+          cy="32"
           r={r}
-          strokeWidth="8"
+          strokeWidth="9"
           fill="none"
-          strokeLinecap="round"
           strokeDasharray={circ}
           strokeDashoffset={circ * (1 - pct)}
-          transform="rotate(-90 36 36)"
+          transform="rotate(-90 32 32)"
         />
       </svg>
       <div>
-        <div className="eyebrow">Today</div>
+        <Label pl="dzisiaj" en="today" />
         <div>
-          <b style={{ fontSize: 22 }}>{Math.min(value, 9999)}</b> / {goal} XP
+          <b>{Math.min(value, 9999)}</b> / {goal} XP
         </div>
-        <div className="muted" style={{ fontSize: 14 }}>
+        <div className="muted" style={{ fontSize: 15 }}>
           {pct >= 1 ? 'Daily goal reached. Dobra robota!' : `${goal - value} XP to your daily goal`}
         </div>
       </div>
@@ -85,13 +84,36 @@ export function GoalRing({ value, goal }: { value: number; goal: number }) {
   );
 }
 
-export function PageHead({ eyebrow, title, children }: { eyebrow?: string; title: ReactNode; children?: ReactNode }) {
+/** A bilingual label: Polish word first, English after. */
+export function Label({ pl, en }: { pl: string; en?: string }) {
+  return (
+    <span className="label">
+      <i lang="pl">{pl}</i>
+      {en && <span>{en}</span>}
+    </span>
+  );
+}
+
+/** Page title in Polish with the English underneath: the interface teaches too. */
+export function PageHead({ pl, en, children }: { pl: string; en: string; children?: ReactNode }) {
   return (
     <header className="page-head">
-      {eyebrow && <div className="eyebrow">{eyebrow}</div>}
-      <h1>{title}</h1>
-      {children && <p>{children}</p>}
+      <h1 lang="pl">{pl}</h1>
+      <div className="gloss">{en}</div>
+      {children && <p className="lead">{children}</p>}
     </header>
+  );
+}
+
+export function SectionHead({ pl, en, children }: { pl: string; en: string; children?: ReactNode }) {
+  return (
+    <div className="section-head">
+      <h2>
+        <span lang="pl">{pl}</span>
+        <small>{en}</small>
+      </h2>
+      {children}
+    </div>
   );
 }
 

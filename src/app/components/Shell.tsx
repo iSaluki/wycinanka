@@ -2,31 +2,36 @@ import type { ReactNode } from 'react';
 import { Link, usePath } from '../lib/router';
 import { useStats } from '../lib/derived';
 import { dismissSyncError, useApp } from '../lib/store';
-import { GoalRing } from './common';
-import { IconFlame, IconGrammar, IconLearn, IconProfile, IconReview, IconSounds, IconWords } from './icons';
+import { GoalRing, Label } from './common';
+import { IconGrammar, IconLearn, IconProfile, IconReview, IconSounds, IconTools, IconWords } from './icons';
 import { Rosette } from './Rosette';
 
+/** Navigation is labelled in Polish first: learners read these words every visit. */
 const NAV = [
-  { to: '/', label: 'Learn', icon: IconLearn, match: (p: string) => p === '/' || p.startsWith('/learn') },
-  { to: '/review', label: 'Review', icon: IconReview },
-  { to: '/words', label: 'Words', icon: IconWords },
-  { to: '/sounds', label: 'Sounds', icon: IconSounds },
-  { to: '/grammar', label: 'Grammar', icon: IconGrammar },
-  { to: '/profile', label: 'Profile', icon: IconProfile, railOnly: true },
+  { to: '/', pl: 'Nauka', en: 'Learn', icon: IconLearn, match: (p: string) => p === '/' || p.startsWith('/learn') || p.startsWith('/practice') },
+  { to: '/review', pl: 'Powtórka', en: 'Review', icon: IconReview },
+  { to: '/words', pl: 'Słowa', en: 'Words', icon: IconWords },
+  { to: '/sounds', pl: 'Wymowa', en: 'Sounds', icon: IconSounds },
+  { to: '/grammar', pl: 'Gramatyka', en: 'Grammar', icon: IconGrammar },
+  { to: '/tools', pl: 'Narzędzia', en: 'Tools', icon: IconTools },
+  { to: '/profile', pl: 'Profil', en: 'Profile', icon: IconProfile, railOnly: true },
 ];
 
+/** The brand mark: an eight-petal wycinanka flower in black and red. */
 export function Mark() {
   return (
     <svg viewBox="0 0 64 64" aria-hidden="true">
       <g transform="translate(32 32)">
-        {[0, 60, 120, 180, 240, 300].map((r) => (
-          <path key={r} d="M0-6C7-12 7-22 0-30C-7-22-7-12 0-6Z" fill="var(--kobalt)" transform={`rotate(${r})`} />
+        {[0, 45, 90, 135, 180, 225, 270, 315].map((r, i) => (
+          <path
+            key={r}
+            d="M0-7C6-12 6-22 0-30C-6-22-6-12 0-7Z"
+            fill={i % 2 ? 'var(--czerwien)' : 'var(--ink)'}
+            transform={`rotate(${r})`}
+          />
         ))}
-        {[30, 90, 150, 210, 270, 330].map((r) => (
-          <path key={r} d="M0-6C4-10 4-16 0-20C-4-16-4-10 0-6Z" fill="var(--malina)" transform={`rotate(${r})`} />
-        ))}
-        <circle r="7" fill="var(--slonecznik)" />
-        <circle r="3" fill="var(--ink)" />
+        <circle r="7" fill="var(--czerwien)" />
+        <circle r="2.6" fill="var(--paper)" />
       </g>
     </svg>
   );
@@ -37,30 +42,22 @@ function NavLinks({ rail }: { rail: boolean }) {
   const due = useStats().due;
   return (
     <>
-      {NAV.filter((n) => rail || !n.railOnly).map(({ to, label, icon: Icon, match }) => {
+      {NAV.filter((n) => rail || !n.railOnly).map(({ to, pl, en, icon: Icon, match }) => {
         const active = match ? match(path) : path.startsWith(to);
         return (
           <Link key={to} to={to} className="tab" aria-current={active ? 'page' : undefined}>
             <Icon />
-            <span>
-              {label}
-              {to === '/review' && due > 0 && <span className="sr-only">, {due} due</span>}
+            <span className="pl" lang="pl">
+              {pl}
             </span>
+            <small>
+              {en}
+              {to === '/review' && due > 0 && ` · ${due}`}
+            </small>
           </Link>
         );
       })}
     </>
-  );
-}
-
-function StreakChip() {
-  const { streak } = useStats();
-  return (
-    <span className="stat-chip" title={`${streak}-day streak`}>
-      <IconFlame />
-      {streak}
-      <span className="sr-only">day streak</span>
-    </span>
   );
 }
 
@@ -69,27 +66,20 @@ export function Aside() {
   return (
     <>
       <section className="rosette-wrap" aria-labelledby="rosette-title">
-        <div className="eyebrow" id="rosette-title">
-          Twoja wycinanka
+        <div id="rosette-title">
+          <Label pl="Twoja wycinanka" en="your paper cut" />
         </div>
         <Rosette done={stats.done} next={stats.next?.id} />
-        <p className="rosette-caption">Each petal is a unit; every lesson you finish cuts one more layer.</p>
+        <p className="rosette-caption">Each petal is a unit; every lesson glues on another layer of colour.</p>
       </section>
-      <div className="card">
-        <GoalRing value={stats.todayXp} goal={stats.goal} />
-      </div>
-      <div className="row between card">
-        <div className="row">
-          <IconFlame width={34} height={34} />
-          <div>
-            <b style={{ fontSize: 22 }}>{stats.streak}</b> day{stats.streak === 1 ? '' : 's'}
-            <div className="muted" style={{ fontSize: 14 }}>
-              {stats.streak ? 'Keep it going today' : 'Start a streak today'}
-            </div>
-          </div>
+      <GoalRing value={stats.todayXp} goal={stats.goal} />
+      <div className="row between">
+        <div>
+          <Label pl="dni z rzędu" en="day streak" />
+          <div style={{ font: '700 34px/1 var(--font-pl)' }}>{stats.streak}</div>
         </div>
         <Link to="/review" className="btn small quiet">
-          {stats.due} due
+          {stats.due} to review
         </Link>
       </div>
     </>
@@ -99,6 +89,7 @@ export function Aside() {
 export function Shell({ children, aside = true }: { children: ReactNode; aside?: boolean }) {
   const syncError = useApp((s) => s.syncError);
   const user = useApp((s) => s.user);
+  const { streak } = useStats();
   return (
     <div className="shell">
       <nav className="rail" aria-label="Main">
@@ -121,7 +112,10 @@ export function Shell({ children, aside = true }: { children: ReactNode; aside?:
             <span>Wycinanka</span>
           </Link>
           <div className="chips">
-            <StreakChip />
+            <span className="stat-chip" title={`${streak}-day streak`}>
+              <b>{streak}</b> <span lang="pl">dni</span>
+              <span className="sr-only">day streak</span>
+            </span>
             <Link to="/profile" className="stat-chip" aria-label="Profile and settings">
               <IconProfile />
             </Link>
@@ -129,7 +123,7 @@ export function Shell({ children, aside = true }: { children: ReactNode; aside?:
         </header>
         <main className="main" id="main">
           {syncError && (
-            <div className="banner error" role="alert" style={{ marginBottom: 16 }}>
+            <div className="banner error" role="alert" style={{ marginBottom: 20 }}>
               <p>{syncError}</p>
               <button className="link-btn" onClick={dismissSyncError}>
                 Dismiss

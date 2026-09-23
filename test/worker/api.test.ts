@@ -3,6 +3,8 @@ import { exports } from 'cloudflare:workers';
 import { describe, expect, it } from 'vitest';
 import { LESSONS, lessonCardIds } from '../../src/content/course';
 import { localDay } from '../../src/shared/progress';
+import { migrate } from '../../src/worker/migrate';
+import { MIGRATIONS } from '../../src/worker/migrations';
 
 const ORIGIN = 'https://wycinanka.test';
 const worker = (exports as unknown as { default: Fetcher }).default;
@@ -52,6 +54,27 @@ async function signedUp() {
   expect(r.status).toBe(201);
   return { c, username };
 }
+
+describe('schema', () => {
+  it('shares wrangler\'s migrations table and skips what is already applied', async () => {
+    expect(await migrate(env.DB)).toEqual([]);
+    const { results } = await env.DB.prepare('SELECT name FROM d1_migrations ORDER BY id').all<{ name: string }>();
+    expect(results.map((r) => r.name)).toEqual(MIGRATIONS.map((m) => m.name));
+  });
+
+  it('applies pending migrations once, atomically with their bookkeeping row', async () => {
+    const name = `9999_test_${Date.now()}.sql`;
+    MIGRATIONS.push({ name, sql: '-- test\nCREATE TABLE zz_test (id INTEGER);\nCREATE INDEX zz_test_id ON zz_test(id);\n' });
+    try {
+      expect(await migrate(env.DB)).toEqual([name]);
+      expect(await migrate(env.DB)).toEqual([]);
+      expect((await env.DB.prepare("SELECT COUNT(*) AS n FROM sqlite_master WHERE name LIKE 'zz_test%'").first<{ n: number }>())!.n).toBe(2);
+    } finally {
+      MIGRATIONS.pop();
+      await env.DB.batch([env.DB.prepare('DROP TABLE zz_test'), env.DB.prepare('DELETE FROM d1_migrations WHERE name = ?1').bind(name)]);
+    }
+  });
+});
 
 describe('registration and sign-in', () => {
   it('registers, sets a hardened session cookie and reports the user', async () => {

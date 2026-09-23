@@ -9,9 +9,9 @@ test('a new guest picks a level and completes their first lesson', async ({ page
   await page.goto('/');
   await expect(page).toHaveURL(/\/welcome$/);
   await expect(page.getByRole('heading', { name: 'Wycinanka', level: 1 })).toBeVisible();
-  await page.getByRole('button', { name: 'Start from the beginning' }).click();
-  await expect(page).toHaveURL(/\/lesson\/u01-l1$/);
-  await solveLesson(page, 'u01-l1');
+  await page.getByRole('button', { name: 'Start with the alphabet' }).click();
+  await expect(page).toHaveURL(/\/lesson\/u00-l1$/);
+  await solveLesson(page, 'u00-l1');
   await expect(page.locator('.finish-stats')).toContainText('100%');
   await expect(page.getByText("You're learning as a guest")).toBeVisible();
 
@@ -21,8 +21,8 @@ test('a new guest picks a level and completes their first lesson', async ({ page
 
 test('signing up keeps guest progress and it survives a reload', async ({ page }) => {
   await page.goto('/welcome');
-  await page.getByRole('button', { name: 'Start from the beginning' }).click();
-  await solveLesson(page, 'u01-l1');
+  await page.getByRole('button', { name: 'Start with the alphabet' }).click();
+  await solveLesson(page, 'u00-l1');
   await page.getByRole('link', { name: 'Create a free account' }).click();
   await expect(page.getByText("Everything you've done in this visit will be added")).toBeVisible();
 
@@ -33,7 +33,7 @@ test('signing up keeps guest progress and it survives a reload', async ({ page }
   await expect(page.getByRole('heading', { level: 1 })).toContainText(username);
 
   await page.reload();
-  await expect(page.getByText("You've finished 1 of 54 lessons")).toBeVisible();
+  await expect(page.getByText("You've finished 1 of 60 lessons")).toBeVisible();
 
   // Sign out, then back in.
   await page.goto('/profile');
@@ -42,7 +42,7 @@ test('signing up keeps guest progress and it survives a reload', async ({ page }
   await page.getByLabel('Username').fill(username);
   await page.getByLabel('Password', { exact: true }).fill(PASSWORD);
   await page.getByRole('button', { name: 'Sign in' }).click();
-  await expect(page.getByText("You've finished 1 of 54 lessons")).toBeVisible();
+  await expect(page.getByText("You've finished 1 of 60 lessons")).toBeVisible();
 });
 
 test('rejects a weak password before submitting', async ({ page }) => {
@@ -75,23 +75,25 @@ test('review works after a lesson', async ({ page }) => {
   // Guest progress lives in memory, so navigate within the app rather than reloading.
   await page.getByRole('link', { name: 'Course map' }).click();
   await page.locator('nav.rail').getByRole('link', { name: /Review/ }).click();
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('All caught up');
-  await expect(page.locator('.stat').first()).toContainText('11');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Powtórka');
+  await expect(page.locator('.page-head .gloss')).toHaveText('All caught up');
+  await expect(page.locator('.stat').first()).toContainText('14');
   // Early practice runs a real review session and records it.
-  await page.getByRole('button', { name: 'Practise your 10 weakest words' }).click();
+  await page.getByRole('button', { name: 'Practise your 10 weakest cards' }).click();
   await expect(page.locator('.player .instruction').first()).toBeVisible();
   await expect(page.locator('.stripes span')).toHaveCount(10);
 });
 
 test('reference pages render', async ({ page }) => {
   for (const [path, heading] of [
-    ['/words', 'The 500 words that matter most'],
-    ['/sounds', 'The sounds of Polish'],
-    ['/grammar', 'Grammar, one idea at a time'],
-    ['/learn', 'Your path through Polish'],
+    ['/words', 'Słowa'],
+    ['/sounds', 'Wymowa'],
+    ['/grammar', 'Gramatyka'],
+    ['/learn', 'Nauka'],
+    ['/tools', 'Narzędzia'],
   ]) {
     await page.goto(path);
-    await expect(page.getByRole('heading', { level: 1, name: heading })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: heading, exact: true })).toBeVisible();
   }
   await page.goto('/grammar');
   await page.getByRole('button', { name: 'okno' }).click();
@@ -102,4 +104,28 @@ test('pages are served with a strict Content Security Policy', async ({ request 
   const res = await request.get('/');
   expect(res.headers()['content-security-policy']).toContain("script-src 'self'");
   expect(res.headers()['x-frame-options']).toBe('DENY');
+});
+
+test('the pronouncer explains letters and words', async ({ page }) => {
+  await page.goto('/tools');
+  const input = page.getByLabel('Polish text');
+  await input.fill('cz');
+  await expect(page.getByText('sounds like ch in "church"')).toBeVisible();
+  await input.fill('Wrocław');
+  await expect(page.locator('.respelling').first()).toHaveText('VRO-tswaf');
+  await page.getByRole('tab', { name: /Numbers/ }).click();
+  await page.getByLabel('Number').fill('5');
+  await expect(page.getByText('pięć złotych')).toBeVisible();
+  await page.getByRole('tab', { name: /Clock/ }).click();
+  await page.getByLabel('Time').fill('07:30');
+  await expect(page.getByText('Jest wpół do ósmej.')).toBeVisible();
+});
+
+test('the second lesson opens with a warm-up from the first', async ({ page }) => {
+  await page.goto('/lesson/u00-l1');
+  await solveLesson(page, 'u00-l1');
+  await page.getByRole('button', { name: /^Next:/ }).click();
+  await expect(page.locator('.tag-warmup').first()).toBeVisible();
+  await solveLesson(page, 'u00-l2');
+  await expect(page.locator('.finish-stats')).toContainText('100%');
 });

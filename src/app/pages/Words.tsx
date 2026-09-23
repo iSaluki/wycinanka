@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import { BAND_SIZE, COVERAGE, FREQUENCY } from '../../content/frequency';
 import type { Item } from '../../content/types';
-import { PageHead, Speak } from '../components/common';
+import { PageHead, SectionHead, Speak } from '../components/common';
+import { respell } from '../../shared/phonetics';
 import { Session, type SessionResult } from '../components/Session';
 import { Shell } from '../components/Shell';
 import { shuffle, type Exercise } from '../lib/exercises';
@@ -51,14 +52,12 @@ export function Words() {
   return (
     <Shell>
       <div className="stack-lg">
-        <PageHead eyebrow="Frequency list" title="The 500 words that matter most">
-          Ordered by how often they're heard in everyday Polish. Learn them in small batches and they join your review deck.
+        <PageHead pl="Słowa" en="The 500 words that matter most">
+          Ordered by how often they're heard in everyday Polish. Learn them eight at a time and they join your review deck.
         </PageHead>
 
-        <section className="card coverage" aria-labelledby="cov">
-          <h2 id="cov" style={{ fontSize: 22 }}>
-            Why frequency first?
-          </h2>
+        <section className="stack" aria-labelledby="cov">
+          <SectionHead pl="Najpierw najczęstsze" en="why frequency first?" />
           <p className="muted">
             In film and TV dialogue, the 100 most common word forms make up <b>{COVERAGE[2][1]}%</b> of everything said, and the top 1,000
             make up <b>{COVERAGE[5][1]}%</b>.
@@ -82,7 +81,6 @@ export function Words() {
             const k = b.filter((w) => cards.has(w.id)).length;
             return (
               <button key={i} className="band" aria-pressed={band === i} onClick={() => setBand(i)}>
-                <span className="eyebrow">Words</span>
                 <b>
                   {i * BAND_SIZE + 1}–{(i + 1) * BAND_SIZE}
                 </b>
@@ -98,11 +96,11 @@ export function Words() {
         </div>
 
         <div className="row between wrap">
-          <h2 style={{ fontSize: 24 }}>
-            Words {band * BAND_SIZE + 1}–{(band + 1) * BAND_SIZE}
+          <h2 style={{ fontSize: 30 }}>
+            <span lang="pl">Słowa</span> {band * BAND_SIZE + 1}–{(band + 1) * BAND_SIZE}
           </h2>
           <button
-            className="btn"
+            className="btn red"
             disabled={!unlearnt.length}
             onClick={() => {
               setNote(null);
@@ -125,7 +123,7 @@ export function Words() {
                   {cards.has(w.id) && <span className="known-dot" title="In your review deck" aria-label="In your review deck" />}
                 </div>
                 <small>
-                  {w.en} · <i>{w.pos}</i>
+                  {w.en} · <i>{w.pos}</i> · <span className="say">{respell(w.pl)}</span>
                 </small>
                 {w.ex && (
                   <span className="ex">

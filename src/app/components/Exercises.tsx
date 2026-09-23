@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import type { DialogueLine, Item, Spotlight } from '../../content/types';
 import { POLISH_LETTERS } from '../../shared/grade';
 import type { Exercise } from '../lib/exercises';
 import { speak } from '../lib/speech';
-import { GENDER_LABEL, Rich, Speak } from './common';
+import { respell } from '../../shared/phonetics';
+import { GENDER_LABEL, Rich, Speak, usePolishVoice } from './common';
 
 type Of<K extends Exercise['kind']> = Extract<Exercise, { kind: K }>;
 
@@ -20,6 +21,7 @@ export interface AnswerProps<E> {
 
 export function Choose({ ex, locked, onAnswer, checked }: AnswerProps<Of<'choose'>>) {
   const [picked, setPicked] = useState<string | null>(null);
+  const hasVoice = usePolishVoice();
   useEffect(() => setPicked(null), [ex]);
   const pick = (o: string) => {
     if (locked) return;
@@ -34,33 +36,39 @@ export function Choose({ ex, locked, onAnswer, checked }: AnswerProps<Of<'choose
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   });
-  const optsArePolish = ex.promptLang === 'en';
+  const style = ex.optionStyle ?? (ex.promptLang === 'en' ? 'pl' : 'en');
+  const instruction =
+    ex.instruction ?? (ex.audio ? 'Listen. What does it mean?' : ex.promptLang === 'en' ? 'Choose the Polish' : 'What does this mean?');
+  // Audio-only questions show their text once answered, or straight away if the device can't speak Polish.
+  const hidePrompt = ex.audio && hasVoice && !checked;
   return (
     <>
-      <div className="instruction">{ex.audio ? 'Listen. What does it mean?' : optsArePolish ? 'Choose the Polish' : 'What does this mean?'}</div>
+      <Instruction tag={ex.tag}>{instruction}</Instruction>
       <div className="prompt-row">
         {ex.promptLang === 'pl' && <Speak text={ex.prompt} autoPlay={ex.audio} />}
         {ex.audio && <Speak text={ex.prompt} slow />}
-        {ex.audio && !checked ? (
+        {hidePrompt ? (
           <span className="muted">Tap to hear it again</span>
+        ) : ex.audio && !hasVoice && !checked && ex.fallback ? (
+          <span className="prompt-en">{ex.fallback}</span>
         ) : (
           <span className={ex.promptLang === 'pl' ? 'prompt-pl' : 'prompt-en'} lang={ex.promptLang}>
             {ex.prompt}
           </span>
         )}
       </div>
-      <div className={`options ${ex.options.every((o) => o.length < 22) ? 'grid-2' : ''}`} role="group" aria-label="Answers">
+      <div className={`options ${ex.options.every((o) => o.length < 24) ? 'grid-2' : ''}`} role="group" aria-label="Answers">
         {ex.options.map((o, i) => {
           const state = checked ? (o === ex.answer ? 'right' : o === picked ? 'wrong' : '') : '';
           return (
             <button
               key={o}
               type="button"
-              className={`option ${optsArePolish ? 'pl-opt' : ''} ${state}`}
+              className={`option ${style === 'pl' ? 'pl-opt' : style === 'say' ? 'say-opt' : ''} ${state}`}
               aria-pressed={picked === o}
               disabled={locked && !state}
               onClick={() => pick(o)}
-              lang={optsArePolish ? 'pl' : 'en'}
+              lang={style === 'pl' ? 'pl' : 'en'}
             >
               <span className="key" aria-hidden="true">
                 {i + 1}
@@ -71,6 +79,19 @@ export function Choose({ ex, locked, onAnswer, checked }: AnswerProps<Of<'choose
         })}
       </div>
     </>
+  );
+}
+
+function Instruction({ tag, children }: { tag?: 'warmup'; children: ReactNode }) {
+  return (
+    <div className="instruction">
+      {tag === 'warmup' && (
+        <span className="tag-warmup" lang="pl" title="Warm-up: a quick one from an earlier lesson">
+          rozgrzewka
+        </span>
+      )}
+      {children}
+    </div>
   );
 }
 
@@ -99,7 +120,7 @@ export function TypeAnswer({ ex, locked, onAnswer }: AnswerProps<Of<'type'>>) {
   const toPolish = ex.lang === 'pl';
   return (
     <>
-      <div className="instruction">{toPolish ? 'Write this in Polish' : 'Write this in English'}</div>
+      <Instruction tag={ex.tag}>{toPolish ? 'Write this in Polish' : 'Write this in English'}</Instruction>
       <div className="prompt-row">
         {!toPolish && <Speak text={ex.prompt} />}
         <span className={toPolish ? 'prompt-en' : 'prompt-pl'} lang={toPolish ? 'en' : 'pl'}>
@@ -141,6 +162,7 @@ export function TypeAnswer({ ex, locked, onAnswer }: AnswerProps<Of<'type'>>) {
 
 export function Build({ ex, locked, onAnswer }: AnswerProps<Of<'build'>>) {
   const [chosen, setChosen] = useState<number[]>([]);
+  const hasVoice = usePolishVoice();
   useEffect(() => setChosen([]), [ex]);
   const update = (next: number[]) => {
     setChosen(next);
@@ -148,15 +170,15 @@ export function Build({ ex, locked, onAnswer }: AnswerProps<Of<'build'>>) {
   };
   return (
     <>
-      <div className="instruction">{ex.audio ? 'Build what you hear' : 'Build this in Polish'}</div>
+      <Instruction tag={ex.tag}>{ex.audio && hasVoice ? 'Build what you hear' : 'Build this in Polish'}</Instruction>
       <div className="prompt-row">
-        {ex.audio ? (
+        {ex.audio && hasVoice ? (
           <>
             <Speak text={ex.audio} autoPlay />
             <Speak text={ex.audio} slow />
           </>
         ) : (
-          <span className="prompt-en">{ex.prompt}</span>
+          <span className="prompt-en">{ex.audio ? ex.meaning : ex.prompt}</span>
         )}
       </div>
       <div className="build-line" aria-label="Your sentence" aria-live="polite">
@@ -206,7 +228,7 @@ export function Gap({ ex, locked, onAnswer, checked }: AnswerProps<Of<'gap'>>) {
   };
   return (
     <>
-      <div className="instruction">Fill the gap</div>
+      <Instruction tag={ex.tag}>Fill the gap</Instruction>
       <p className="gap-text" lang="pl">
         {before}
         <span className="gap-slot">{picked ?? ' '}</span>
@@ -316,7 +338,10 @@ export function Meet({ items, onDone }: { items: Item[]; onDone: () => void }) {
     <div className="meet" onKeyDown={onKey}>
       <div className="row between">
         <div className="instruction">
-          New words · {i + 1} of {items.length}
+          <span lang="pl" className="pl" style={{ fontStyle: 'italic', color: 'var(--czerwien)' }}>
+            nowe
+          </span>{' '}
+          {items[0]?.ex ? 'New sounds' : 'New words'} · {i + 1} of {items.length}
         </div>
         <div className="dots" aria-hidden="true">
           {items.map((_, k) => (
@@ -326,17 +351,41 @@ export function Meet({ items, onDone }: { items: Item[]; onDone: () => void }) {
       </div>
       <article className="meet-card" key={item.id}>
         {item.g && <span className="gender">{GENDER_LABEL[item.g]}</span>}
-        <div className="row wrap">
-          <span className="pl" lang="pl">
-            {item.pl}
-          </span>
-        </div>
-        <div className="row">
-          <Speak text={item.pl} autoPlay />
-          <Speak text={item.pl} slow />
-        </div>
-        <div className="en">{item.en}</div>
-        {item.hint && <p className="hint">{item.hint}</p>}
+        <span className="word" lang="pl">
+          {item.pl}
+        </span>
+        {item.ex ? (
+          <>
+            <div className="en">Sounds like {item.en}</div>
+            <ul className="meet-examples" aria-label="Examples">
+              {item.ex.map((w, k) => (
+                <li key={w}>
+                  <Speak text={w} autoPlay={k === 0} />
+                  <span className="pl" lang="pl">
+                    {w}
+                  </span>
+                  <span className="say">{respell(w)}</span>
+                </li>
+              ))}
+            </ul>
+          </>
+        ) : (
+          <>
+            <div className="row">
+              <Speak text={item.pl} autoPlay />
+              <Speak text={item.pl} slow />
+              <span className="say" title="Say it like this. Capitals show the stressed syllable.">
+                {respell(item.pl)}
+              </span>
+            </div>
+            <div className="en">{item.en}</div>
+          </>
+        )}
+        {item.hint && (
+          <p className="hint">
+            <Rich text={item.hint} />
+          </p>
+        )}
       </article>
       <div className="row between">
         <button type="button" className="btn quiet" onClick={() => setI(i - 1)} disabled={i === 0}>

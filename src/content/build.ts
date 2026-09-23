@@ -1,6 +1,6 @@
 import type { DialogueLine, Drill, Item, Lesson, Level, Sentence, Spotlight, Unit, Gender } from './types';
 
-type ItemOpts = { altPl?: string[]; altEn?: string[]; hint?: string; g?: Gender };
+type ItemOpts = { altPl?: string[]; altEn?: string[]; hint?: string; g?: Gender; ex?: string[]; key?: string };
 type SentenceOpts = { altPl?: string[]; altEn?: string[]; extra?: string[] };
 
 export type ItemSpec = [pl: string, en: string, opts?: ItemOpts];
@@ -29,9 +29,13 @@ export function lesson(
     drills?: DrillSpec[];
     spotlight?: Spotlight;
     dialogue?: Array<[who: string, pl: string, en: string]>;
+    phonics?: boolean;
   },
 ): Lesson {
-  const items: Item[] = spec.items.map(([pl, en, o]) => ({ id: `${id}:${slug(pl)}`, pl, en, ...o }));
+  const items: Item[] = spec.items.map(([pl, en, o]) => {
+    const { key, ...rest } = o ?? {};
+    return { id: `${id}:${key ?? slug(pl)}`, pl, en, ...rest };
+  });
   const sentences: Sentence[] = spec.sentences.map(([pl, en, o], i) => ({ id: `${id}:s${i + 1}`, pl, en, ...o }));
   const drills: Drill[] = (spec.drills ?? []).map(([text, en, options, answer, why], i) => ({
     id: `${id}:d${i + 1}`,
@@ -42,7 +46,7 @@ export function lesson(
     why,
   }));
   const dialogue: DialogueLine[] | undefined = spec.dialogue?.map(([who, pl, en]) => ({ who, pl, en }));
-  return { id, title, goal, items, sentences, drills, spotlight: spec.spotlight, dialogue };
+  return { id, title, goal, items, sentences, drills, spotlight: spec.spotlight, dialogue, ...(spec.phonics ? { phonics: true } : {}) };
 }
 
 export function unit(n: number, level: Level, title: string, titlePl: string, summary: string, lessons: Lesson[]): Unit {

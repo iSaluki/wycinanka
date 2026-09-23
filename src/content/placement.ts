@@ -16,7 +16,7 @@ export interface PlacementBand {
 }
 
 export const BANDS: PlacementBand[] = [
-  { band: 0, label: 'Complete beginner', startUnit: 1 },
+  { band: 0, label: 'Complete beginner', startUnit: 0 },
   { band: 1, label: 'First steps (A1)', startUnit: 3 },
   { band: 2, label: 'Everyday basics (A1)', startUnit: 6 },
   { band: 3, label: 'Getting around (A1)', startUnit: 9 },
