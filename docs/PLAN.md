@@ -125,7 +125,7 @@ correctness and speed, with a manual override.
 
 ## 3. Curriculum (initial content)
 
-18 units, 3 lessons each (54 lessons), each lesson ~6–9 items + 3–5 sentences + an optional grammar
+18 units, 3 lessons each (54 lessons; plus the six-lesson phonics unit 0 added in the second release, see 10.1), each lesson ~6–9 items + 3–5 sentences + an optional grammar
 spotlight and dialogue. Target: ~450 taught items and ~250 sentences.
 
 | # | Unit | CEFR | Core grammar / skill |
@@ -231,7 +231,7 @@ Designed against the **OWASP Top 10 (2021)** and **ASVS 4.0 Level 1** with selec
 | Area | Control |
 |---|---|
 | **A01 Broken access control** | Every progress query is scoped by `user_id` from the server-side session, never from the request. No IDs of other users are ever accepted. |
-| **A02 Cryptographic failures** | Passwords: PBKDF2-HMAC-SHA256 via WebCrypto with a 16-byte random salt, **plus an HMAC pepper held as a Worker secret** (never in D1). Iteration count is stored in each hash and re-hashed on login when the configured count changes. Session tokens: 32 random bytes; only the SHA-256 of the token is stored. HTTPS only (HSTS). |
+| **A02 Cryptographic failures** | Passwords: PBKDF2-HMAC-SHA256 via WebCrypto with a 16-byte random salt, **plus an HMAC pepper held as a Worker secret** (never in D1). Iteration count and whether a pepper was used are stored in each hash, which is re-hashed on login when either changes. The pepper is optional so a fresh deploy works before the secret is set; a peppered hash never verifies without it (fail closed). Session tokens: 32 random bytes; only the SHA-256 of the token is stored. HTTPS only (HSTS). |
 | **Platform constraint** | OWASP recommends 600k PBKDF2 iterations; Cloudflare Workers caps PBKDF2 at 100k and the free plan allows ~10 ms CPU per request ([workerd #1346](https://github.com/cloudflare/workerd/issues/1346)). Measured cost is roughly 0.45 ms per 1,000 iterations, so we default to **30,000** on the free plan and 100,000 on paid (configurable `PBKDF2_ITERATIONS`) and compensate with the pepper, which makes a stolen database alone uncrackable offline, and strict login throttling. Argon2id via WASM would exceed the free CPU budget. |
 | **A03 Injection** | Only prepared statements (`.bind()`); JSON bodies validated with strict schemas (zod), unknown keys rejected; size limits on bodies (16 KB, 64 KB for import). React escapes output; no `dangerouslySetInnerHTML`. |
 | **A04 Insecure design** | Generic auth errors ("Username or password is incorrect"); constant-ish work on unknown users (dummy hash); throttling on login and registration per IP and per username with lockout windows. |
@@ -330,3 +330,20 @@ Deviations from the plan:
 - The placement check suggests a starting unit rather than pre-loading earlier units' words into the review deck;
   learners who skip ahead can still open any earlier lesson.
 - `/api/auth/me` returns `{ "user": null }` for guests instead of a 401, since being a guest is a normal state.
+
+### 10.1 Second release
+
+- **Alphabet and phonics unit (unit 0, six lessons)**: vowels, surprising letters, digraphs, the soft family, nasal vowels
+  and reading rules, with "how does it sound?", "which spelling?" and "how do you say it?" exercises. The course is
+  now 60 lessons in 19 units.
+- **Reinforcement**: grammar drills are review cards; every lesson opens with a warm-up of due or weak cards from
+  earlier lessons; the home and review screens show trouble spots by skill and "tricky" cards (two or more lapses),
+  each with a focused practice session; any started unit can be revised as a whole.
+- **Pronunciation engine** (`src/shared/phonetics.ts`): graphemes, softening by *i*, voicing assimilation, final
+  devoicing, nasal variants, syllables and penultimate stress, producing English-style respellings and IPA.
+- **Tools**: pronouncer (single letters and pairs such as *cz* get a sound card), numbers and prices with correct
+  agreement (*2 złote*, *5 złotych*), telling the time, and a phrasebook.
+- **Redesign**: a paper-cut (*wycinanka*) look on white paper with Łowicz stripe colours, Polish-first bilingual
+  headings, Poltawski Nowy and Signika (both by Polish type designers).
+- **Deployment**: the Worker migrates D1 itself and the pepper is optional (hashes record whether they were
+  peppered), so connecting the repository in the Cloudflare dashboard deploys with no manual steps. See the README.

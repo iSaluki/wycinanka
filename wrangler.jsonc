@@ -1,8 +1,11 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "wycinanka",
+  "name": "learnpolish",
   "main": "src/worker/index.ts",
   "compatibility_date": "2026-08-15",
+  // Builds the front end before every deploy, so a plain `wrangler deploy` (the Workers Builds default) works.
+  "build": { "command": "npm run build" },
+  "routes": [{ "pattern": "polish.saluki.cloud", "custom_domain": true }],
   "observability": { "enabled": true },
   // Daily clean-up of expired sessions and throttle counters.
   "triggers": { "crons": ["17 3 * * *"] },
@@ -15,9 +18,8 @@
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "wycinanka",
-      // Replace with the id printed by `npx wrangler d1 create wycinanka`.
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_name": "learnpolish-db",
+      "database_id": "50af2708-c87e-4aee-a9e2-3d74b321737c",
       "migrations_dir": "migrations"
     }
   ],
@@ -26,5 +28,6 @@
     // On the paid plan raise it to 100,000 (the Workers maximum); hashes upgrade on next sign-in.
     "PBKDF2_ITERATIONS": "30000"
   }
-  // Secret (not committed): PEPPER — set with `npx wrangler secret put PEPPER`.
+  // Optional secret (not committed): PEPPER, 32+ characters. See README → Deploying.
+  // The Worker applies pending migrations itself on first request (src/worker/migrate.ts).
 }

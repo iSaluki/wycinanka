@@ -4,10 +4,11 @@
 
 A free Polish course for British English speakers, from complete beginner to B1. Every lesson you finish cuts a new layer into your own paper rosette. Runs entirely on Cloudflare Workers + D1, within the free plan.
 
-- **54 lessons in 18 units** (A1–B1): sounds, greetings, the seven cases, verb groups, aspect, past, future and conditional
-- **Spaced review** scheduled by FSRS, the modern algorithm used in Anki
+- **60 lessons in 19 units** (A0–B1), starting with an alphabet and phonics unit, then greetings, the seven cases, verb groups, aspect, past, future and conditional
+- **Reinforcement, not one-off teaching**: FSRS spaced review (the algorithm used in Anki) for every word, sentence and grammar drill; each lesson opens with a warm-up from earlier ones; trouble spots by skill, a "tricky words" list and unit revision target what you get wrong most
 - **The 500 most frequent words**, learnt in batches of eight
-- **Sounds**: the Polish sound system and a minimal-pair listening game (*wieś / wiesz*)
+- **Sounds**: an alphabet chart, English-style respellings on every word (*VRO-tswaf*) and a minimal-pair listening game (*wieś / wiesz*)
+- **Tools** outside the course: a pronouncer (type *cz* or any word and see how to say it and why), Polish numbers and prices, telling the time, and a phrasebook
 - **Grammar reference**: the seven cases, a declension explorer and every lesson's grammar notes
 - **Placement check** so learners can start at their own level
 - **Guest mode**: learn without an account. Nothing is saved; sign up to keep progress, and that visit's work comes with you.
@@ -19,22 +20,21 @@ The research behind the course design, the curriculum, architecture and security
 
 | Layer | Choice |
 |---|---|
-| Front end | React 19 + Vite, plain CSS; self-hosted fonts (Poltawski Nowy, Lato) |
+| Front end | React 19 + Vite, plain CSS; self-hosted fonts (Poltawski Nowy, Signika) |
 | API | Hono on Cloudflare Workers (`src/worker`) |
-| Data | Cloudflare D1 (`migrations/`) |
+| Data | Cloudflare D1 (`migrations/`, applied by the Worker itself on first request) |
 | Audio | The browser's built-in Polish speech synthesis (free, no API) |
 | Shared | FSRS scheduler, answer grader, validation and progress rules (`src/shared`), used by both browser and Worker |
 | Content | TypeScript data in `src/content`, validated by tests |
 
 ## Develop
 
-Requires Node 20+.
+Requires Node 22 (see `.node-version`).
 
 ```sh
 npm install
 cp .dev.vars.example .dev.vars        # local-only pepper for password hashing
-npm run db:migrate:local
-npm run build && npx wrangler dev      # app + API on http://localhost:8787
+npx wrangler dev                       # builds, then app + API on http://localhost:8787
 ```
 
 For fast front-end iteration, run `npx wrangler dev` in one terminal and `npm run dev` in another. Vite proxies `/api` to the Worker.
@@ -51,14 +51,38 @@ The end-to-end tests complete real lessons by reading answers from the course co
 
 ## Deploy (free plan)
 
+Live at **https://polish.saluki.cloud**. The repository is set up so that a Cloudflare dashboard deploy works with the default settings:
+
+- `wrangler.jsonc` names the Worker `learnpolish` (the repository name, which the dashboard suggests), binds the existing D1 database `learnpolish-db` and serves the Worker on the custom domain `polish.saluki.cloud`.
+- `build.command` in `wrangler.jsonc` runs `npm run build`, so a plain `npx wrangler deploy` builds the front end first.
+- The Worker applies any pending migrations itself on its first request (`src/worker/migrate.ts`), using the same `d1_migrations` table as `wrangler d1 migrations apply`. No separate migration step is needed.
+- `PEPPER` is optional, so the first deploy works before any secret is set (see below).
+
+### Connect the repository (one time)
+
+1. In the Cloudflare dashboard, go to **Workers & Pages → Create → Import a repository**, and pick `iSaluki/learnpolish`.
+2. Keep the defaults: project name `learnpolish`, root directory `/`, deploy command `npx wrangler deploy`. The build command can be left empty or set to `npm run build`.
+3. Select **Create and deploy**. Every push to `main` then builds and deploys automatically, and pull requests get preview builds.
+
+### Add the pepper (recommended)
+
+In the Worker, open **Settings → Variables and Secrets → Add**, choose type **Secret**, name it `PEPPER` and paste a random value of at least 32 characters (for example from `openssl rand -base64 48`). Keep a copy somewhere safe. Once it is set it must not change, because peppered passwords can only be checked with the same pepper.
+
+Accounts created before the pepper was set keep working: their hashes are marked as unpeppered and are upgraded to peppered hashes the next time each person signs in.
+
+### From the command line instead
+
 ```sh
 npx wrangler login
-npx wrangler d1 create wycinanka                 # copy the database_id into wrangler.jsonc
+npm run deploy                                   # builds and deploys
 openssl rand -base64 48 | npx wrangler secret put PEPPER
-npm run deploy                                   # builds, applies migrations, deploys
 ```
 
-`PEPPER` must be at least 32 characters. Keep a copy somewhere safe: if it changes, every existing password stops working.
+### Adding a migration
+
+Add the `.sql` file to `migrations/` **and** the same text to `src/worker/migrations.ts`. A unit test fails if the two differ. The next deploy applies it on the first request.
+
+### Limits
 
 The free plan limits each request to about 10 ms of CPU, so `PBKDF2_ITERATIONS` in `wrangler.jsonc` defaults to 30,000. On the paid plan, raise it to 100,000 (the Workers maximum). Existing password hashes are upgraded automatically the next time each user signs in.
 
@@ -68,7 +92,7 @@ A daily Cron Trigger removes expired sessions and stale sign-in throttling rows.
 
 Designed against the OWASP Top 10 and ASVS level 1, with selected level 2 controls (full table in [docs/PLAN.md](docs/PLAN.md#5-security-owasp)):
 
-- Passwords: PBKDF2-HMAC-SHA256 with a per-user salt and a secret pepper; NIST-style policy (length and a blocklist, no composition rules)
+- Passwords: PBKDF2-HMAC-SHA256 with a per-user salt and a secret pepper (a Worker secret, never stored in D1); NIST-style policy (length and a blocklist, no composition rules)
 - Sessions: 256-bit random tokens in `__Host-` cookies (`HttpOnly`, `Secure`, `SameSite=Lax`); only their SHA-256 hash is stored; revoked on sign-out and on password change
 - CSRF: same-origin `Origin` check and JSON-only bodies on every state-changing request
 - Throttling and lockout on sign-in, registration and password-confirmed actions

@@ -85,8 +85,8 @@ describe('placement', () => {
   it('places a learner who answers everything at the last band', () => {
     expect(placementResult(perfect).startUnit).toBe(17);
   });
-  it('places a learner who knows nothing at unit 1', () => {
-    expect(placementResult({})).toEqual({ band: 0, startUnit: 1 });
+  it('places a learner who knows nothing at the alphabet unit', () => {
+    expect(placementResult({})).toEqual({ band: 0, startUnit: 0 });
   });
   it('stops at the first band below two thirds', () => {
     const answers = { ...perfect, p7: 'x', p8: 'x' };

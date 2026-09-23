@@ -16,5 +16,5 @@
     "noFallthroughCasesInSwitch": true,
     "types": ["vite/client"]
   },
-  "include": ["src/app", "src/shared", "src/content", "test/unit", "e2e"]
+  "include": ["src/app", "src/shared", "src/content", "src/worker/crypto.ts", "src/worker/migrations.ts", "test/unit", "e2e"]
 }
