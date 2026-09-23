@@ -1,4 +1,5 @@
 export interface Env {
+  /** Absent in Worker Previews, which do not inherit production bindings (see wrangler.jsonc `previews`). */
   DB: D1Database;
   ASSETS: Fetcher;
   /** Worker secret used to pepper password hashes. At least 32 characters. Optional: see crypto.ts. */
