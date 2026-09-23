@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { UNITS } from '../../content/course';
-import { Speak } from '../components/common';
+import { Label, Speak } from '../components/common';
 import { Rosette } from '../components/Rosette';
 import { Mark } from '../components/Shell';
 import { Link, navigate, useTitle } from '../lib/router';
@@ -20,47 +20,52 @@ const CHOICES = [
   {
     id: 'new',
     title: 'Complete beginner',
-    quote: '“I know pierogi and not much else.”',
-    body: 'Start with the sounds of Polish and your first phrases.',
-    colour: 'var(--slonecznik)',
-    unit: 1,
+    quote: '„Znam tylko pierogi.”',
+    gloss: '"I only know pierogi."',
+    body: 'Start with the alphabet and its sounds, then your first words.',
+    colour: 'var(--zolc)',
+    unit: 0,
   },
   {
     id: 'some',
     title: 'I know some basics',
-    quote: '“Cześć, dziękuję, dwa piwa…”',
-    body: 'Take an 18-question placement check, or start at Unit 5.',
-    colour: 'var(--malina)',
+    quote: '„Cześć, dziękuję, dwa piwa…”',
+    gloss: '"Hi, thanks, two beers…"',
+    body: 'Take the 18-question placement check, or start at Unit 5.',
+    colour: 'var(--czerwien)',
     unit: 5,
     placement: true,
   },
   {
     id: 'more',
     title: 'I get by',
-    quote: '“Mówię trochę po polsku.”',
-    body: 'Check your level, or jump straight into the past tense and aspect (A2).',
-    colour: 'var(--kobalt)',
+    quote: '„Mówię trochę po polsku.”',
+    gloss: '"I speak a little Polish."',
+    body: 'Check your level, or go straight to the past tense and aspect (A2).',
+    colour: 'var(--zielen)',
     unit: 11,
     placement: true,
   },
 ];
 
-/** A rosette that cuts itself, one layer at a time, as a preview of what progress looks like. */
+/** A rosette that assembles itself layer by layer: a preview of what progress looks like. */
 function DemoRosette() {
-  const all = UNITS.flatMap((u) => u.lessons.map((l) => l.id));
   const [n, setN] = useState(0);
+  // Seeds first, then one layer at a time around the flower, so it grows symmetrically.
+  const order = [
+    ...(UNITS.find((u) => u.n === 0)?.lessons.map((l) => l.id) ?? []),
+    ...[0, 1, 2].flatMap((layer) => UNITS.filter((u) => u.n > 0).map((u) => u.lessons[layer]?.id)),
+  ].filter(Boolean) as string[];
+  const target = order.length - 6;
   useEffect(() => {
     if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      setN(44);
+      setN(target);
       return;
     }
-    const t = setInterval(() => setN((k) => (k >= 44 ? k : k + 1)), 140);
+    const t = setInterval(() => setN((k) => (k >= target ? k : k + 1)), 90);
     return () => clearInterval(t);
-  }, []);
-  // Cut lesson 1 of every unit, then lesson 2 — so the preview grows symmetrically.
-  const order = [0, 1, 2].flatMap((layer) => UNITS.map((u) => u.lessons[layer]?.id)).filter(Boolean) as string[];
-  const done = new Set(order.slice(0, n));
-  return <Rosette done={done} fresh={order[n - 1]} label={`A sample rosette: ${all.length} lessons make a full wycinanka.`} />;
+  }, [target]);
+  return <Rosette done={new Set(order.slice(0, n))} fresh={order[n - 1]} label="A sample rosette. Every lesson you finish adds a layer to yours." />;
 }
 
 export function Welcome() {
@@ -69,7 +74,7 @@ export function Welcome() {
     markWelcomed();
     if (placement) return navigate('/placement');
     await updateSettings({ startUnit: c.unit });
-    navigate(c.unit === 1 ? '/lesson/u01-l1' : '/learn');
+    navigate(c.unit === 0 ? '/lesson/u00-l1' : '/learn');
   };
 
   return (
@@ -86,19 +91,17 @@ export function Welcome() {
 
       <section className="welcome-hero">
         <div className="stack" style={{ gap: 22 }}>
-          <div className="eyebrow">Polish for English speakers · free</div>
+          <Label pl="po polsku, od podstaw" en="Polish from scratch · free" />
           <h1 lang="pl">Wycinanka</h1>
-          <div>
-            <span className="say-it">
-              <Speak text="wycinanka" label="Hear “wycinanka”" />
-              <span>
-                vi-chi-<b>NAN</b>-ka · the Polish art of paper cutting
-              </span>
+          <span className="say-it">
+            <Speak text="wycinanka" label="Hear “wycinanka”" />
+            <span>
+              <b>vi-chi-NAN-ka</b> — the Polish art of cutting paper
             </span>
-          </div>
+          </span>
           <p className="lede">
-            Learn Polish in five-minute lessons. Every one you finish cuts a new layer into your own paper rosette — until you've made the
-            whole thing.
+            Learn Polish in five-minute lessons. Each one you finish glues another layer onto your own paper rosette, and the words you find
+            hardest keep coming back until they stick.
           </p>
         </div>
         <div style={{ maxWidth: 420, width: '100%', justifySelf: 'center' }}>
@@ -106,24 +109,31 @@ export function Welcome() {
         </div>
       </section>
 
+      <div className="scallop" aria-hidden="true" />
+
       <section className="stack" aria-labelledby="where">
-        <h2 id="where" style={{ fontSize: 30 }}>
-          Where are you starting from?
+        <h2 id="where" style={{ fontSize: 36 }}>
+          <span lang="pl">Od czego zaczynamy?</span>{' '}
+          <small style={{ font: '400 18px var(--font-ui)', color: 'var(--ink-3)' }}>Where are you starting from?</small>
         </h2>
         <div className="levels">
           {CHOICES.map((c) => (
             <div key={c.id} className="level-card">
               <svg className="swatch" viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M12 23C4 16 4 8 12 1c8 7 8 15 0 22Z" fill={c.colour} />
+                <circle cx="12" cy="12" r="2" fill="var(--paper)" />
               </svg>
               <h3>{c.title}</h3>
               <p className="quote" lang="pl">
                 {c.quote}
               </p>
-              <p className="muted">{c.body}</p>
+              <p className="muted" style={{ marginTop: -6, fontSize: 15 }}>
+                {c.gloss}
+              </p>
+              <p>{c.body}</p>
               <div className="row wrap">
-                <button className="btn small" onClick={() => choose(c, !!c.placement)}>
-                  {c.placement ? 'Check my level' : 'Start from the beginning'}
+                <button className={`btn small ${c.id === 'new' ? 'red' : ''}`} onClick={() => choose(c, !!c.placement)}>
+                  {c.placement ? 'Check my level' : 'Start with the alphabet'}
                 </button>
                 {c.placement && (
                   <button className="link-btn" onClick={() => choose(c, false)}>
@@ -138,20 +148,28 @@ export function Welcome() {
 
       <section className="research" aria-label="How Wycinanka teaches">
         <div>
-          <h3>Spaced review</h3>
-          <p>Every word you learn comes back just before you'd forget it, scheduled by FSRS — the same modern algorithm used in Anki.</p>
+          <h3 lang="pl">Powtarzanie</h3>
+          <p>
+            <b>Spaced review.</b> Every word, sentence and grammar point returns just before you'd forget it (FSRS, the scheduler behind Anki). Lessons
+            open with a warm-up from earlier ones, and your trouble spots get their own practice.
+          </p>
         </div>
         <div>
-          <h3>Frequency first</h3>
-          <p>The 100 most common words make up about 43% of everyday spoken Polish. You learn those first.</p>
+          <h3 lang="pl">Najczęstsze słowa</h3>
+          <p>
+            <b>Frequency first.</b> The 100 most common words make up about 43% of everyday spoken Polish. You learn those first.
+          </p>
         </div>
         <div>
-          <h3>Sounds English lacks</h3>
-          <p>Hear the difference between sz, ś and s, and train your ear with minimal pairs like wieś and wiesz.</p>
+          <h3 lang="pl">Wymowa</h3>
+          <p>
+            <b>Sounds first.</b> A phonics unit for the alphabet, respellings you can read on every word, and a pronouncer that explains any word you
+            type.
+          </p>
         </div>
       </section>
 
-      <p className="muted" style={{ fontSize: 14 }}>
+      <p className="muted" style={{ fontSize: 15 }}>
         No account needed to learn. Create a free account any time to save your progress — there's no paid tier.
       </p>
     </main>

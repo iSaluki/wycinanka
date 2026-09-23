@@ -6,6 +6,7 @@ import { speak } from '../lib/speech';
 import { navigate } from '../lib/router';
 import { Build, Choose, Dialogue, Gap, Match, Meet, SpotlightView, TypeAnswer } from './Exercises';
 import { IconClose } from './icons';
+import { Label } from './common';
 
 /**
  * Runs a sequence of exercises: check → feedback → continue. Wrong answers come back once at the end
@@ -18,6 +19,8 @@ export interface SessionResult {
   missed: Set<string>;
   /** Per-card rating from the first attempt (review sessions). */
   ratings: Map<string, { rating: Rating; at: number }>;
+  /** Every first attempt, so callers can separate warm-ups from the lesson itself. */
+  attempts: Array<{ cardId: string; pass: boolean; tag?: 'warmup' }>;
 }
 
 interface Feedback {
@@ -73,7 +76,7 @@ export function Session({
   const [pos, setPos] = useState(0);
   const [answer, setAnswer] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
-  const results = useRef<SessionResult>({ correct: 0, total: 0, missed: new Set(), ratings: new Map() });
+  const results = useRef<SessionResult>({ correct: 0, total: 0, missed: new Set(), ratings: new Map(), attempts: [] });
   const matchMisses = useRef(new Set<string>());
   const started = useRef(Date.now());
   const finished = useRef(false);
@@ -97,9 +100,10 @@ export function Session({
     setPos(pos + 1);
   }, [pos, queue.length, onFinish]);
 
-  const record = (cardId: string, pass: boolean, rating: Rating, retry: boolean) => {
+  const record = (cardId: string, pass: boolean, rating: Rating, retry: boolean, tag?: 'warmup') => {
     if (retry) return;
     const r = results.current;
+    r.attempts.push({ cardId, pass, tag });
     r.total++;
     if (pass) r.correct++;
     else r.missed.add(cardId);
@@ -113,7 +117,7 @@ export function Session({
     const { result, pass, expected, lang } = check(ex, answer);
     const close = result && (result.verdict === 'accent' || result.verdict === 'typo');
     const rating: Rating = !pass ? 1 : close ? 2 : 3;
-    record(ex.cardId, pass, rating, entry.retry);
+    record(ex.cardId, pass, rating, entry.retry, ex.tag);
     if (!pass && !entry.retry) setQueue((q) => [...q, { ex, retry: true, key: q.length }]);
 
     const [pl, en] = PRAISE[Math.floor(Math.random() * PRAISE.length)];
@@ -124,12 +128,15 @@ export function Session({
       note = 'Nearly — check the spelling.';
     } else if (ex.kind === 'gap' && ex.why) {
       note = ex.why;
+    } else if (!pass && 'hint' in ex && ex.hint) {
+      // Mistakes are the best moment to restate the rule or the sound.
+      note = `Tip: ${ex.hint.replace(/[{}]/g, '')}`;
     }
     const showAnswer = !pass || close || ex.kind === 'type' || ex.kind === 'build';
     setFeedback({
       pass,
-      title: pass ? (close ? 'Nearly!' : pl) : 'Not quite',
-      subtitle: pass && !close ? en : undefined,
+      title: pass ? (close ? 'Prawie!' : pl) : 'Niestety',
+      subtitle: pass ? (close ? 'Nearly!' : en) : 'Not quite',
       answer: showAnswer ? expected : undefined,
       answerLang: lang,
       note,
@@ -238,7 +245,7 @@ export function Session({
             </div>
             {feedback.answer && (
               <div>
-                <div className="eyebrow">{feedback.pass ? 'Answer' : 'Correct answer'}</div>
+                <Label pl={feedback.pass ? 'odpowiedź' : 'poprawnie'} en={feedback.pass ? 'answer' : 'correct answer'} />
                 <div className="answer" lang={feedback.answerLang}>
                   {feedback.answer}
                 </div>

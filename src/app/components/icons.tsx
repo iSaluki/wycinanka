@@ -111,3 +111,12 @@ export const IconArrow = (p: P) => (
     <path d="M5 12h14M13 6l6 6-6 6" />
   </svg>
 );
+
+/** Scissors: the wycinanka tool, used for the Tools section. */
+export const IconTools = (p: P) => (
+  <svg {...base} {...p}>
+    <circle cx="6" cy="18" r="3" />
+    <circle cx="18" cy="18" r="3" />
+    <path d="M8.2 16 18 3M15.8 16 6 3" />
+  </svg>
+);

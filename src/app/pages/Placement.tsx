@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { UNITS } from '../../content/course';
 import { BANDS, bandFailed, PLACEMENT, placementResult } from '../../content/placement';
 import { IconClose } from '../components/icons';
+import { Label } from '../components/common';
 import { navigate, useTitle } from '../lib/router';
 import { updateSettings } from '../lib/store';
 import { markWelcomed } from './Welcome';
@@ -40,22 +41,20 @@ export function Placement() {
       <main className="player">
         <div />
         <div className="finish">
-          <div className="eyebrow">Placement result</div>
+          <Label pl="wynik" en="placement result" />
           <h1>Start at Unit {unit.n}</h1>
           <p className="muted" style={{ maxWidth: '46ch' }}>
             You answered {right} of {Object.keys(answers).length} correctly.{' '}
             {band ? `Your next step is “${band.label}”.` : 'You know everything this course covers — start at B1 to keep it fresh.'} Earlier
             units stay open, so you can dip back any time.
           </p>
-          <div className="card" style={{ textAlign: 'left', maxWidth: 460, width: '100%' }}>
-            <div className="eyebrow">
-              Unit {unit.n} · {unit.level}
-            </div>
+          <div style={{ textAlign: 'left', maxWidth: 460, width: '100%', borderTop: '1.5px solid var(--ink)', paddingTop: 16 }}>
+            <Label pl={unit.titlePl} en={`Unit ${unit.n} · ${unit.level}`} />
             <h2 style={{ fontSize: 26, margin: '6px 0' }}>{unit.title}</h2>
             <p className="muted">{unit.summary}</p>
           </div>
           <div className="row wrap" style={{ justifyContent: 'center' }}>
-            <button className="btn" onClick={() => accept(unit.n)}>
+            <button className="btn red" onClick={() => accept(unit.n)}>
               Start at Unit {unit.n}
             </button>
             <button className="btn quiet" onClick={() => accept(1)}>

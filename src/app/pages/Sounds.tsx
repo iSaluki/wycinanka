@@ -1,10 +1,12 @@
 import { useState } from 'react';
+import { ALPHABET, DIGRAPHS, NOT_NATIVE } from '../../content/alphabet';
 import { MINIMAL_PAIRS, SOUND_GROUPS, TONGUE_TWISTERS } from '../../content/sounds';
-import { PageHead, Speak, usePolishVoice } from '../components/common';
+import { respell } from '../../shared/phonetics';
+import { Label, PageHead, SectionHead, Speak, usePolishVoice } from '../components/common';
 import { IconPlay } from '../components/icons';
 import { Shell } from '../components/Shell';
 import { shuffle } from '../lib/exercises';
-import { useTitle } from '../lib/router';
+import { Link, useTitle } from '../lib/router';
 import { speak } from '../lib/speech';
 
 function PairGame() {
@@ -33,22 +35,30 @@ function PairGame() {
   return (
     <section className="pair-game" aria-labelledby="pairs">
       <div className="row between wrap">
-        <div>
-          <div className="eyebrow">Ear training · {pair.contrast}</div>
-          <h2 id="pairs" style={{ fontSize: 28 }}>
+        <div className="stack" style={{ gap: 4 }}>
+          <Label pl="ćwiczenie ucha" en={`ear training · ${pair.contrast}`} />
+          <h2 id="pairs" style={{ fontSize: 30 }}>
             Which word do you hear?
           </h2>
         </div>
-        <span aria-live="polite">
+        <span aria-live="polite" style={{ font: '700 26px var(--font-pl)' }}>
           {score.right}/{score.total}
         </span>
       </div>
-      {!has && <p>Your device has no Polish voice, so this game can't play audio. The sound cards below still show how each sound is made.</p>}
+      {!has && (
+        <p>
+          This device has no Polish voice, so the game can't play audio. Read the respellings instead:{' '}
+          <b>
+            {pair.a[0]} = “{respell(pair.a[0])}”, {pair.b[0]} = “{respell(pair.b[0])}”
+          </b>
+          .
+        </p>
+      )}
       <div className="row">
         <button className="big-play" onClick={() => speak(word)} disabled={!has} aria-label="Play the word">
           <IconPlay />
         </button>
-        <button className="btn small quiet" onClick={() => speak(word, { slow: true })} disabled={!has}>
+        <button className="btn small" style={{ background: 'var(--paper)', color: 'var(--ink)' }} onClick={() => speak(word, { slow: true })} disabled={!has}>
           Slower
         </button>
       </div>
@@ -58,7 +68,8 @@ function PairGame() {
           return (
             <button key={side} className={`option pl-opt ${state}`} onClick={() => pick(side)} lang="pl">
               <span>
-                {pair[side][0]} <span className="muted" style={{ fontFamily: 'var(--font-ui)', fontSize: 14 }} lang="en">
+                {pair[side][0]}{' '}
+                <span className="muted" style={{ fontFamily: 'var(--font-ui)', fontSize: 15 }} lang="en">
                   — {pair[side][1]}
                 </span>
               </span>
@@ -68,11 +79,11 @@ function PairGame() {
       </div>
       {picked && (
         <div className="row between wrap">
-          <p>{picked === target ? 'Dobrze! You heard it.' : `It was ${word}. Listen to both again, then try the next one.`}</p>
+          <p>{picked === target ? 'Dobrze! You heard it.' : `It was ${word}. Listen to both again.`}</p>
           <div className="row">
             <Speak text={pair.a[0]} label={`Play ${pair.a[0]}`} />
             <Speak text={pair.b[0]} label={`Play ${pair.b[0]}`} />
-            <button className="btn small" onClick={next}>
+            <button className="btn small red" onClick={next}>
               Next pair
             </button>
           </div>
@@ -82,35 +93,98 @@ function PairGame() {
   );
 }
 
+function AlphabetChart() {
+  const [sel, setSel] = useState<string | null>(null);
+  const letter = ALPHABET.find((l) => l.lower === sel);
+  const say = (l: (typeof ALPHABET)[number]) => {
+    setSel(l.lower);
+    speak(`${l.name}. ${l.example[0]}`);
+  };
+  return (
+    <section className="stack" aria-labelledby="abc">
+      <SectionHead pl="Alfabet" en="32 letters — tap one to hear its name" />
+      <div className="alphabet" role="group" aria-label="The Polish alphabet">
+        {ALPHABET.map((l) => (
+          <button key={l.lower} className={`letter ${l.special ? 'special' : ''}`} aria-pressed={sel === l.lower} onClick={() => say(l)} lang="pl">
+            <span className="glyph">
+              {l.upper}
+              {l.lower}
+            </span>
+            <span className="name">{l.name}</span>
+            <span className="snd" lang="en">
+              {l.sound}
+            </span>
+          </button>
+        ))}
+      </div>
+      <div aria-live="polite">
+        {letter ? (
+          <p style={{ fontSize: 18 }}>
+            <b className="pl" lang="pl" style={{ fontSize: 24 }}>
+              {letter.upper}
+            </b>{' '}
+            is called <i className="pl">„{letter.name}”</i> and sounds like {letter.sound}:{' '}
+            <span className="pl" lang="pl" style={{ fontSize: 22 }}>
+              {letter.example[0]}
+            </span>{' '}
+            <span className="say">“{respell(letter.example[0])}”</span> — {letter.example[1]}.
+          </p>
+        ) : (
+          <p className="muted">Letters in red don't exist in English. {NOT_NATIVE}</p>
+        )}
+      </div>
+      <SectionHead pl="Dwuznaki" en="letter pairs that make one sound" />
+      <div className="sound-grid">
+        {DIGRAPHS.map((d) => (
+          <button key={d.spelling} className="sound" onClick={() => speak(d.example[0])}>
+            <span className="spell" lang="pl">
+              {d.spelling}
+            </span>
+            <span className="like">{d.sound}</span>
+            <span className="ex" lang="pl">
+              {d.example[0]} <span className="say">“{respell(d.example[0])}”</span>
+            </span>
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export function Sounds() {
-  useTitle('Sounds');
+  useTitle('Pronunciation');
   const has = usePolishVoice();
   const same = MINIMAL_PAIRS.find((p) => p.same)!;
   return (
     <Shell>
       <div className="stack-lg">
-        <PageHead eyebrow="Pronunciation" title="The sounds of Polish">
-          Polish spelling is regular: once you know these, you can read any word aloud. Tap a card to hear its examples.
+        <PageHead pl="Wymowa" en="Pronunciation">
+          Polish spelling is regular: learn which letters make which sounds and you can read any word aloud. New to the letters? The{' '}
+          <Link to="/lesson/u00-l1">Alphabet &amp; phonics unit</Link> teaches them step by step, and the{' '}
+          <Link to="/tools">pronouncer</Link> reads out anything you type.
         </PageHead>
         {!has && (
           <div className="banner">
             <p>
               No Polish voice was found on this device, so audio is off. On Windows add Polish under Settings → Time &amp; language → Speech; on
-              macOS and iOS, under Accessibility → Spoken content → Voices; on Android, in Text-to-speech settings.
+              macOS and iOS under Accessibility → Spoken content → Voices; on Android in Text-to-speech settings. Respellings are shown
+              everywhere in the meantime.
             </p>
           </div>
         )}
+
+        <AlphabetChart />
 
         <PairGame />
 
         {SOUND_GROUPS.map((g) => (
           <section key={g.id} className="stack" aria-labelledby={`g-${g.id}`}>
-            <div>
-              <h2 id={`g-${g.id}`} style={{ fontSize: 26 }}>
-                {g.title}
-              </h2>
-              <p className="muted">{g.note}</p>
+            <div className="section-head">
+              <h2 id={`g-${g.id}`}>{g.title}</h2>
             </div>
+            <p className="muted" style={{ marginTop: -4 }}>
+              {g.note}
+            </p>
             <div className="sound-grid">
               {g.sounds.map((s) => (
                 <button
@@ -133,17 +207,17 @@ export function Sounds() {
           </section>
         ))}
 
-        <section className="card stack">
-          <h2 style={{ fontSize: 24 }}>Same sound, different spelling</h2>
+        <section className="stack">
+          <SectionHead pl="Ten sam dźwięk" en="same sound, different spelling" />
           <p>
-            <span className="pl" lang="pl">
+            <span className="pl" lang="pl" style={{ fontSize: 22 }}>
               {same.a[0]}
             </span>{' '}
             ({same.a[1]}) and{' '}
-            <span className="pl" lang="pl">
+            <span className="pl" lang="pl" style={{ fontSize: 22 }}>
               {same.b[0]}
             </span>{' '}
-            ({same.b[1]}) sound identical: rz and ż are the same sound. Only spelling tells them apart, so learn each word's spelling as you meet it.
+            ({same.b[1]}) sound identical: rz and ż are one sound. Only the spelling tells them apart, so learn each word's spelling as you meet it.
           </p>
           <div className="row">
             <Speak text={same.a[0]} label={`Play ${same.a[0]}`} />
@@ -152,18 +226,16 @@ export function Sounds() {
         </section>
 
         <section className="stack" aria-labelledby="tw">
-          <h2 id="tw" style={{ fontSize: 26 }}>
-            Tongue twisters
-          </h2>
+          <SectionHead pl="Łamańce językowe" en="tongue twisters" />
           <p className="muted">Poles use these on each other too. Start slowly.</p>
           {TONGUE_TWISTERS.map(([pl, en]) => (
-            <div key={pl} className="card example">
+            <div key={pl} className="example" style={{ alignItems: 'flex-start' }}>
               <Speak text={pl} slow />
-              <Speak text={pl} />
               <div>
-                <div className="pl" lang="pl" style={{ fontSize: 22 }}>
+                <div className="pl" lang="pl" style={{ fontSize: 24 }}>
                   {pl}
                 </div>
+                <div className="say">{respell(pl)}</div>
                 <div className="muted">{en}</div>
               </div>
             </div>

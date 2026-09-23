@@ -3,7 +3,7 @@ import { TOTAL_LESSONS } from '../../content/course';
 import { addDays, localDay } from '../../shared/progress';
 import { passwordProblem, PASSWORD_MESSAGES } from '../../shared/password';
 import type { Settings } from '../../shared/schemas';
-import { PageHead, Speak, usePolishVoice } from '../components/common';
+import { PageHead, SectionHead, Speak, usePolishVoice } from '../components/common';
 import { Shell } from '../components/Shell';
 import { ApiError } from '../lib/api';
 import { useStats } from '../lib/derived';
@@ -41,10 +41,8 @@ function SettingsCard() {
   const goal = s.dailyGoal ?? DEFAULT_SETTINGS.dailyGoal;
   const rate = s.speechRate ?? DEFAULT_SETTINGS.speechRate;
   return (
-    <section className="card stack" aria-labelledby="settings">
-      <h2 id="settings" style={{ fontSize: 24 }}>
-        Settings
-      </h2>
+    <section className="stack" aria-labelledby="settings">
+      <SectionHead pl="Ustawienia" en="settings" />
       <div className="field">
         <span id="goal-l" style={{ fontWeight: 700 }}>
           Daily goal
@@ -145,10 +143,8 @@ function AccountCard() {
 
   return (
     <>
-      <section className="card stack" aria-labelledby="pw">
-        <h2 id="pw" style={{ fontSize: 24 }}>
-          Change password
-        </h2>
+      <section className="stack" aria-labelledby="pw">
+        <SectionHead pl="Hasło" en="change password" />
         <form className="form" onSubmit={submitPassword}>
           <input type="text" autoComplete="username" value={user.username} readOnly hidden />
           <div className="field">
@@ -173,10 +169,8 @@ function AccountCard() {
         </form>
       </section>
 
-      <section className="card stack" aria-labelledby="data">
-        <h2 id="data" style={{ fontSize: 24 }}>
-          Your data
-        </h2>
+      <section className="stack" aria-labelledby="data">
+        <SectionHead pl="Twoje dane" en="your data" />
         <p className="muted">Download everything stored about you as a JSON file.</p>
         <div className="row wrap">
           <button className="btn quiet" onClick={() => downloadExport().catch((e) => alert(e.message))}>
@@ -188,10 +182,8 @@ function AccountCard() {
         </div>
       </section>
 
-      <section className="card stack danger-zone" aria-labelledby="del">
-        <h2 id="del" style={{ fontSize: 24 }}>
-          Delete account
-        </h2>
+      <section className="stack" aria-labelledby="del">
+        <SectionHead pl="Usuń konto" en="delete account" />
         <p className="muted">This permanently removes your account, progress and review deck. It can't be undone.</p>
         {confirmDelete ? (
           <form className="form" onSubmit={submitDelete}>
@@ -230,7 +222,7 @@ export function Profile() {
   return (
     <Shell>
       <div className="stack-lg">
-        <PageHead eyebrow={user ? 'Your account' : 'Guest'} title={user ? user.username : 'Learning as a guest'}>
+        <PageHead pl={user ? user.username : 'Gość'} en={user ? 'Your profile' : 'Learning as a guest'}>
           {user
             ? `Learning since ${new Date(user.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}.`
             : "Your progress is kept only until you close this tab. Create a free account to save it — everything from this visit comes with you."}
@@ -265,10 +257,8 @@ export function Profile() {
             <span>cards in review</span>
           </div>
         </div>
-        <section className="card stack" aria-labelledby="act">
-          <h2 id="act" style={{ fontSize: 24 }}>
-            Activity
-          </h2>
+        <section className="stack" aria-labelledby="act">
+          <SectionHead pl="Aktywność" en="the last 15 weeks" />
           <Heatmap />
         </section>
         <SettingsCard />

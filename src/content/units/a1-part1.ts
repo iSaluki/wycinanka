@@ -3,9 +3,9 @@ import { lesson, unit } from '../build';
 export const u01 = unit(
   1,
   'A1',
-  'Sounds of Polish',
-  'Dźwięki',
-  'Polish is spelt the way it sounds. Learn the letters that trip English speakers up and you can read anything aloud.',
+  'First words',
+  'Pierwsze słowa',
+  'Put the sounds to work: read, hear and say your first Polish words.',
   [
     lesson('u01-l1', 'Vowels and friendly letters', 'Read short words aloud: vowels, w, j and c.', {
       items: [

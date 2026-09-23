@@ -27,7 +27,7 @@ export const deleteAccountSchema = z.object({ password: z.string().min(1).max(PA
 
 export const settingsSchema = z
   .object({
-    startUnit: z.number().int().min(1).max(18).optional(),
+    startUnit: z.number().int().min(0).max(18).optional(),
     placementBand: z.number().int().min(0).max(6).optional(),
     dailyGoal: z.union([z.literal(10), z.literal(20), z.literal(30), z.literal(50)]).optional(),
     speechRate: z.number().min(0.5).max(1.3).optional(),

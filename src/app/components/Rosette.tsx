@@ -1,83 +1,84 @@
 import { UNITS } from '../../content/course';
 
 /**
- * Twoja wycinanka — the learner's paper-cut rosette.
- * One petal per unit (18, like a folk "gwiazda"); each petal has three layered leaves, one per lesson,
- * from the small inner leaf (lesson 1, sunflower) to the large back leaf (lesson 3, cobalt).
- * Unfinished lessons are drawn as dashed pencil lines waiting to be cut.
+ * Twoja wycinanka — the learner's paper-cut rosette, built like a Łowicz wycinanka:
+ * a black paper base with coloured layers glued on top.
+ * One petal per course unit (1–18); each finished lesson glues on one coloured layer, from the
+ * large back leaf (lesson 1, green)… to the small front leaf (lesson 3, yellow). The six phonics
+ * lessons of Unit 0 are the seeds around the centre.
  */
 
 const C = 200;
-const R0 = 46;
+const R0 = 48;
+// Back to front: the largest leaf is glued first.
 const LAYERS = [
-  { tip: 196, width: 30 }, // lesson 3 — back, largest
-  { tip: 164, width: 22 }, // lesson 2
-  { tip: 128, width: 14 }, // lesson 1 — front, smallest
+  { tip: 186, width: 26, cls: 'l3' },
+  { tip: 156, width: 19, cls: 'l2' },
+  { tip: 124, width: 12, cls: 'l1' },
 ];
+const BASE = { tip: 198, width: 33 };
 
-function leafPath(tip: number, w: number): string {
-  const mid = (R0 + tip) / 2;
-  return `M0 ${-R0} C ${w} ${-mid + 8}, ${w * 0.7} ${-tip + 14}, 0 ${-tip} C ${-w * 0.7} ${-tip + 14}, ${-w} ${-mid + 8}, 0 ${-R0} Z`;
+function leafPath(tip: number, w: number, r0 = R0): string {
+  const mid = (r0 + tip) / 2;
+  return `M0 ${-r0} C ${w} ${-mid + 8}, ${w * 0.7} ${-tip + 14}, 0 ${-tip} C ${-w * 0.7} ${-tip + 14}, ${-w} ${-mid + 8}, 0 ${-r0} Z`;
 }
 
 interface Props {
   done: Set<string>;
   /** Lesson to highlight as "cut next". */
   next?: string;
-  /** Lesson that was just completed: its leaf unfolds. */
+  /** Lesson just completed: its layer unfolds. */
   fresh?: string;
-  size?: number;
   label?: string;
 }
 
 export function Rosette({ done, next, fresh, label }: Props) {
-  const n = UNITS.length;
+  const units = UNITS.filter((u) => u.n > 0);
+  const phonics = UNITS.find((u) => u.n === 0)?.lessons ?? [];
+  const n = units.length;
   const total = UNITS.reduce((s, u) => s + u.lessons.length, 0);
-  const count = [...done].filter((id) => UNITS.some((u) => u.lessons.some((l) => l.id === id))).length;
-  const scallops = Array.from({ length: 16 }, (_, i) => i);
+  const count = UNITS.flatMap((u) => u.lessons).filter((l) => done.has(l.id)).length;
 
   return (
-    <svg
-      className="rosette"
-      viewBox="0 0 400 400"
-      role="img"
-      aria-label={label ?? `Your paper-cut rosette: ${count} of ${total} lessons cut.`}
-    >
+    <svg className="rosette" viewBox="0 0 400 400" role="img" aria-label={label ?? `Your paper-cut rosette: ${count} of ${total} lessons done.`}>
       <g transform={`translate(${C} ${C})`}>
-        {UNITS.map((u, i) => (
+        {/* Black paper base */}
+        {units.map((u, i) => (
+          <path key={u.id} className="base" d={leafPath(BASE.tip, BASE.width, 30)} transform={`rotate(${(360 / n) * i})`} />
+        ))}
+        <circle className="base" r="56" />
+
+        {/* Coloured layers, one per finished lesson (lesson 1 is the back layer) */}
+        {units.map((u, i) => (
           <g key={u.id} transform={`rotate(${(360 / n) * i})`}>
-            {[2, 1, 0].map((lessonIdx, layer) => {
-              const lesson = u.lessons[lessonIdx];
+            {LAYERS.map((layer, k) => {
+              const lesson = u.lessons[k];
               if (!lesson) return null;
-              const { tip, width } = LAYERS[layer];
               const isDone = done.has(lesson.id);
-              const cls = ['leaf', isDone ? `l${lessonIdx + 1}` : 'uncut', lesson.id === next ? 'next' : '', lesson.id === fresh ? 'fresh' : '']
+              const isNext = lesson.id === next && !isDone;
+              if (!isDone && !isNext) return null;
+              const cls = ['leaf', isDone ? layer.cls : 'uncut', isNext ? 'next' : '', lesson.id === fresh ? 'fresh' : '']
                 .filter(Boolean)
                 .join(' ');
-              return (
-                <g key={lesson.id}>
-                  <path className={cls} d={leafPath(tip, width)} />
-                  {isDone && lessonIdx === 2 && <circle className="hole" cx="0" cy={-(tip - 22)} r="3.2" />}
-                  {isDone && lessonIdx === 1 && <circle className="hole" cx="0" cy={-(tip - 16)} r="2.4" />}
-                </g>
-              );
+              return <path key={lesson.id} className={cls} d={leafPath(layer.tip, layer.width)} />;
             })}
+            {/* Holes cut through every layer, as in real wycinanki */}
+            <circle className="hole" cx="0" cy="-172" r="3.2" />
+            <circle className="hole" cx="0" cy="-141" r="2.4" />
           </g>
         ))}
-        {scallops.map((i) => (
-          <circle key={i} className="centre-ring" r="8" transform={`rotate(${22.5 * i}) translate(0 -38)`} />
+
+        {/* Centre: red disc with the six phonics lessons as seeds */}
+        <circle className="centre" r="34" />
+        {phonics.map((l, i) => (
+          <circle
+            key={l.id}
+            className={`seed ${done.has(l.id) ? 'on' : ''}`}
+            r="5.5"
+            transform={`rotate(${(360 / phonics.length) * i}) translate(0 -18)`}
+          />
         ))}
-        <circle className="centre-ring" r="38" />
-        <circle className="centre" r="27" />
-        <text
-          textAnchor="middle"
-          dominantBaseline="central"
-          fill="var(--paper)"
-          style={{ font: '700 22px var(--font-pl)' }}
-          aria-hidden="true"
-        >
-          {count}
-        </text>
+        <circle className="hole" r="5" />
       </g>
     </svg>
   );

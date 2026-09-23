@@ -13,6 +13,8 @@ import { Review } from './pages/Review';
 import { Sounds } from './pages/Sounds';
 import { Welcome, WELCOME_KEY } from './pages/Welcome';
 import { Words } from './pages/Words';
+import { Tools } from './pages/Tools';
+import { Practice } from './pages/Practice';
 import { Mark } from './components/Shell';
 
 function welcomed(): boolean {
@@ -52,6 +54,9 @@ export function App() {
 
   const lesson = match('/lesson/:id', path);
   if (lesson) return <LessonPage key={lesson.id} id={lesson.id} />;
+  const practice = match('/practice/:kind/:id', path);
+  if (practice) return <Practice key={path} kind={practice.kind} id={practice.id} />;
+  if (path === '/tools' || match('/tools/:id', path)) return <Tools />;
 
   switch (path) {
     case '/':
