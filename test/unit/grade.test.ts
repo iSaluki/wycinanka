@@ -1,0 +1,51 @@
+import { describe, expect, it } from 'vitest';
+import { grade, levenshtein, normalise, stripDiacritics } from '../../src/shared/grade';
+
+describe('grade (Polish)', () => {
+  it('accepts exact answers ignoring case, punctuation and extra spaces', () => {
+    expect(grade('  poproszę   KAWĘ ', ['Poproszę kawę.'], 'pl').verdict).toBe('correct');
+  });
+
+  it('accepts alternative answers', () => {
+    expect(grade('dziś', ['dzisiaj', 'dziś'], 'pl')).toMatchObject({ verdict: 'correct', expected: 'dziś' });
+  });
+
+  it('flags missing diacritics and names the letters', () => {
+    const r = grade('dziekuje', ['dziękuję'], 'pl');
+    expect(r.verdict).toBe('accent');
+    expect(r.accents).toEqual([['ę', 'e']]);
+    expect(grade('mały', ['mały'], 'pl').verdict).toBe('correct');
+    expect(grade('maly', ['mały'], 'pl').accents).toEqual([['ł', 'l']]);
+  });
+
+  it('forgives one slip in longer words but not in short ones', () => {
+    expect(grade('przeprasam', ['przepraszam'], 'pl').verdict).toBe('typo');
+    expect(grade('kod', ['kot'], 'pl').verdict).toBe('wrong');
+  });
+
+  it('marks unrelated answers wrong and reports the expected answer', () => {
+    expect(grade('herbata', ['kawa'], 'pl')).toMatchObject({ verdict: 'wrong', expected: 'kawa' });
+    expect(grade('', ['kawa'], 'pl').verdict).toBe('wrong');
+  });
+});
+
+describe('grade (English)', () => {
+  it('ignores articles and common contractions', () => {
+    expect(grade('the bill', ['bill'], 'en').verdict).toBe('correct');
+    expect(grade("I'm cold", ['I am cold.'], 'en').verdict).toBe('correct');
+    expect(grade('a coffee with milk please', ['A coffee with milk, please.'], 'en').verdict).toBe('correct');
+  });
+});
+
+describe('helpers', () => {
+  it('normalises typographic quotes and punctuation', () => {
+    expect(normalise('„Dzień dobry!”')).toBe('dzień dobry');
+  });
+  it('strips every Polish diacritic', () => {
+    expect(stripDiacritics('ąćęłńóśźż')).toBe('acelnoszz');
+  });
+  it('computes edit distance', () => {
+    expect(levenshtein('kot', 'kod')).toBe(1);
+    expect(levenshtein('', 'abc')).toBe(3);
+  });
+});

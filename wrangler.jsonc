@@ -1,0 +1,30 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "wycinanka",
+  "main": "src/worker/index.ts",
+  "compatibility_date": "2026-08-15",
+  "observability": { "enabled": true },
+  // Daily clean-up of expired sessions and throttle counters.
+  "triggers": { "crons": ["17 3 * * *"] },
+  "assets": {
+    "directory": "./dist/client",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "wycinanka",
+      // Replace with the id printed by `npx wrangler d1 create wycinanka`.
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "vars": {
+    // PBKDF2 work factor. 30,000 keeps sign-in inside the free plan's ~10 ms CPU budget.
+    // On the paid plan raise it to 100,000 (the Workers maximum); hashes upgrade on next sign-in.
+    "PBKDF2_ITERATIONS": "30000"
+  }
+  // Secret (not committed): PEPPER — set with `npx wrangler secret put PEPPER`.
+}
