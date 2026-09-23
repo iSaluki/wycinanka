@@ -86,7 +86,7 @@ Add the `.sql` file to `migrations/` **and** the same text to `src/worker/migrat
 
 The free plan limits each request to about 10 ms of CPU, so `PBKDF2_ITERATIONS` in `wrangler.jsonc` defaults to 30,000. On the paid plan, raise it to 100,000 (the Workers maximum). Existing password hashes are upgraded automatically the next time each user signs in.
 
-A daily Cron Trigger removes expired sessions and stale sign-in throttling rows.
+Expired sessions and stale sign-in throttling rows are removed at most once an hour, in the background of normal API requests. No Cron Trigger is used, because the free plan allows only five per account.
 
 ## Security
 

@@ -7,8 +7,6 @@
   "build": { "command": "npm run build" },
   "routes": [{ "pattern": "polish.saluki.cloud", "custom_domain": true }],
   "observability": { "enabled": true },
-  // Daily clean-up of expired sessions and throttle counters.
-  "triggers": { "crons": ["17 3 * * *"] },
   "assets": {
     "directory": "./dist/client",
     "binding": "ASSETS",
