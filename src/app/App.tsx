@@ -15,6 +15,7 @@ import { Welcome, WELCOME_KEY } from './pages/Welcome';
 import { Words } from './pages/Words';
 import { Tools } from './pages/Tools';
 import { Practice } from './pages/Practice';
+import { Pictures } from './pages/Pictures';
 import { Mark } from './components/Shell';
 
 function welcomed(): boolean {
@@ -71,6 +72,8 @@ export function App() {
       return <Review />;
     case '/words':
       return <Words />;
+    case '/pictures':
+      return <Pictures />;
     case '/sounds':
       return <Sounds />;
     case '/grammar':

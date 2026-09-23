@@ -7,6 +7,7 @@ A free Polish course for British English speakers, from complete beginner to B1.
 - **60 lessons in 19 units** (A0–B1), starting with an alphabet and phonics unit, then greetings, the seven cases, verb groups, aspect, past, future and conditional
 - **Reinforcement, not one-off teaching**: FSRS spaced review (the algorithm used in Anki) for every word, sentence and grammar drill; each lesson opens with a warm-up from earlier ones; trouble spots by skill, a "tricky words" list and unit revision target what you get wrong most
 - **The 500 most frequent words**, learnt in batches of eight
+- **Picture flashcards**: 72 everyday objects in nine themed decks. Meet each picture with its Polish and English name, then name it from four Polish words; learnt pictures come back on the spaced-review schedule. Images are [Twemoji](https://github.com/jdecked/twemoji) (CC BY 4.0), self-hosted in `public/pictures`
 - **Sounds**: an alphabet chart, English-style respellings on every word (*VRO-tswaf*) and a minimal-pair listening game (*wieś / wiesz*)
 - **Tools** outside the course: a pronouncer (type *cz* or any word and see how to say it and why), Polish numbers and prices, telling the time, and a phrasebook
 - **Grammar reference**: the seven cases, a declension explorer and every lesson's grammar notes

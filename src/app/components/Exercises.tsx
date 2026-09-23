@@ -44,19 +44,26 @@ export function Choose({ ex, locked, onAnswer, checked }: AnswerProps<Of<'choose
   return (
     <>
       <Instruction tag={ex.tag}>{instruction}</Instruction>
-      <div className="prompt-row">
-        {ex.promptLang === 'pl' && <Speak text={ex.prompt} autoPlay={ex.audio} />}
-        {ex.audio && <Speak text={ex.prompt} slow />}
-        {hidePrompt ? (
-          <span className="muted">Tap to hear it again</span>
-        ) : ex.audio && !hasVoice && !checked && ex.fallback ? (
-          <span className="prompt-en">{ex.fallback}</span>
-        ) : (
-          <span className={ex.promptLang === 'pl' ? 'prompt-pl' : 'prompt-en'} lang={ex.promptLang}>
-            {ex.prompt}
-          </span>
-        )}
-      </div>
+      {ex.image ? (
+        <figure className="picture-prompt">
+          <img src={ex.image} alt={ex.prompt} width={220} height={220} draggable={false} />
+          {checked && <figcaption>{ex.prompt}</figcaption>}
+        </figure>
+      ) : (
+        <div className="prompt-row">
+          {ex.promptLang === 'pl' && <Speak text={ex.prompt} autoPlay={ex.audio} />}
+          {ex.audio && <Speak text={ex.prompt} slow />}
+          {hidePrompt ? (
+            <span className="muted">Tap to hear it again</span>
+          ) : ex.audio && !hasVoice && !checked && ex.fallback ? (
+            <span className="prompt-en">{ex.fallback}</span>
+          ) : (
+            <span className={ex.promptLang === 'pl' ? 'prompt-pl' : 'prompt-en'} lang={ex.promptLang}>
+              {ex.prompt}
+            </span>
+          )}
+        </div>
+      )}
       <div className={`options ${ex.options.every((o) => o.length < 24) ? 'grid-2' : ''}`} role="group" aria-label="Answers">
         {ex.options.map((o, i) => {
           const state = checked ? (o === ex.answer ? 'right' : o === picked ? 'wrong' : '') : '';
@@ -341,7 +348,7 @@ export function Meet({ items, onDone }: { items: Item[]; onDone: () => void }) {
           <span lang="pl" className="pl" style={{ fontStyle: 'italic', color: 'var(--czerwien)' }}>
             nowe
           </span>{' '}
-          {items[0]?.ex ? 'New sounds' : 'New words'} · {i + 1} of {items.length}
+          {items[0]?.ex ? 'New sounds' : items[0]?.img ? 'New pictures' : 'New words'} · {i + 1} of {items.length}
         </div>
         <div className="dots" aria-hidden="true">
           {items.map((_, k) => (
@@ -349,7 +356,8 @@ export function Meet({ items, onDone }: { items: Item[]; onDone: () => void }) {
           ))}
         </div>
       </div>
-      <article className="meet-card" key={item.id}>
+      <article className={`meet-card ${item.img ? 'with-picture' : ''}`} key={item.id}>
+        {item.img && <img className="meet-picture" src={item.img} alt="" width={200} height={200} draggable={false} />}
         {item.g && <span className="gender">{GENDER_LABEL[item.g]}</span>}
         <span className="word" lang="pl">
           {item.pl}

@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { PICTURE_DECKS } from '../src/content/pictures';
 import { PLACEMENT } from '../src/content/placement';
 import { solveLesson } from './helpers';
 
@@ -128,4 +129,40 @@ test('the second lesson opens with a warm-up from the first', async ({ page }) =
   await expect(page.locator('.tag-warmup').first()).toBeVisible();
   await solveLesson(page, 'u00-l2');
   await expect(page.locator('.finish-stats')).toContainText('100%');
+});
+
+test('picture flashcards: meet a deck, then name each picture from four Polish words', async ({ page }) => {
+  const deck = PICTURE_DECKS[0];
+  const byEn = new Map(deck.pictures.map((p) => [p.en, p]));
+  await page.goto('/pictures');
+  await expect(page.getByRole('heading', { name: 'Obrazki', level: 1 })).toBeVisible();
+  await page.getByRole('button', { name: `Learn ${deck.pictures.length} new pictures` }).click();
+
+  // First meeting: picture, Polish and English together.
+  for (let i = 0; i < deck.pictures.length; i++) {
+    const card = page.locator('.meet-card');
+    await expect(card.locator('img.meet-picture')).toBeVisible();
+    const pl = (await card.locator('.word').textContent())!.trim();
+    const en = (await card.locator('.en').textContent())!.trim();
+    expect(byEn.get(en)?.pl).toBe(pl);
+    await page.getByRole('button', { name: i === deck.pictures.length - 1 ? 'Start practising' : 'Next word' }).click();
+  }
+
+  // Quiz: only the picture is shown; choose its Polish name.
+  for (let i = 0; i < deck.pictures.length; i++) {
+    const img = page.locator('.picture-prompt img');
+    await expect(img).toBeVisible();
+    const picture = byEn.get((await img.getAttribute('alt'))!)!;
+    expect(await img.getAttribute('src')).toBe(picture.img);
+    const options = page.locator('.options button.option');
+    await expect(options).toHaveCount(4);
+    await options.filter({ hasText: picture.pl }).click();
+    await page.getByRole('button', { name: 'Check' }).click();
+    await expect(page.locator('.sheet.good')).toBeVisible();
+    await page.getByRole('button', { name: 'Continue' }).click();
+  }
+
+  await expect(page.getByText(`Added ${deck.pictures.length} pictures to your review deck`)).toBeVisible();
+  await expect(page.getByRole('button', { name: `Practise ${deck.pictures.length}` })).toBeVisible();
+  await expect(page.locator('.picture-grid li.known')).toHaveCount(deck.pictures.length);
 });

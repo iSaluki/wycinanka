@@ -271,6 +271,9 @@ describe('progress', () => {
     expect(bad.status).toBe(400);
     const junk = await c.call('POST', '/api/progress/reviews', { day: today, reviews: [{ cardId: 'u01-l1:nonexistent', rating: 3, at }] });
     expect(junk.status).toBe(400);
+    const picture = await c.call('POST', '/api/progress/reviews', { day: today, reviews: [{ cardId: 'pic-apple', rating: 3, at }] });
+    expect(picture.status).toBe(200);
+    expect(picture.json.cards[0].cardId).toBe('pic-apple');
   });
 
   it('keeps each learner\'s progress private', async () => {

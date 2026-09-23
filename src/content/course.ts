@@ -4,6 +4,7 @@ import { u06, u07, u08, u09, u10 } from './units/a1-part2';
 import { u11, u12, u13, u14, u15, u16 } from './units/a2';
 import { u17, u18 } from './units/b1';
 import { FREQUENCY } from './frequency';
+import { PICTURE_DECKS, type Picture, type PictureDeck } from './pictures';
 import type { Drill, FrequencyWord, Item, Lesson, Sentence, Unit } from './types';
 
 export const UNITS: Unit[] = [u00, u01, u02, u03, u04, u05, u06, u07, u08, u09, u10, u11, u12, u13, u14, u15, u16, u17, u18];
@@ -14,7 +15,8 @@ export type CardSource =
   | { kind: 'item'; item: Item; lesson: Lesson }
   | { kind: 'sentence'; sentence: Sentence; lesson: Lesson }
   | { kind: 'drill'; drill: Drill; lesson: Lesson }
-  | { kind: 'word'; word: FrequencyWord };
+  | { kind: 'word'; word: FrequencyWord }
+  | { kind: 'picture'; picture: Picture; deck: PictureDeck };
 
 const lessonMap = new Map<string, Lesson>();
 const unitOfLesson = new Map<string, Unit>();
@@ -30,6 +32,7 @@ for (const u of UNITS) {
   }
 }
 for (const word of FREQUENCY) cardMap.set(word.id, { kind: 'word', word });
+for (const deck of PICTURE_DECKS) for (const picture of deck.pictures) cardMap.set(picture.id, { kind: 'picture', picture, deck });
 
 export const getLesson = (id: string) => lessonMap.get(id);
 export const getUnitOfLesson = (id: string) => unitOfLesson.get(id);
@@ -45,10 +48,10 @@ export function lessonCardIds(lesson: Lesson): string[] {
   return [...lesson.items.map((i) => i.id), ...lesson.sentences.map((s) => s.id), ...lesson.drills.map((d) => d.id)];
 }
 
-/** Lesson a card belongs to (frequency words have none). */
+/** Lesson a card belongs to (frequency words and pictures have none). */
 export function lessonOfCard(id: string): Lesson | undefined {
   const src = cardMap.get(id);
-  return src && src.kind !== 'word' ? src.lesson : undefined;
+  return src && 'lesson' in src ? src.lesson : undefined;
 }
 
 export function nextLessonAfter(id: string): Lesson | undefined {

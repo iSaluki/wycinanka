@@ -14,6 +14,8 @@ export interface Item {
   g?: Gender;
   /** Example words (phonics lessons). */
   ex?: string[];
+  /** Picture of the thing (picture flashcards). */
+  img?: string;
 }
 
 /** A full sentence: used for building, translating and listening. */

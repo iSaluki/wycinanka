@@ -120,3 +120,12 @@ export const IconTools = (p: P) => (
     <path d="M8.2 16 18 3M15.8 16 6 3" />
   </svg>
 );
+
+/** A framed picture, for the picture flashcards. */
+export const IconPictures = (p: P) => (
+  <svg {...base} {...p}>
+    <rect x="3" y="4" width="18" height="16" rx="2.5" />
+    <circle cx="9" cy="9.5" r="1.8" />
+    <path d="m3.5 18 5.5-5.5 4 4 2.5-2.5 5 5" />
+  </svg>
+);

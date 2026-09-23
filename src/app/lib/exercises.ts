@@ -1,5 +1,6 @@
 import type { DialogueLine, Drill, FrequencyWord, Item, Lesson, Sentence, Spotlight } from '../../content/types';
 import { getCard, LESSONS, type CardSource } from '../../content/course';
+import type { Picture } from '../../content/pictures';
 import { normalise } from '../../shared/grade';
 import { respell } from '../../shared/phonetics';
 
@@ -25,6 +26,8 @@ export type Exercise =
       hint?: string;
       /** Shown instead of audio when the device has no Polish voice. */
       fallback?: string;
+      /** Show this picture in place of the prompt text (picture flashcards). */
+      image?: string;
       tag?: 'warmup';
     }
   | { kind: 'type'; cardId: string; prompt: string; accepted: string[]; lang: 'pl' | 'en'; hint?: string; tag?: 'warmup' }
@@ -216,7 +219,22 @@ export function reviewExercise(src: CardSource, reps: number, cardId: string, sp
     if (reps >= 3) return translateToEnglish(sentence);
     return reps % 2 === 0 ? buildPolish(sentence, pool) : buildFromAudio(sentence, pool);
   }
+  if (src.kind === 'picture') return pictureChoice(src.picture, src.deck.pictures.map((p) => p.pl));
   return wordExercise(src.word, reps, cardId);
+}
+
+/** "What is this in Polish?" — a picture and four Polish words, the wrong ones from the same deck. */
+export function pictureChoice(p: Picture, pool: string[]): Exercise {
+  return {
+    kind: 'choose',
+    cardId: p.id,
+    prompt: p.en,
+    promptLang: 'en',
+    options: shuffle([p.pl, ...distractors(p.pl, pool, 3)]),
+    answer: p.pl,
+    image: p.img,
+    instruction: 'What is this in Polish?',
+  };
 }
 
 let wordPoolCache: string[] | undefined;

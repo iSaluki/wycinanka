@@ -25,6 +25,7 @@ function cardLabel(id: string): string {
   if (src.kind === 'item') return src.item.pl;
   if (src.kind === 'sentence') return src.sentence.pl;
   if (src.kind === 'drill') return src.drill.text.replace('___', src.drill.answer);
+  if (src.kind === 'picture') return src.picture.pl;
   return src.word.pl;
 }
 

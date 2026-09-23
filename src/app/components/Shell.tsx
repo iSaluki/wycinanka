@@ -3,7 +3,7 @@ import { Link, usePath } from '../lib/router';
 import { useStats } from '../lib/derived';
 import { dismissSyncError, useApp } from '../lib/store';
 import { GoalRing, Label } from './common';
-import { IconGrammar, IconLearn, IconProfile, IconReview, IconSounds, IconTools, IconWords } from './icons';
+import { IconGrammar, IconLearn, IconPictures, IconProfile, IconReview, IconSounds, IconTools, IconWords } from './icons';
 import { Rosette } from './Rosette';
 
 /** Navigation is labelled in Polish first: learners read these words every visit. */
@@ -11,6 +11,7 @@ const NAV = [
   { to: '/', pl: 'Nauka', en: 'Learn', icon: IconLearn, match: (p: string) => p === '/' || p.startsWith('/learn') || p.startsWith('/practice') },
   { to: '/review', pl: 'Powtórka', en: 'Review', icon: IconReview },
   { to: '/words', pl: 'Słowa', en: 'Words', icon: IconWords },
+  { to: '/pictures', pl: 'Obrazki', en: 'Pictures', icon: IconPictures },
   { to: '/sounds', pl: 'Wymowa', en: 'Sounds', icon: IconSounds },
   { to: '/grammar', pl: 'Gramatyka', en: 'Grammar', icon: IconGrammar },
   { to: '/tools', pl: 'Narzędzia', en: 'Tools', icon: IconTools },
