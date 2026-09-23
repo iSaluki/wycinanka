@@ -1,0 +1,91 @@
+import { describe, expect, it } from 'vitest';
+import { LESSONS, UNITS } from '../../src/content/course';
+import { FREQUENCY } from '../../src/content/frequency';
+import { DECLENSIONS } from '../../src/content/grammar';
+import { MINIMAL_PAIRS } from '../../src/content/sounds';
+import { normalise } from '../../src/shared/grade';
+import { tokenise } from '../../src/app/lib/exercises';
+
+const everyString = (v: unknown, out: string[] = []): string[] => {
+  if (typeof v === 'string') out.push(v);
+  else if (Array.isArray(v)) v.forEach((x) => everyString(x, out));
+  else if (v && typeof v === 'object') Object.values(v).forEach((x) => everyString(x, out));
+  return out;
+};
+
+describe('course content', () => {
+  it('has 18 units of 3 lessons across A1, A2 and B1', () => {
+    expect(UNITS).toHaveLength(18);
+    expect(LESSONS).toHaveLength(54);
+    expect(new Set(UNITS.map((u) => u.level))).toEqual(new Set(['A1', 'A2', 'B1']));
+  });
+
+  it('uses unique ids everywhere', () => {
+    const ids = [
+      ...LESSONS.map((l) => l.id),
+      ...LESSONS.flatMap((l) => [...l.items, ...l.sentences, ...l.drills].map((x) => x.id)),
+      ...FREQUENCY.map((w) => w.id),
+    ];
+    const dupes = ids.filter((id, i) => ids.indexOf(id) !== i);
+    expect(dupes).toEqual([]);
+    for (const id of ids) expect(id).toMatch(/^[a-z0-9:-]{1,64}$/);
+  });
+
+  it('does not teach the same word twice as a lesson item', () => {
+    const seen = new Map<string, string>();
+    const dupes: string[] = [];
+    for (const l of LESSONS)
+      for (const i of l.items) {
+        const k = normalise(i.pl);
+        if (seen.has(k)) dupes.push(`${i.pl} (${seen.get(k)} and ${l.id})`);
+        seen.set(k, l.id);
+      }
+    expect(dupes).toEqual([]);
+  });
+
+  it('gives every lesson enough practice material', () => {
+    for (const l of LESSONS) {
+      expect(l.items.length, l.id).toBeGreaterThanOrEqual(6);
+      expect(l.sentences.length, l.id).toBeGreaterThanOrEqual(3);
+    }
+  });
+
+  it('stores text in Unicode NFC with no stray whitespace', () => {
+    for (const s of everyString([UNITS, FREQUENCY, DECLENSIONS, MINIMAL_PAIRS])) {
+      expect(s, s).toBe(s.normalize('NFC'));
+      expect(s, JSON.stringify(s)).toBe(s.trim());
+    }
+  });
+
+  it('has well-formed gap drills', () => {
+    for (const l of LESSONS)
+      for (const d of l.drills) {
+        expect(d.text, d.id).toContain('___');
+        expect(d.options, d.id).toContain(d.answer);
+        expect(new Set(d.options).size, d.id).toBe(d.options.length);
+      }
+  });
+
+  it('never offers a correct word as a distractor tile', () => {
+    for (const l of LESSONS)
+      for (const s of l.sentences) {
+        const correct = new Set([s.pl, ...(s.altPl ?? [])].flatMap(tokenise).map(normalise));
+        for (const e of s.extra ?? []) expect(correct.has(normalise(e)), `${s.id}: ${e}`).toBe(false);
+      }
+  });
+
+  it('has 500 frequency words with glosses', () => {
+    expect(FREQUENCY).toHaveLength(500);
+    for (const w of FREQUENCY) {
+      expect(w.en.length, w.pl).toBeGreaterThan(0);
+      expect(w.pos, w.pl).toMatch(/^(particle|pronoun|preposition|conjunction|verb|noun|adjective|adverb|numeral|interjection)$/);
+    }
+  });
+
+  it('has complete declension tables', () => {
+    for (const d of DECLENSIONS) {
+      expect(d.singular).toHaveLength(7);
+      expect(d.plural).toHaveLength(7);
+    }
+  });
+});
