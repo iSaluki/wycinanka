@@ -33,7 +33,7 @@ export interface CultureImage {
   caption: string;
   /** Who made it. */
   author: string;
-  license: 'Public domain' | 'CC0' | 'CC BY 2.0' | 'CC BY 3.0' | 'CC BY 4.0' | 'CC BY-SA 3.0 PL' | 'CC BY-SA 4.0';
+  license: 'Public domain' | 'CC0' | 'CC BY 2.0' | 'CC BY 3.0' | 'CC BY 4.0' | 'CC BY-SA 3.0' | 'CC BY-SA 3.0 PL' | 'CC BY-SA 4.0';
   /** Its page on Wikimedia Commons. */
   source: string;
 }
@@ -68,7 +68,7 @@ export const CULTURE: CultureTopic[] = [
     body: [
       'For most Polish families Christmas is celebrated on the evening of 24 December, **{Wigilia}**. Children watch the sky, because supper traditionally begins when the first star appears: {pierwsza gwiazdka}.',
       'Before anyone eats, the family shares **{opłatek}**, a thin wafer blessed in church. Everyone breaks off a piece of each other\'s wafer and exchanges personal wishes for the year ahead. It is often the most emotional moment of the evening.',
-      'The supper itself is meatless. Many homes aim for twelve dishes: beetroot soup ({barszcz}) with tiny mushroom dumplings ({uszka}), carp ({karp}) or other fish, pierogi with sauerkraut and mushrooms, and poppy-seed cake ({makowiec}). A little hay may be tucked under the white tablecloth, a reminder of the manger.',
+      'The supper itself is **meatless**. Many homes aim for **twelve dishes**: beetroot soup ({barszcz}) with tiny mushroom dumplings ({uszka}), carp ({karp}) or other fish, pierogi with sauerkraut and mushrooms, and poppy-seed cake ({makowiec}). A little hay may be tucked under the white tablecloth, a reminder of the manger.',
       'An extra place is laid at the table for an unexpected guest, so that no traveller is turned away. Presents are opened after supper, and many families go to midnight Mass, **{Pasterka}**.',
     ],
     words: [
@@ -106,7 +106,7 @@ export const CULTURE: CultureTopic[] = [
     body: [
       'On Holy Saturday families carry small wicker baskets to church to be blessed. The basket, **{święconka}**, holds a little of everything for Easter breakfast: eggs, bread, salt, pepper, sausage, horseradish and a lamb made of sugar or butter.',
       'Decorated eggs are called **{pisanki}**. Some are simply dyed (traditionally in onion skins), others covered in patterns drawn with hot wax.',
-      'Easter Sunday starts with a big breakfast. The blessed eggs are shared with wishes, much like the Christmas wafer, and many families eat sour rye soup ({żurek}) with white sausage ({biała kiełbasa}).',
+      'Easter Sunday starts with **a big breakfast**. The blessed eggs are shared with wishes, much like the Christmas wafer, and many families eat sour rye soup ({żurek}) with white sausage ({biała kiełbasa}).',
       'Easter Monday is **{Śmigus-dyngus}**, or {lany poniedziałek}: "wet Monday". People soak each other with water, from a polite sprinkle to buckets and water pistols. Visitors should expect to get wet.',
     ],
     words: [
@@ -166,7 +166,7 @@ export const CULTURE: CultureTopic[] = [
     summary: 'Children say goodbye to winter by throwing a straw doll into the river.',
     body: [
       'On the first day of spring, schoolchildren make **{Marzanna}**: a doll of straw dressed in rags, standing for winter. They carry her to a river or pond, singing, and throw her in (or burn her) so that winter goes and spring can come.',
-      'The custom is far older than Christianity. Tradition says you must not look back at Marzanna once she is in the water, or winter might follow you home.',
+      'The custom is far older than Christianity. Tradition says **you must not look back** at Marzanna once she is in the water, or winter might follow you home.',
     ],
     words: [
       ['wiosna', 'spring'],
@@ -251,7 +251,7 @@ export const CULTURE: CultureTopic[] = [
     summary: 'A night of party fortune-telling with hot wax and a key.',
     body: [
       'The evening before St Andrew\'s Day is for **{wróżby}**: fortune-telling games, played today mostly for fun at parties and in schools.',
-      'The best known: pour melted wax through the hole of a large old key into cold water. Hold the set shape up to a candle and read your future in its shadow on the wall. Another game lines up everyone\'s shoes from the back of the room to the door; whoever\'s shoe reaches the threshold first will be the first to marry.',
+      'The best known: **pour melted wax through the hole of a large old key** into cold water. Hold the set shape up to a candle and read your future in its shadow on the wall. Another game lines up everyone\'s shoes from the back of the room to the door; whoever\'s shoe reaches the threshold first will be the first to marry.',
     ],
     words: [
       ['Andrzejki', "St Andrew's Eve"],
@@ -279,7 +279,7 @@ export const CULTURE: CultureTopic[] = [
     summary: 'A second birthday, shared with everyone who has the same name.',
     body: [
       'Every day of the calendar belongs to a few first names, taken from saints\' days: 30 November is for Andrzej, 24 June for Jan, 26 July for Anna. Your name day, **{imieniny}**, is celebrated much like a birthday, and in older generations often more than one.',
-      'Colleagues bring cake to the office, friends call, and flowers are given. Calendars and even the weather forecast mention whose name day it is, so there is no excuse for forgetting.',
+      'Colleagues bring cake to the office, friends call, and flowers are given. Calendars and even the weather forecast mention whose name day it is, so there is **no excuse for forgetting**.',
       'At any celebration you will hear **{Sto lat}**, "a hundred years", sung as the Polish version of "Happy Birthday": may you live a hundred years.',
     ],
     words: [
@@ -289,6 +289,16 @@ export const CULTURE: CultureTopic[] = [
       ['Wszystkiego najlepszego!', 'All the best!'],
       ['kwiaty', 'flowers'],
     ],
+    image: {
+      src: '/culture/imieniny.jpg',
+      width: 720,
+      height: 954,
+      alt: 'A painting of a small girl in a white dress holding a bunch of flowers behind her back, an older woman seated in the background.',
+      caption: "{Imieniny babuni}, Granny's name day, by Olga Boznańska: a granddaughter in her best dress, with flowers ready behind her back.",
+      author: 'Olga Boznańska, National Museum in Warsaw',
+      license: 'Public domain',
+      source: "https://commons.wikimedia.org/wiki/File:Olga_Bozna%C5%84ska_-_Granny's_name_day_-_MP_400_-_National_Museum_in_Warsaw.jpg",
+    },
     video: {
       youtube: 'vKI8TO7g2OU',
       title: 'Fans and players sing Sto lat',
@@ -304,11 +314,11 @@ export const CULTURE: CultureTopic[] = [
     theme: 'everyday',
     summary: 'Shoes off, flowers in odd numbers, and never leave hungry.',
     body: [
-      'Poles take hospitality seriously; an old saying goes {Gość w dom, Bóg w dom}: "a guest in the house is God in the house". Expect to be fed more than you can eat, and to be offered seconds more than once.',
+      'Poles take hospitality seriously; an old saying goes {Gość w dom, Bóg w dom}: "a guest in the house is God in the house". **Expect to be fed more than you can eat**, and to be offered seconds more than once.',
       'Take your shoes off at the door. Hosts often keep slippers, **{kapcie}**, for visitors.',
       'Bring something small: a box of chocolates, a bottle of wine, or flowers. Give flowers in an **odd number**; even numbers are for funerals. Yellow chrysanthemums are for graves, so choose something else.',
       'Before eating, wish everyone **{Smacznego!}** ("enjoy your meal"). When raising a glass, the toast is **{Na zdrowie!}**, "to health", and it is also what you say when someone sneezes.',
-      'Use {Pan} (to a man) and {Pani} (to a woman) with people you don\'t know well, until they suggest first names.',
+      'Use {Pan} (to a man) and {Pani} (to a woman) with people you don\'t know well, **until they suggest first names**.',
     ],
     words: [
       ['Smacznego!', 'Enjoy your meal!'],
@@ -317,6 +327,16 @@ export const CULTURE: CultureTopic[] = [
       ['Gość w dom, Bóg w dom.', 'A guest in the house is God in the house.'],
       ['Proszę bardzo.', "Here you are; you're welcome."],
     ],
+    image: {
+      src: '/culture/goscinnosc.jpg',
+      width: 900,
+      height: 643,
+      alt: 'A round loaf of bread with a heap of salt on top, decorated with sprigs of green fern.',
+      caption: 'Bread and salt, {chleb i sól}: the traditional welcome, offered to newlyweds and honoured guests at the door.',
+      author: 'Alina Zienowicz',
+      license: 'CC BY-SA 3.0',
+      source: 'https://commons.wikimedia.org/wiki/File:Chleb_i_sol.JPG',
+    },
   },
   {
     id: 'kuchnia',
@@ -358,7 +378,7 @@ export const CULTURE: CultureTopic[] = [
     body: [
       'In the 1800s, country families began decorating their whitewashed cottages with paper cut-outs, **{wycinanki}**, pasted on walls and ceiling beams and renewed before Easter and Christmas.',
       'Each region has its own style. Around **{Łowicz}**, in central Poland, cut-outs are bright and built up in many layers of coloured paper: roosters, flowers and round rosettes ({gwiazdy}, "stars"). The **{Kurpie}** region in the north-east is known for single-colour, perfectly symmetrical designs, such as the tall tree-like {leluja}, traditionally cut with sheep-shearing scissors.',
-      'The rosette you build as you learn is a nod to the Łowicz style: every lesson adds another layer of colour.',
+      'The rosette you build as you learn is a nod to the Łowicz style: **every lesson adds another layer** of colour.',
     ],
     words: [
       ['wycinanka', 'a paper cut-out'],
@@ -426,7 +446,7 @@ export const CULTURE: CultureTopic[] = [
       'In 1569 the Union of Lublin joined the Kingdom of Poland and the Grand Duchy of Lithuania into the **{Rzeczpospolita Obojga Narodów}**, the "Commonwealth of Both Nations". At its height it was one of the largest countries in Europe, reaching from the Baltic deep into what is now Ukraine and Belarus. Poland\'s official name is still {Rzeczpospolita Polska}.',
       'Its kings were not born to the throne but elected, in a {wolna elekcja} ("free election") open to the whole nobility, the **{szlachta}**. Parliament, the **{Sejm}**, gave every noble a voice, and in time a single member could block any law with the {liberum veto}. Today\'s parliament is still called the Sejm.',
       'The capital moved from Kraków to {Warszawa} around 1600. In 1683 King Jan III Sobieski led the army that lifted the Ottoman siege of Vienna, with the famous winged cavalry, the **{husaria}**.',
-      'Weakened by wars and a paralysed parliament, the Commonwealth was carved up by Russia, Prussia and Austria in three partitions, in 1772, 1793 and 1795. The constitution of 3 May 1791 was a last attempt at reform (see National days).',
+      'Weakened by wars and a paralysed parliament, the Commonwealth was carved up by Russia, Prussia and Austria in **three partitions**, in 1772, 1793 and 1795. The constitution of 3 May 1791 was a last attempt at reform (see National days).',
     ],
     words: [
       ['Rzeczpospolita', 'republic, the Commonwealth'],
@@ -454,9 +474,9 @@ export const CULTURE: CultureTopic[] = [
     when: '1 August 1944',
     summary: 'Sixty-three days that the whole city still stops to remember.',
     body: [
-      'The Second World War began on 1 September 1939, when Germany invaded Poland; the Soviet Union invaded from the east on 17 September. About six million Polish citizens died in the war, around half of them Polish Jews murdered in the Holocaust. In 1943 the Jews of the Warsaw Ghetto rose up against the Germans in the Warsaw Ghetto Uprising.',
+      'The Second World War began on **1 September 1939**, when Germany invaded Poland; the Soviet Union invaded from the east on 17 September. About six million Polish citizens died in the war, around half of them Polish Jews murdered in the Holocaust. In 1943 the Jews of the Warsaw Ghetto rose up against the Germans in the Warsaw Ghetto Uprising.',
       'On 1 August 1944 at 5 pm, **{Godzina W}** ("W-hour"), the Polish underground Home Army, the {Armia Krajowa}, rose against the German occupation of Warsaw. They fought for 63 days, largely alone, while the Soviet army waited across the river {Wisła}. Between 150,000 and 200,000 civilians were killed, and afterwards the Germans set about razing the city to the ground.',
-      'Every year at 5 pm on 1 August, sirens sound across Warsaw and the city stands still for a minute: drivers stop and get out of their cars, and people stop in the street. The Old Town, {Stare Miasto}, was rebuilt from paintings and photographs after the war, and is now a UNESCO World Heritage Site.',
+      'Every year at **5 pm on 1 August**, sirens sound across Warsaw and **the city stands still for a minute**: drivers stop and get out of their cars, and people stop in the street. The Old Town, {Stare Miasto}, was rebuilt from paintings and photographs after the war, and is now a UNESCO World Heritage Site.',
     ],
     words: [
       ['powstanie', 'uprising'],
@@ -484,10 +504,10 @@ export const CULTURE: CultureTopic[] = [
     when: 'August 1980',
     summary: 'A shipyard strike that helped end communism in Europe.',
     body: [
-      'After 1945 Poland was a communist state under Soviet control, the Polish People\'s Republic (PRL). In 1978 the Archbishop of Kraków, Karol Wojtyła, became Pope John Paul II, {Jan Paweł II}, and his visit home in 1979 drew millions onto the streets.',
+      'After 1945 Poland was a communist state under Soviet control, the Polish People\'s Republic (PRL). In 1978 the Archbishop of Kraków, Karol Wojtyła, became **Pope John Paul II**, {Jan Paweł II}, and his visit home in 1979 drew millions onto the streets.',
       'In August 1980, workers at the shipyard in Gdańsk, the {Stocznia Gdańska}, went on **{strajk}** (strike), led by an electrician, Lech Wałęsa. The government gave way, and **{Solidarność}** became the first independent trade union in the Soviet bloc, with about ten million members.',
-      'On 13 December 1981 the government declared martial law, {stan wojenny}: Solidarity was banned and its leaders interned. It carried on underground, and Wałęsa won the Nobel Peace Prize in 1983.',
-      'In 1989 talks at the Round Table, the {Okrągły Stół}, led to partly free elections on 4 June. Solidarity won almost every seat it was allowed to contest, and Tadeusz Mazowiecki became the first non-communist prime minister in the Eastern Bloc. The Berlin Wall fell that November. Poland joined NATO in 1999 and the European Union in 2004.',
+      'On **13 December 1981** the government declared **martial law**, {stan wojenny}: Solidarity was banned and its leaders interned. It carried on underground, and Wałęsa won the Nobel Peace Prize in 1983.',
+      'In 1989 talks at the Round Table, the {Okrągły Stół}, led to **partly free elections on 4 June**. Solidarity won almost every seat it was allowed to contest, and Tadeusz Mazowiecki became the first non-communist prime minister in the Eastern Bloc. The Berlin Wall fell that November. Poland joined NATO in 1999 and the European Union in 2004.',
     ],
     words: [
       ['solidarność', 'solidarity'],
@@ -551,7 +571,7 @@ export const CULTURE: CultureTopic[] = [
     summary: 'Two national dances, one great composer, and a school ball 100 days before exams.',
     body: [
       '**{Fryderyk Chopin}** was born in 1810 in Żelazowa Wola, near Warsaw, and left Poland at twenty, never to return. His music was full of Polish dances, above all the lively **mazurka** ({mazurek}) and the stately **polonaise** ({polonez}).',
-      'His heart was brought back to Warsaw, as he wished, and rests in a pillar of the Holy Cross Church. Every five years Warsaw hosts the International Chopin Piano Competition, and in summer there are free concerts by his monument in Łazienki Park.',
+      '**His heart was brought back to Warsaw**, as he wished, and rests in a pillar of the Holy Cross Church. Every five years Warsaw hosts the International Chopin Piano Competition, and in summer there are free concerts by his monument in Łazienki Park.',
       'The polonaise is still danced today. About a hundred days before their final school exams, the {matura}, students hold a ball called **{studniówka}** ("the hundred-day"), and it always opens with a polonaise.',
     ],
     words: [

@@ -202,6 +202,24 @@ function SettingsCard() {
         </span>
       </div>
       <div className="field">
+        <span id="sounds-l" style={{ fontWeight: 700 }}>
+          Sound effects
+        </span>
+        <div className="seg" role="radiogroup" aria-labelledby="sounds-l">
+          {(
+            [
+              [true, 'On'],
+              [false, 'Off'],
+            ] as const
+          ).map(([on, label]) => (
+            <button key={label} role="radio" aria-checked={(s.sounds !== false) === on} aria-pressed={(s.sounds !== false) === on} onClick={() => set({ sounds: on })}>
+              {label}
+            </button>
+          ))}
+        </div>
+        <span className="help">A soft chime for a right answer, a low note for a wrong one, and a little tune when you finish.</span>
+      </div>
+      <div className="field">
         <span id="theme-l" style={{ fontWeight: 700 }}>
           Theme
         </span>

@@ -12,6 +12,7 @@ import type { Card } from '../../shared/fsrs';
 import { localDay } from '../../shared/progress';
 import type { CardRow, ImportInput, LessonResult, ReviewInput, Settings, Snapshot } from '../../shared/schemas';
 import { api, ApiError } from './api';
+import { setSoundEffects } from './sfx';
 import { setPreferDeviceVoice, setSpeechRate } from './speech';
 
 /**
@@ -91,6 +92,7 @@ function applySettingsToDocument(s: Settings) {
   else root.removeAttribute('data-motion');
   setSpeechRate(s.speechRate ?? DEFAULT_SETTINGS.speechRate);
   setPreferDeviceVoice(!!s.deviceVoice);
+  setSoundEffects(s.sounds !== false);
 }
 
 function fromSnapshot(snap: Snapshot): ProgressState {

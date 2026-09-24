@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
-import { getUnitOfLesson, TOTAL_LESSONS } from '../../content/course';
+import { getUnitOfLesson, LESSONS, TOTAL_LESSONS } from '../../content/course';
+import { cultureAfter } from '../../content/culture-stops';
 import { FREQUENCY } from '../../content/frequency';
 import { respell } from '../../shared/phonetics';
 import { GoalRing, Label, SectionHead, Speak } from '../components/common';
@@ -7,6 +8,7 @@ import { IconArrow } from '../components/icons';
 import { Rosette } from '../components/Rosette';
 import { InstallPrompt } from '../components/InstallPrompt';
 import { Shell } from '../components/Shell';
+import { markCultureSeen, useCultureSeen } from '../lib/cultureStops';
 import { useStats } from '../lib/derived';
 import { trickyCards, troubleSpots } from '../lib/reinforce';
 import { Link, navigate, useTitle } from '../lib/router';
@@ -42,6 +44,11 @@ export function Home() {
   const next = stats.next;
   const unit = next ? getUnitOfLesson(next.id) : undefined;
   const upcoming = nextDue(progress);
+  // A culture break straight after the last lesson done comes up before the next lesson.
+  const cultureSeen = useCultureSeen();
+  const before = next ? LESSONS[LESSONS.findIndex((l) => l.id === next.id) - 1] : undefined;
+  const pending = before && stats.done.has(before.id) ? cultureAfter(before.id) : undefined;
+  const culture = pending && !cultureSeen.has(pending.id) ? pending : undefined;
   const fresh = stats.done.size === 0;
   const spots = useMemo(() => troubleSpots(progress).slice(0, 3), [progress]);
   const tricky = useMemo(() => trickyCards(progress).length, [progress]);
@@ -75,7 +82,21 @@ export function Home() {
           </p>
         </section>
 
-        {next && unit ? (
+        {next && unit && culture ? (
+          <section className="next-up" aria-labelledby="continue-title">
+            <Label pl="przerwa na kulturę" en="up next · a culture break" />
+            <h2 id="continue-title">{culture.title}</h2>
+            <p className="muted">{culture.summary} Just reading, no questions.</p>
+            <div className="row wrap">
+              <button className="btn red" onClick={() => navigate(`/course/culture/${culture.id}`)}>
+                Read it <IconArrow width={20} height={20} />
+              </button>
+              <button className="btn quiet" onClick={() => (markCultureSeen(culture.id), navigate(`/lesson/${next.id}`))}>
+                Skip to the next lesson
+              </button>
+            </div>
+          </section>
+        ) : next && unit ? (
           <section className="next-up" aria-labelledby="continue-title">
             <Label pl={fresh ? 'zaczynamy' : 'dalej'} en={`${fresh ? "let's begin" : 'up next'} · Unit ${unit.n} · ${unit.title}`} />
             <h2 id="continue-title">{next.title}</h2>

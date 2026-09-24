@@ -38,6 +38,8 @@ export const settingsSchema = z
     deviceVoice: z.boolean().optional(),
     /** Speaking exercises in lessons. On unless switched off. */
     speaking: z.boolean().optional(),
+    /** Little sounds for right and wrong answers and a finished lesson. On unless switched off. */
+    sounds: z.boolean().optional(),
     /** Daily practice reminder by push notification, at `reminderHour` o'clock in `timeZone`. */
     reminders: z.boolean().optional(),
     reminderHour: z.number().int().min(0).max(23).optional(),

@@ -1,6 +1,6 @@
 import type { DialogueLine, Drill, FrequencyWord, Item, Lesson, Sentence, Spotlight } from '../../content/types';
 import { getCard, LESSONS, type CardSource } from '../../content/course';
-import type { Picture } from '../../content/pictures';
+import { PICTURES, type Picture } from '../../content/pictures';
 import { CHUNK_CORES, chunkCore, CHUNKS, type Chunk } from '../../content/chunks';
 import { normalise } from '../../shared/grade';
 import { respell } from '../../shared/phonetics';
@@ -11,7 +11,7 @@ import { respell } from '../../shared/phonetics';
  * Questions from earlier lessons mixed into a lesson: a warm-up opens it, and signed-in learners also get
  * personalised revision part-way through. Neither counts towards the lesson's score.
  */
-export type ExtraTag = 'warmup' | 'revision';
+export type ExtraTag = 'warmup' | 'revision' | 'picture';
 
 export type Exercise =
   /** New material, a few at a time. `from` and `total` place this group within everything the session introduces. */
@@ -205,7 +205,38 @@ function chooseMeaning(item: Item, pool: string[], audio = false): Exercise {
 function choosePolish(item: Item, pool: string[]): Exercise {
   const right = sameMeaning(item.en, item.pl);
   const opts = shuffle([item.pl, ...distractors(item.pl, pool.filter((p) => !right.some(sameText(p))), 3)]);
-  return { kind: 'choose', cardId: item.id, prompt: item.en, promptLang: 'en', options: opts, answer: item.pl };
+  const ex: Exercise = { kind: 'choose', cardId: item.id, prompt: item.en, promptLang: 'en', options: opts, answer: item.pl };
+  // A word with a picture is named from the picture, so it attaches to the thing rather than the English.
+  return item.img ? { ...ex, image: item.img, instruction: 'What is this in Polish?' } : ex;
+}
+
+const PICTURE_OF = new Map(PICTURES.map((p) => [p.pl.toLocaleLowerCase('pl'), p.img]));
+
+/** Lesson words that have a picture flashcard get its picture, on their intro card and when named. */
+export function withPictures(items: Item[]): Item[] {
+  return items.map((i) => {
+    const img = !i.img && !i.ex ? PICTURE_OF.get(i.pl.toLocaleLowerCase('pl')) : undefined;
+    return img ? { ...i, img } : i;
+  });
+}
+
+/**
+ * Picture flashcards mixed into a lesson: new pictures are met, then named straight away; known ones are
+ * just named. Tagged, so they count as reviews rather than towards the lesson's score.
+ */
+export function pictureRound(fresh: Picture[], known: Array<{ id: string; reps: number }>): Exercise[][] {
+  const quiz = (p: Picture): Exercise => ({ ...(pictureQuiz(p) as Extract<Exercise, { kind: 'choose' }>), tag: 'picture' });
+  const meet: Exercise[][] = fresh.length
+    ? [[{ kind: 'meet', items: fresh.map((p) => ({ id: p.id, pl: p.pl, en: p.en, g: p.g, img: p.img })) }, ...fresh.map(quiz)]]
+    : [];
+  const byId = new Map(PICTURES.map((p) => [p.id, p]));
+  return [...meet, ...known.flatMap(({ id }) => (byId.has(id) ? [[quiz(byId.get(id)!)]] : []))];
+}
+
+/** A picture question with the wrong answers from its own deck. */
+function pictureQuiz(p: Picture): Exercise {
+  const src = getCard(p.id);
+  return pictureChoice(p, src?.kind === 'picture' ? src.deck.pictures.map((x) => x.pl) : PICTURES.map((x) => x.pl));
 }
 
 function typePolish(item: Item): Exercise {
@@ -364,9 +395,12 @@ export function lessonPlan(lesson: Lesson, { speaking = true }: PlanOptions = {}
   const plPool = near.flatMap((l) => l.items.map((i) => i.pl));
   const wordPool = near.flatMap((l) => l.sentences.flatMap((s) => tokenise(s.pl)));
 
-  const intro = stepwise(lesson.items, (i) => chooseMeaning(i, enPool), wordPair);
-  // A second pass, mixed across the whole lesson: hear it, then find the Polish for the English.
-  const mixed = shuffle(lesson.items);
+  const items = withPictures(lesson.items);
+  const intro = stepwise(items, (i) => chooseMeaning(i, enPool), wordPair);
+  // A second pass, mixed across the whole lesson: hear it, then find the Polish for the English (or the picture).
+  const shuffled = shuffle(items);
+  const plain = shuffled.filter((i) => !i.img);
+  const mixed = [...plain.slice(0, 2), ...shuffled.filter((i) => i.img), ...plain.slice(2)];
   const listen: Exercise[] = mixed.slice(0, 2).map((i) => chooseMeaning(i, enPool, true));
   const pickPl: Exercise[] = mixed.slice(2, 4).map((i) => choosePolish(i, plPool));
   const produce: Exercise[] = shuffle(lesson.items)

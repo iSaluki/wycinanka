@@ -28,10 +28,13 @@ from piper import PiperVoice, SynthesisConfig
 # Voice and settings: https://huggingface.co/rhasspy/piper-voices (CC0 dataset)
 MODEL = 'pl_PL-mc_speech-medium'
 MODEL_URL = 'https://huggingface.co/rhasspy/piper-voices/resolve/main/pl/pl_PL/mc_speech/medium/'
-VOICE = 'mc-speech-1'
+VOICE = 'mc-speech-2'
 # Slightly slower than natural: these are learners.
 SYNTH = SynthesisConfig(length_scale=1.08)
 BITRATE = 40  # kbit/s, mono: clear speech at about 5 KB a second
+# Silence before the first sound. Piper starts a word like "szkoła" at full volume on its first sample, and
+# browsers and audio devices often swallow the first moments of playback, which left "szkoła" as "koła".
+LEAD_IN = 0.15  # seconds
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / 'public' / 'voice'
@@ -54,6 +57,14 @@ def texts() -> list[dict]:
     return json.loads(out.stdout)
 
 
+def lead_in(pcm: bytes, rate: int) -> bytes:
+    """Pads 16-bit mono audio so at least LEAD_IN seconds of silence come before the first sound."""
+    samples = memoryview(pcm).cast('h')
+    quiet = next((i for i, s in enumerate(samples) if abs(s) > 500), len(samples))
+    pad = max(0, int(LEAD_IN * rate) - quiet)
+    return bytes(2 * pad) + pcm
+
+
 def mp3(voice: PiperVoice, text: str) -> bytes:
     buf = io.BytesIO()
     with wave.open(buf, 'wb') as w:
@@ -61,6 +72,7 @@ def mp3(voice: PiperVoice, text: str) -> bytes:
     buf.seek(0)
     with wave.open(buf, 'rb') as w:
         rate, pcm = w.getframerate(), w.readframes(w.getnframes())
+    pcm = lead_in(pcm, rate)
     enc = lameenc.Encoder()
     enc.set_bit_rate(BITRATE)
     enc.set_in_sample_rate(rate)

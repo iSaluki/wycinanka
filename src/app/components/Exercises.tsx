@@ -108,13 +108,14 @@ export function Choose({ ex, locked, onAnswer, checked, hints = 0 }: AnswerProps
 const TAGS: Record<ExtraTag, { pl: string; title: string }> = {
   warmup: { pl: 'rozgrzewka', title: 'Warm-up: a quick one from an earlier lesson' },
   revision: { pl: 'powtórka', title: "Revision: picked for you from earlier lessons, most often from what you've got wrong" },
+  picture: { pl: 'obrazki', title: 'Picture flashcards: name the thing in Polish' },
 };
 
 function Instruction({ tag, children }: { tag?: ExtraTag; children: ReactNode }) {
   return (
     <div className="instruction">
       {tag && (
-        <span className={`tag-warmup ${tag === 'revision' ? 'tag-revision' : ''}`} lang="pl" title={TAGS[tag].title}>
+        <span className={`tag-warmup ${tag === 'warmup' ? '' : `tag-${tag}`}`} lang="pl" title={TAGS[tag].title}>
           {TAGS[tag].pl}
         </span>
       )}

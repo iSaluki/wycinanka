@@ -79,7 +79,8 @@ test('review works after a lesson', async ({ page }) => {
   await page.locator('nav.rail').getByRole('link', { name: /Review/ }).click();
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Powtórka');
   await expect(page.locator('.page-head .gloss')).toHaveText('All caught up');
-  await expect(page.locator('.stat').first()).toContainText('14');
+  // The lesson's 14 cards, and the 2 picture flashcards met along the way.
+  await expect(page.locator('.stat').first()).toContainText('16');
   // Early practice runs a real review session and records it.
   await page.getByRole('button', { name: 'Practise your 10 weakest cards' }).click();
   await expect(page.locator('.player .instruction').first()).toBeVisible();
@@ -111,6 +112,20 @@ test('culture notes open from the list and link on to the next one', async ({ pa
   await expect(page.locator('.culture-words li')).not.toHaveCount(0);
   await page.getByRole('link', { name: /^Next:/ }).click();
   await expect(page).toHaveURL(/\/culture\/marzanna$/);
+});
+
+test('culture breaks sit in the course between lessons, are only read, and can be skipped', async ({ page }) => {
+  await page.goto('/learn');
+  await page.getByRole('link', { name: /Culture break: Being a guest/ }).click();
+  await expect(page).toHaveURL(/\/course\/culture\/goscinnosc$/);
+  await expect(page.locator('.culture-glance')).toBeVisible();
+  await expect(page.locator('.culture-picture img')).toBeVisible();
+  // Nothing to answer: no questions, just the reading and a way on.
+  await expect(page.locator('.options')).toHaveCount(0);
+  await page.getByRole('button', { name: /^Skip to/ }).click();
+  await expect(page).toHaveURL(/\/lesson\/u03-l1$/);
+  await page.goto('/learn');
+  await expect(page.getByRole('link', { name: /Culture break: Being a guest/ })).toHaveClass(/done/);
 });
 
 test('the app can be installed: manifest, icons and service worker are served', async ({ request }) => {

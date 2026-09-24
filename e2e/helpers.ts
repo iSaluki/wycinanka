@@ -2,6 +2,7 @@ import { expect, type Page } from '@playwright/test';
 import { LESSONS } from '../src/content/course';
 import { mergeChunks, tokenise } from '../src/app/lib/exercises';
 import { chunkCore, CHUNKS } from '../src/content/chunks';
+import { PICTURES } from '../src/content/pictures';
 import { respell } from '../src/shared/phonetics';
 
 // A course-wide answer key: warm-ups can ask about any earlier lesson.
@@ -17,6 +18,7 @@ const sentByPl = new Map(sentences.map((s) => [s.pl, s]));
 const drills = LESSONS.flatMap((l) => l.drills);
 const chunkByPl = new Map(CHUNKS.map((c) => [c.pl, c]));
 const chunkByEn = new Map(CHUNKS.map((c) => [c.en, c]));
+const picturesByEn = new Map(PICTURES.map((p) => [p.en, p]));
 const chunkByExample = new Map(CHUNKS.flatMap((c) => (c.ex ? [[c.ex[1], c] as const] : [])));
 
 /** Instructions of speaking exercises. */
@@ -24,9 +26,11 @@ export const SPEAKING = ['Say it after me', 'Say it in Polish', 'Read it aloud',
 
 /** Answer every exercise in a lesson or session correctly, using the course content as the answer key. */
 export async function solveLesson(page: Page, _lessonId: string, onStep?: (kind: string, phase: 'before' | 'after') => Promise<void>) {
+  const optionTexts = () =>
+    page.locator('.options button.option').evaluateAll((els) => els.map((e) => (e.textContent ?? '').replace(/^\d/, '').trim()));
   const clickOption = async (text: string) => {
     const options = page.locator('.options button.option');
-    const texts = await options.evaluateAll((els) => els.map((e) => (e.textContent ?? '').replace(/^\d/, '').trim()));
+    const texts = await optionTexts();
     const i = texts.indexOf(text);
     expect(i, `option "${text}" in ${JSON.stringify(texts)}`).toBeGreaterThanOrEqual(0);
     await options.nth(i).click();
@@ -54,7 +58,7 @@ export async function solveLesson(page: Page, _lessonId: string, onStep?: (kind:
     }
     const instruction = page.locator('.player-body .instruction').first();
     if (!(await instruction.isVisible())) continue;
-    const kind = (await instruction.textContent())!.replace(/^(rozgrzewka|powtórka)/, '').trim();
+    const kind = (await instruction.textContent())!.replace(/^(rozgrzewka|powtórka|obrazki)/, '').trim();
     await onStep?.(kind, 'before');
 
     if (kind === 'How does it sound?') {
@@ -69,6 +73,11 @@ export async function solveLesson(page: Page, _lessonId: string, onStep?: (kind:
       await clickOption(byPl.get(await spokenPrompt())!.en);
     } else if (kind === 'What does this phrase mean?') {
       await clickOption(chunkByPl.get(await text('.prompt-pl'))!.en);
+    } else if (kind === 'What is this in Polish?') {
+      // A picture flashcard, or a lesson word shown as its picture: the image's alt text is the English.
+      const en = (await page.locator('.picture-prompt img').getAttribute('alt'))!;
+      const texts = await optionTexts();
+      await clickOption([byEn.get(en)?.pl, picturesByEn.get(en)?.pl].find((pl) => pl && texts.includes(pl))!);
     } else if (kind === 'Choose the Polish') {
       await clickOption(byEn.get(await text('.prompt-en'))!.pl);
     } else if (kind === 'Write this in Polish') {

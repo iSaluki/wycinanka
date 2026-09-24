@@ -1,6 +1,7 @@
 import { getUnitOfLesson, lessonOfCard, UNITS } from '../../content/course';
 import { getLesson } from '../../content/course';
 import { getSkill, skillOfLesson, SKILLS, type Skill } from '../../content/skills';
+import { PICTURE_DECKS, type Picture } from '../../content/pictures';
 import type { Spotlight } from '../../content/types';
 import type { ProgressState } from '../../shared/engine';
 import { retrievability, type Card } from '../../shared/fsrs';
@@ -109,6 +110,26 @@ export function revisionCards(
     .sort((a, b) => b.key - a.key)
     .slice(0, n)
     .map(({ id, reps }) => ({ id, reps }));
+}
+
+/**
+ * Picture flashcards to mix into a lesson: one picture not met yet (the next in deck order), and known ones
+ * to fill up to `n`, picked like revision, towards the ones got wrong. With none known, `n` new ones.
+ */
+export function lessonPictures(
+  p: ProgressState,
+  n = 2,
+  now = Date.now(),
+  rand = Math.random,
+): { fresh: Picture[]; known: Array<{ id: string; reps: number }> } {
+  const unseen = PICTURE_DECKS.flatMap((d) => d.pictures).filter((x) => !p.cards.has(x.id));
+  const knownIds = PICTURE_DECKS.flatMap((d) => d.pictures).filter((x) => p.cards.has(x.id));
+  const known = knownIds
+    .map((x) => ({ id: x.id, reps: p.cards.get(x.id)!.reps, key: Math.pow(rand(), 1 / revisionWeight(p.cards.get(x.id)!, now)) }))
+    .sort((a, b) => b.key - a.key)
+    .slice(0, Math.max(0, n - Math.min(1, unseen.length)))
+    .map(({ id, reps }) => ({ id, reps }));
+  return { fresh: unseen.slice(0, n - known.length), known };
 }
 
 /** Spreads `extra` exercises evenly through `main`, never before `from` (the lesson's introduction). */

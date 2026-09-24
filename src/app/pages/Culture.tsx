@@ -1,32 +1,58 @@
-import { useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { CULTURE, CULTURE_THEMES, cultureTopic, type CultureImage, type CultureTopic, type CultureVideo } from '../../content/culture';
 import { respell } from '../../shared/phonetics';
 import { PageHead, Rich, SectionHead, Speak } from '../components/common';
 import { IconArrow } from '../components/icons';
 import { Shell } from '../components/Shell';
-import { Link, useTitle } from '../lib/router';
+import { cultureStop } from '../../content/culture-stops';
+import { markCultureSeen } from '../lib/cultureStops';
+import { Link, navigate, useTitle } from '../lib/router';
 import { NotFound } from './NotFound';
 
-function Article({ topic }: { topic: CultureTopic }) {
+/**
+ * A culture note. In the course (`course`), it's a culture break between lessons: something to read, never
+ * tested, with a way to skip straight on to the next lesson.
+ */
+function Article({ topic, course = false }: { topic: CultureTopic; course?: boolean }) {
   const i = CULTURE.indexOf(topic);
   const next = CULTURE[(i + 1) % CULTURE.length];
+  const stop = course ? cultureStop(topic.id) : undefined;
+  // Opened, read or skipped, a culture break comes up only once.
+  useEffect(() => {
+    if (stop) markCultureSeen(topic.id);
+  }, [stop, topic.id]);
+  const onward = () => navigate(stop?.next ? `/lesson/${stop.next.id}` : '/learn');
   return (
     <Shell>
       <article className="stack-lg culture-article">
-        <p className="muted" style={{ fontSize: 15 }}>
-          <Link to="/culture">← All culture notes</Link>
-        </p>
+        {stop ? (
+          <div className="culture-break" role="note">
+            <p>
+              <b>
+                <span lang="pl">Przerwa na kulturę</span>: a culture break.
+              </b>{' '}
+              Nothing to answer, just something to read. Here only for the language? Skip it.
+            </p>
+            <button type="button" className="btn small quiet" onClick={onward}>
+              {stop.next ? 'Skip to the next lesson' : 'Skip'}
+            </button>
+          </div>
+        ) : (
+          <p className="muted" style={{ fontSize: 15 }}>
+            <Link to="/culture">← All culture notes</Link>
+          </p>
+        )}
         <PageHead pl={topic.pl} en={topic.title} />
-        {topic.when && <p className="culture-when">{topic.when}</p>}
-        <p className="muted culture-tip">
-          Tap any <span className="pl say-word-sample" lang="pl">Polish word</span> to hear it.
-        </p>
-        {topic.image && <Picture image={topic.image} />}
+        <Glance topic={topic} />
         <div className="stack">
           {topic.body.map((p, k) => (
-            <p key={k}>
-              <Rich text={p} tappable />
-            </p>
+            <Fragment key={k}>
+              <p className={k === 0 ? 'culture-lead' : undefined}>
+                <Rich text={p} tappable />
+              </p>
+              {/* The picture breaks up the text after the opening paragraph, next to what it shows. */}
+              {k === 0 && topic.image && <Picture image={topic.image} />}
+            </Fragment>
           ))}
         </div>
         {topic.video && <Video video={topic.video} />}
@@ -47,11 +73,43 @@ function Article({ topic }: { topic: CultureTopic }) {
             ))}
           </ul>
         </section>
-        <Link to={`/culture/${next.id}`} className="btn quiet" style={{ alignSelf: 'flex-start' }}>
-          Next: {next.title} <IconArrow width={20} height={20} />
-        </Link>
+        {stop ? (
+          <button type="button" className="btn red" style={{ alignSelf: 'flex-start' }} onClick={onward}>
+            {stop.next ? `Next lesson: ${stop.next.title}` : 'Back to the course'} <IconArrow width={20} height={20} />
+          </button>
+        ) : (
+          <Link to={`/culture/${next.id}`} className="btn quiet" style={{ alignSelf: 'flex-start' }}>
+            Next: {next.title} <IconArrow width={20} height={20} />
+          </Link>
+        )}
       </article>
     </Shell>
+  );
+}
+
+/** The note in a nutshell before the full text: what it is, when, and the first few words to take away. */
+function Glance({ topic }: { topic: CultureTopic }) {
+  return (
+    <aside className="culture-glance" aria-label="At a glance">
+      <p className="glance-summary">{topic.summary}</p>
+      {topic.when && (
+        <p className="culture-when">
+          <span className="sr-only">When: </span>
+          {topic.when}
+        </p>
+      )}
+      <ul className="glance-words" aria-label="Key words">
+        {topic.words.slice(0, 3).map(([pl, en]) => (
+          <li key={pl}>
+            <Rich text={`{${pl}}`} tappable /> <span className="en">{en}</span>
+          </li>
+        ))}
+      </ul>
+      <p className="culture-tip">
+        Tap any <span className="pl say-word-sample" lang="pl">underlined Polish</span> to hear it. Key points are{' '}
+        <strong>highlighted</strong>.
+      </p>
+    </aside>
   );
 }
 
@@ -59,6 +117,7 @@ const LICENSES: Partial<Record<CultureImage['license'], string>> = {
   'CC BY 2.0': 'https://creativecommons.org/licenses/by/2.0/',
   'CC BY 3.0': 'https://creativecommons.org/licenses/by/3.0/',
   'CC BY 4.0': 'https://creativecommons.org/licenses/by/4.0/',
+  'CC BY-SA 3.0': 'https://creativecommons.org/licenses/by-sa/3.0/',
   'CC BY-SA 3.0 PL': 'https://creativecommons.org/licenses/by-sa/3.0/pl/',
   'CC BY-SA 4.0': 'https://creativecommons.org/licenses/by-sa/4.0/',
   CC0: 'https://creativecommons.org/publicdomain/zero/1.0/',
@@ -71,7 +130,10 @@ function Picture({ image }: { image: CultureImage }) {
     <figure className="culture-picture">
       <img src={image.src} alt={image.alt} width={image.width} height={image.height} loading="lazy" decoding="async" />
       <figcaption>
-        <Rich text={image.caption} tappable />
+        {/* One line of text: the caption's parts must not become separate grid rows. */}
+        <span>
+          <Rich text={image.caption} tappable />
+        </span>
         <small className="credit">
           {image.author},{' '}
           {license ? (
@@ -134,11 +196,11 @@ function Video({ video }: { video: CultureVideo }) {
   );
 }
 
-export function Culture({ id }: { id?: string }) {
+export function Culture({ id, course = false }: { id?: string; course?: boolean }) {
   const topic = id ? cultureTopic(id) : undefined;
   useTitle(topic ? topic.title : 'Culture');
   if (id && !topic) return <NotFound />;
-  if (topic) return <Article topic={topic} />;
+  if (topic) return <Article topic={topic} course={course} />;
   return (
     <Shell>
       <div className="stack-lg">

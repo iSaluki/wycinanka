@@ -1,7 +1,10 @@
+import { Fragment } from 'react';
 import { UNITS } from '../../content/course';
+import { cultureAfter } from '../../content/culture-stops';
 import type { Level } from '../../content/types';
 import { PageHead } from '../components/common';
 import { Shell } from '../components/Shell';
+import { useCultureSeen } from '../lib/cultureStops';
 import { useStats } from '../lib/derived';
 import { unitCardIds } from '../lib/reinforce';
 import { Link, useTitle } from '../lib/router';
@@ -19,13 +22,14 @@ export function Learn() {
   const stats = useStats();
   const progress = useApp((s) => s.progress);
   const startUnit = useApp((s) => s.settings.startUnit ?? 0);
+  const cultureSeen = useCultureSeen();
 
   return (
     <Shell>
       <div className="stack-lg">
         <PageHead pl="Nauka" en="The course">
           From the alphabet to the conditional in 19 units. Every lesson is open; the red one is our suggestion. Once you've done a lesson in a
-          unit, revise the whole unit to keep it fresh.
+          unit, revise the whole unit to keep it fresh. Culture breaks along the way are just for reading, and you can skip them.
         </PageHead>
         {LEVELS.map(([level, pl, en, blurb]) => {
           const units = UNITS.filter((u) => (level === 'A0' ? u.n === 0 : u.level === level && u.n > 0));
@@ -66,8 +70,10 @@ export function Learn() {
                           {u.lessons.map((l, i) => {
                             const rec = progress.lessons.get(l.id);
                             const isNext = l.id === stats.next?.id;
+                            const culture = cultureAfter(l.id);
                             return (
-                              <li key={l.id}>
+                              <Fragment key={l.id}>
+                              <li>
                                 <Link to={`/lesson/${l.id}`} className={`lesson-link ${rec ? 'done' : ''} ${isNext ? 'next' : ''}`}>
                                   <span className="dot" aria-hidden="true" />
                                   <span className="t">
@@ -80,6 +86,24 @@ export function Learn() {
                                   {rec ? <span className="score">{rec.best}%</span> : isNext ? <span className="score">dalej</span> : null}
                                 </Link>
                               </li>
+                              {culture && (
+                                <li>
+                                  <Link to={`/course/culture/${culture.id}`} className={`lesson-link culture-stop ${cultureSeen.has(culture.id) ? 'done' : ''}`}>
+                                    <span className="dot" aria-hidden="true" />
+                                    <span className="t">
+                                      <span>
+                                        <span className="sr-only">Culture break: </span>
+                                        {culture.title}
+                                      </span>
+                                      <small>Culture break · reading only, skip it if you like</small>
+                                    </span>
+                                    <span className="score" lang="pl">
+                                      kultura
+                                    </span>
+                                  </Link>
+                                </li>
+                              )}
+                              </Fragment>
                             );
                           })}
                         </ol>
