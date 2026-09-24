@@ -29,6 +29,8 @@
   --pomarancz: #e8631c;
   --on-ink: #ffffff;
   --focus: #1e4fb5;
+  /* Outline for picture flashcards; lifts Twemoji's near-black shapes off a dark page. */
+  --picture-halo: none;
 
   --font-pl: 'Poltawski Nowy', 'Iowan Old Style', Georgia, serif;
   --font-ui: 'Signika', 'Segoe UI', system-ui, sans-serif;
@@ -72,6 +74,7 @@
     --pomarancz: #f58a4f;
     --on-ink: #141210;
     --focus: #f5c63a;
+    --picture-halo: drop-shadow(0 0 1px rgb(243 239 231 / 0.9)) drop-shadow(0 0 0.5px rgb(243 239 231 / 0.9));
     color-scheme: dark;
   }
 }
@@ -97,6 +100,7 @@
   --pomarancz: #f58a4f;
   --on-ink: #141210;
   --focus: #f5c63a;
+  --picture-halo: drop-shadow(0 0 1px rgb(243 239 231 / 0.9)) drop-shadow(0 0 0.5px rgb(243 239 231 / 0.9));
   color-scheme: dark;
 }
 
@@ -2568,7 +2572,7 @@ details.spot > div {
   padding: 18px;
   border: 1.5px solid var(--rule);
   border-radius: var(--r);
-  background: #fff;
+  background: var(--paper-2);
 }
 
 .picture-prompt img,
@@ -2577,10 +2581,11 @@ details.spot > div {
   height: auto;
   aspect-ratio: 1;
   user-select: none;
+  filter: var(--picture-halo);
 }
 
 .picture-prompt figcaption {
-  color: #555;
+  color: var(--ink-3);
   font-size: 18px;
 }
 
@@ -2588,7 +2593,7 @@ details.spot > div {
   padding: 16px;
   border: 1.5px solid var(--rule);
   border-radius: var(--r);
-  background: #fff;
+  background: var(--paper-2);
   box-sizing: content-box;
 }
 
@@ -2616,8 +2621,9 @@ details.spot > div {
   height: 80px;
   margin-bottom: 4px;
   padding: 8px;
+  filter: var(--picture-halo);
   border-radius: var(--r);
-  background: #fff;
+  background: var(--paper-2);
   box-sizing: content-box;
 }
 
