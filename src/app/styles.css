@@ -3142,3 +3142,67 @@ dialog.confirm p {
   color: var(--ink-2);
   font-size: 16px;
 }
+
+/* Polish words in running text that say themselves when tapped */
+.say-word {
+  display: inline;
+  padding: 0;
+  border: 0;
+  border-bottom: 2px dotted var(--czerwien);
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-family: var(--font-pl);
+  line-height: inherit;
+  cursor: pointer;
+}
+
+.say-word:hover,
+.say-word[data-playing='true'] {
+  color: var(--czerwien);
+  border-bottom-style: solid;
+}
+
+.say-word:focus-visible {
+  outline: 3px solid var(--zolc);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.say-word-sample {
+  border-bottom: 2px dotted var(--czerwien);
+}
+
+.culture-tip {
+  margin-top: -8px !important;
+  font-size: 15px;
+}
+
+/* Culture pictures */
+.culture-picture {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.culture-picture img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 460px;
+  object-fit: contain;
+  background: var(--paper-2);
+  border-radius: 4px;
+}
+
+.culture-picture figcaption {
+  display: grid;
+  gap: 2px;
+  color: var(--ink-2);
+  font-size: 16px;
+}
+
+.culture-picture .credit {
+  color: var(--ink-3);
+  font-size: 13px;
+}

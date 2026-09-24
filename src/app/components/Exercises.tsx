@@ -35,7 +35,7 @@ function HintLine({ label, text, lang }: { label: string; text: string; lang: 'p
 
 export function Choose({ ex, locked, onAnswer, checked, hints = 0 }: AnswerProps<Of<'choose'>>) {
   const [picked, setPicked] = useState<string | null>(null);
-  const hasVoice = usePolishVoice();
+  const hasVoice = usePolishVoice(ex.say ?? ex.prompt);
   useEffect(() => setPicked(null), [ex, hints]);
   const out = ruledOut(ex.options, ex.answer, hints);
   const pick = (o: string) => {
@@ -191,7 +191,7 @@ export function TypeAnswer({ ex, locked, onAnswer, hints = 0 }: AnswerProps<Of<'
 
 export function Build({ ex, locked, onAnswer, hints = 0 }: AnswerProps<Of<'build'>>) {
   const [chosen, setChosen] = useState<number[]>([]);
-  const hasVoice = usePolishVoice();
+  const hasVoice = usePolishVoice(ex.audio ?? '');
   useEffect(() => setChosen([]), [ex]);
   const update = (next: number[]) => {
     setChosen(next);

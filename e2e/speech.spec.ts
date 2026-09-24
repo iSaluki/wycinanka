@@ -1,4 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
+import { readFileSync } from 'node:fs';
+import { audioId } from '../src/app/lib/speech';
 import { solveLesson } from './helpers';
 
 /**
@@ -36,10 +38,15 @@ export async function fakePolishVoice(page: Page) {
   });
 }
 
+// The service worker fetches the list of recordings itself, out of reach of page.route(): keep it out of these tests.
+test.use({ serviceWorkers: 'block' });
+
 const spokenTexts = (page: Page) => page.evaluate(() => (window as unknown as { __spoken: string[] }).__spoken);
 
 test('the voice reads only Polish: no English glosses, gaps or spelling labels', async ({ page }) => {
   await fakePolishVoice(page);
+  // Recordings are named by a hash of their text; hide them so every text reaches the voice we can inspect.
+  await page.route('**/voice-index.json', (r) => r.fulfill({ status: 404 }));
   await page.goto('/lesson/u00-l2');
   await solveLesson(page, 'u00-l2');
   await page.goto('/lesson/u00-l6');
@@ -67,4 +74,57 @@ test('building a sentence always shows what it means in English', async ({ page 
     if (kind === 'Build what you hear') await expect(page.locator('.build-meaning')).toBeVisible();
   });
   expect(builds).toBeGreaterThan(0);
+});
+
+test('course text plays the recorded voice; text made up on the spot uses the device voice', async ({ page, request }) => {
+  const index = JSON.parse(readFileSync('public/voice-index.json', 'utf8')) as { voice: string };
+  await fakePolishVoice(page);
+  // Headless Chromium can't be heard: note what each <audio> is asked to play, and finish at once.
+  await page.addInitScript(() => {
+    const played: string[] = [];
+    (window as unknown as { __played: string[] }).__played = played;
+    HTMLMediaElement.prototype.play = function (this: HTMLMediaElement) {
+      played.push(new URL(this.src).pathname);
+      setTimeout(() => this.onended?.(new Event('ended')), 0);
+      return Promise.resolve();
+    };
+  });
+  const played = () => page.evaluate(() => (window as unknown as { __played: string[] }).__played);
+
+  await page.goto('/lesson/u01-l1');
+  await page.getByRole('button', { name: 'Play: tak', exact: true }).click();
+  const file = `/voice/${index.voice}/${audioId('tak')}.mp3`;
+  await expect.poll(played).toContain(file);
+  expect(await spokenTexts(page)).not.toContain('tak');
+  const res = await request.get(file);
+  expect(res.status()).toBe(200);
+  expect(res.headers()['content-type']).toContain('audio/mpeg');
+
+  // A number typed into the tools has no recording.
+  await page.goto('/tools/numbers');
+  const input = page.locator('#num');
+  await input.fill('4321');
+  await page.getByRole('button', { name: /^Play: cztery tysiące/ }).first().click();
+  await expect.poll(() => spokenTexts(page)).toContainEqual(expect.stringMatching(/^cztery tysiące/));
+});
+
+test('Polish words in culture notes say themselves when tapped, and articles have credited pictures', async ({ page }) => {
+  const index = JSON.parse(readFileSync('public/voice-index.json', 'utf8')) as { voice: string };
+  await page.addInitScript(() => {
+    const played: string[] = [];
+    (window as unknown as { __played: string[] }).__played = played;
+    HTMLMediaElement.prototype.play = function (this: HTMLMediaElement) {
+      played.push(new URL(this.src).pathname);
+      setTimeout(() => this.onended?.(new Event('ended')), 0);
+      return Promise.resolve();
+    };
+  });
+  await page.goto('/culture/wigilia');
+  const picture = page.locator('.culture-picture img');
+  await expect(picture).toBeVisible();
+  expect(await picture.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
+  await expect(page.locator('.culture-picture .credit')).toContainText('Wikimedia Commons');
+
+  await page.locator('.culture-article p').getByRole('button', { name: 'barszcz: hear it' }).first().click();
+  await expect.poll(() => page.evaluate(() => (window as unknown as { __played: string[] }).__played)).toContain(`/voice/${index.voice}/${audioId('barszcz')}.mp3`);
 });

@@ -2,9 +2,10 @@
  * Wycinanka service worker: makes the app installable, keeps it opening when the network drops,
  * and shows daily practice reminders sent by the Worker (see src/worker/reminders.ts).
  *
- * Caching is deliberately small. Hashed build files (/assets/*) never change, so they are served
- * from the cache first; everything else is left to the browser's normal HTTP cache. Pages always
- * try the network first and fall back to the cached app shell.
+ * Caching is deliberately small. Hashed build files (/assets/*) and recordings (/voice/*) never change,
+ * so they are served from the cache first (recordings once they have been played); everything else is
+ * left to the browser's normal HTTP cache. Pages always try the network first and fall back to the
+ * cached app shell.
  * The API is never cached: progress must always come from the server.
  */
 
@@ -51,7 +52,24 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  if (url.pathname.startsWith('/assets/')) {
+  // The list of recordings: fresh when online, the last copy offline, so recorded audio keeps working.
+  if (url.pathname === '/voice-index.json') {
+    event.respondWith(
+      fetch(req)
+        .then((res) => {
+          if (res.ok) {
+            const copy = res.clone();
+            caches.open(CACHE).then((c) => c.put(req, copy));
+          }
+          return res;
+        })
+        .catch(() => caches.match(req).then((r) => r ?? Response.error())),
+    );
+    return;
+  }
+
+  // Recordings never change, like build files: once heard, they play from the cache, offline too.
+  if (url.pathname.startsWith('/assets/') || url.pathname.startsWith('/voice/')) {
     event.respondWith(
       caches.match(req).then(
         (hit) =>

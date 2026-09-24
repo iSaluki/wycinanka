@@ -14,7 +14,7 @@ A free Polish course for British English speakers, from complete beginner to B1.
 - **Picture flashcards**: 72 everyday objects in nine themed decks. Meet each picture with its Polish and English name, then name it from four Polish words; learnt pictures come back on the spaced-review schedule. Images are [Twemoji](https://github.com/jdecked/twemoji) (CC BY 4.0), self-hosted in `public/pictures`
 - **Sounds**: an alphabet chart, English-style respellings on every word (*VRO-tswaf*) and a minimal-pair listening game (*wieś / wiesz*)
 - **Tools** outside the course: a pronouncer (type *cz* or any word and see how to say it and why), Polish numbers and prices, telling the time, and a phrasebook
-- **Culture notes**: short English articles on Polish traditions (Wigilia, Easter, name days, All Saints', Fat Thursday, paper cutting and more), each with Polish words to hear and take away. Five carry one hand-picked video from the performer's or institution's own channel (fans and players singing *Sto lat*, a stadium singing the anthem, Chopin from the Chopin Institute, a Łowicz paper-cutter, Wigilia's twelve dishes). Nothing loads from YouTube until the learner presses play, and then only from youtube-nocookie.com, the one third-party origin the CSP allows (as a frame)
+- **Culture notes**: short English articles on Polish traditions (Wigilia, Easter, name days, All Saints', Fat Thursday, paper cutting and more) and history (the baptism of 966, the Commonwealth, the Warsaw Uprising, Solidarity), each with Polish words to hear and take away. Every Polish word in an article can be tapped to hear it, and most articles have a picture from Wikimedia Commons (public domain or Creative Commons, self-hosted in `public/culture`, credited under it). Five carry one hand-picked video from the performer's or institution's own channel (fans and players singing *Sto lat*, a stadium singing the anthem, Chopin from the Chopin Institute, a Łowicz paper-cutter, Wigilia's twelve dishes). Nothing loads from YouTube until the learner presses play, and then only from youtube-nocookie.com, the one third-party origin the CSP allows (as a frame)
 - **Installable app (PWA)**: mobile learners are invited to add Wycinanka to their home screen (the browser's own install prompt on Android, Share → Add to Home Screen instructions on iPhone)
 - **Daily reminders**: signed-in learners can switch on a push notification at a time they choose, sent only on days they haven't practised yet
 - **Grammar reference**: the seven cases, a declension explorer and every lesson's grammar notes
@@ -31,7 +31,7 @@ The research behind the course design, the curriculum, architecture and security
 | Front end | React 19 + Vite, plain CSS; self-hosted fonts (Poltawski Nowy, Signika) |
 | API | Hono on Cloudflare Workers (`src/worker`) |
 | Data | Cloudflare D1 (`migrations/`, applied by the Worker itself on first request) |
-| Audio | The browser's built-in Polish speech synthesis (free, no API) |
+| Audio | Every fixed Polish text pre-recorded with [Piper](https://github.com/OHF-Voice/piper1-gpl), a free neural voice run locally (`scripts/voice.py`), served as small MP3s; the browser's own Polish voice for text typed into the tools, or for everything if the learner prefers it |
 | Shared | FSRS scheduler, answer grader, validation and progress rules (`src/shared`), used by both browser and Worker |
 | Content | TypeScript data in `src/content`, validated by tests |
 
@@ -116,3 +116,14 @@ Designed against the OWASP Top 10 and ASVS level 1, with selected level 2 contro
 - Course: `src/content/units/*.ts`, built with the helpers in `src/content/build.ts`. IDs derive from the lesson ID and the Polish text, so don't change the Polish of an item that is already live: that would reset learners' review cards for it.
 - Frequency list: `src/content/frequency.ts`, ordered using the OpenSubtitles 2018 Polish list ([hermitdave/FrequencyWords](https://github.com/hermitdave/FrequencyWords)), grouped by dictionary form.
 - `npm run test:unit` checks content integrity: unique IDs, Unicode NFC, drills that can be answered, and distractor tiles that aren't also correct words.
+
+### Recorded voice
+
+Lessons, phrases, words and the other fixed Polish text are read by the mc_speech Piper voice (trained on a CC0 dataset), recorded ahead of time rather than synthesised in the browser. After adding or changing Polish text, record it:
+
+```sh
+pip install piper-tts lameenc   # once; Python 3.9+
+npm run voice                   # records only what's new, deletes what's gone
+```
+
+The first run downloads the voice model (about 60 MB) to `~/.cache/wycinanka-voice`. `src/app/lib/spoken.ts` lists every text that is recorded; each file in `public/voice/<voice>/` is named by a hash of its text, and `public/voice-index.json` lists them, so the app knows what it can play without a lookup table. `npm run test:unit` fails if any text is missing a recording. Text without one (a number typed into the tools, for example) falls back to the browser's voice.
