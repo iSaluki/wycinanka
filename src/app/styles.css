@@ -2953,3 +2953,43 @@ dialog.confirm p {
   font-family: var(--font-pl);
   color: var(--ink-2);
 }
+
+/* ---------- Start-up fallback (index.html, replaced once the app renders) ---------- */
+
+.boot {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 18px;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: 24px 16px;
+  text-align: center;
+}
+.boot-brand {
+  margin: 0;
+  font: 700 28px/1.2 var(--font-pl);
+}
+.boot-help,
+.boot-error {
+  max-width: 34em;
+  margin: 0;
+  color: var(--ink-2);
+}
+/* Only worth saying if start-up is clearly stuck. */
+.boot-help {
+  visibility: hidden;
+  animation: boot-help 0s 6s forwards;
+}
+@keyframes boot-help {
+  to {
+    visibility: visible;
+  }
+}
+.boot-error code {
+  display: block;
+  margin-top: 10px;
+  font-size: 14px;
+  color: var(--ink-3);
+  overflow-wrap: anywhere;
+}

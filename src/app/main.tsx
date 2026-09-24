@@ -8,13 +8,28 @@ import '@fontsource/signika/500.css';
 import '@fontsource/signika/600.css';
 import '@fontsource/signika/700.css';
 import './styles.css';
-import { App } from './App';
 import { initPwa } from './lib/pwa';
+import { BootError, showBootError } from './BootError';
 
-initPwa();
+const root = document.getElementById('root')!;
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-);
+try {
+  initPwa();
+} catch (err) {
+  // Install prompts and the service worker are extras: never let them stop the app.
+  console.warn('PWA set-up failed', err);
+}
+
+// The app is loaded separately so that anything failing while its modules start up (an API an older
+// or privacy-hardened browser lacks) shows a message instead of leaving a blank page.
+import('./App')
+  .then(({ App }) => {
+    createRoot(root).render(
+      <StrictMode>
+        <BootError>
+          <App />
+        </BootError>
+      </StrictMode>,
+    );
+  })
+  .catch((err: unknown) => showBootError(root, err));

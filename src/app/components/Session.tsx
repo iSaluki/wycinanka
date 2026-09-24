@@ -84,7 +84,10 @@ function ConfirmLeave({ what, onStay, onLeave }: { what: string; onStay: () => v
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const d = ref.current;
-    if (d && !d.open) d.showModal();
+    if (!d || d.open) return;
+    // Safari before 15.4 has no showModal(); an open, non-modal dialog still works there.
+    if (typeof d.showModal === 'function') d.showModal();
+    else d.setAttribute('open', '');
   }, []);
   return (
     <dialog ref={ref} className="confirm" aria-labelledby="leave-title" aria-describedby="leave-body" onCancel={(e) => (e.preventDefault(), onStay())}>

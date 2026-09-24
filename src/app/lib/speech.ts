@@ -10,7 +10,12 @@ const listeners = new Set<() => void>();
 
 function pickVoice() {
   if (typeof speechSynthesis === 'undefined') return;
-  const voices = speechSynthesis.getVoices();
+  let voices: SpeechSynthesisVoice[] = [];
+  try {
+    voices = speechSynthesis.getVoices();
+  } catch {
+    // Privacy browsers (Brave, some iOS modes) can refuse voice lists; lessons fall back to spelling help.
+  }
   const polish = voices.filter((v) => v.lang.toLowerCase().replace('_', '-').startsWith('pl'));
   // Prefer higher-quality network/"natural" voices where the platform offers them.
   voice = polish.find((v) => /natural|enhanced|premium|google/i.test(v.name)) ?? polish[0] ?? null;
@@ -18,9 +23,14 @@ function pickVoice() {
   listeners.forEach((l) => l());
 }
 
-if (typeof speechSynthesis !== 'undefined') {
-  pickVoice();
-  speechSynthesis.addEventListener?.('voiceschanged', pickVoice);
+// Runs at import time, so a browser that blocks speech must never stop the whole app from starting.
+try {
+  if (typeof speechSynthesis !== 'undefined') {
+    pickVoice();
+    speechSynthesis.addEventListener?.('voiceschanged', pickVoice);
+  }
+} catch {
+  ready = true;
 }
 
 export const speechSupported = () => typeof speechSynthesis !== 'undefined';
@@ -59,12 +69,16 @@ export function speak(text: string, opts: { slow?: boolean; onEnd?: () => void }
     opts.onEnd?.();
     return;
   }
-  speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  u.voice = voice;
-  u.lang = voice.lang;
-  u.rate = opts.slow ? Math.max(0.5, rate * 0.65) : rate;
-  u.onend = () => opts.onEnd?.();
-  u.onerror = () => opts.onEnd?.();
-  speechSynthesis.speak(u);
+  try {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.voice = voice;
+    u.lang = voice.lang;
+    u.rate = opts.slow ? Math.max(0.5, rate * 0.65) : rate;
+    u.onend = () => opts.onEnd?.();
+    u.onerror = () => opts.onEnd?.();
+    speechSynthesis.speak(u);
+  } catch {
+    opts.onEnd?.();
+  }
 }

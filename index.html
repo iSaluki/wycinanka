@@ -17,7 +17,16 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   </head>
   <body>
-    <div id="root"></div>
+    <!-- Shown until the app starts, so a browser that cannot run it never sees an empty white page. -->
+    <div id="root">
+      <div class="boot" aria-busy="true">
+        <p class="boot-brand">Wycinanka</p>
+        <p class="boot-help">
+          Still loading? Wycinanka needs JavaScript. If you use Brave, turn off “Block Scripts” in Shields for this
+          site; otherwise update your browser (on an iPad, update iPadOS) and reload.
+        </p>
+      </div>
+    </div>
     <noscript>Wycinanka needs JavaScript to run lessons.</noscript>
     <script type="module" src="/src/app/main.tsx"></script>
   </body>
