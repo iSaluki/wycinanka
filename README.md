@@ -14,7 +14,7 @@ A free Polish course for British English speakers, from complete beginner to B1.
 - **Picture flashcards**: 72 everyday objects in nine themed decks. Meet each picture with its Polish and English name, then name it from four Polish words; learnt pictures come back on the spaced-review schedule. Images are [Twemoji](https://github.com/jdecked/twemoji) (CC BY 4.0), self-hosted in `public/pictures`
 - **Sounds**: an alphabet chart, English-style respellings on every word (*VRO-tswaf*) and a minimal-pair listening game (*wieś / wiesz*)
 - **Tools** outside the course: a pronouncer (type *cz* or any word and see how to say it and why), Polish numbers and prices, telling the time, and a phrasebook
-- **Culture notes**: short English articles on Polish traditions (Wigilia, Easter, name days, All Saints', Fat Thursday, paper cutting and more), each with Polish words to hear and take away. Five carry one hand-picked video from the performer's or institution's own channel (fans and players singing *Sto lat*, a stadium singing the anthem, Chopin from the Chopin Institute, a Łowicz paper-cutter, Wigilia's twelve dishes). Nothing loads from YouTube until the learner presses play, and then only from youtube-nocookie.com, the one third-party origin the CSP allows (as a frame)
+- **Culture notes**: short English articles on Polish traditions (Wigilia, Easter, name days, All Saints', Fat Thursday, paper cutting and more) and history (the baptism of 966, the Commonwealth, the Warsaw Uprising, Solidarity), each with Polish words to hear and take away. Every Polish word in an article can be tapped to hear it, and most articles have a picture from Wikimedia Commons (public domain or Creative Commons, self-hosted in `public/culture`, credited under it). Five carry one hand-picked video from the performer's or institution's own channel (fans and players singing *Sto lat*, a stadium singing the anthem, Chopin from the Chopin Institute, a Łowicz paper-cutter, Wigilia's twelve dishes). Nothing loads from YouTube until the learner presses play, and then only from youtube-nocookie.com, the one third-party origin the CSP allows (as a frame)
 - **Installable app (PWA)**: mobile learners are invited to add Wycinanka to their home screen (the browser's own install prompt on Android, Share → Add to Home Screen instructions on iPhone)
 - **Daily reminders**: signed-in learners can switch on a push notification at a time they choose, sent only on days they haven't practised yet
 - **Grammar reference**: the seven cases, a declension explorer and every lesson's grammar notes
@@ -119,7 +119,7 @@ Designed against the OWASP Top 10 and ASVS level 1, with selected level 2 contro
 
 ### Recorded voice
 
-Lessons, phrases, words and the other fixed Polish text are read by the __VOICE__ Piper voice (trained on a CC0 dataset), recorded ahead of time rather than synthesised in the browser. After adding or changing Polish text, record it:
+Lessons, phrases, words and the other fixed Polish text are read by the mc_speech Piper voice (trained on a CC0 dataset), recorded ahead of time rather than synthesised in the browser. After adding or changing Polish text, record it:
 
 ```sh
 pip install piper-tts lameenc   # once; Python 3.9+

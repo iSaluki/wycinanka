@@ -42,14 +42,54 @@ export function Speak({ text, slow, label, autoPlay }: { text: string; slow?: bo
   );
 }
 
-/** Renders lesson prose: **bold** and {Polish text in the Polish face}. */
-export function Rich({ text }: { text: string }) {
+/** A Polish word in running text that says itself when tapped. */
+function SayWord({ text }: { text: string }) {
+  const has = usePolishVoice(text);
+  const [playing, setPlaying] = useState(false);
+  if (!has)
+    return (
+      <span className="pl" lang="pl">
+        {text}
+      </span>
+    );
+  return (
+    <button
+      type="button"
+      className="pl say-word"
+      lang="pl"
+      data-playing={playing}
+      aria-label={`${text}: hear it`}
+      title="Tap to hear it"
+      onClick={() => {
+        setPlaying(true);
+        speak(text, { onEnd: () => setPlaying(false) });
+      }}
+    >
+      {text}
+    </button>
+  );
+}
+
+/**
+ * Renders lesson prose: **bold**, {Polish text in the Polish face} and **{a key Polish term}**, bold.
+ * With `tappable`, Polish words can be tapped to hear them.
+ */
+export function Rich({ text, tappable = false }: { text: string; tappable?: boolean }) {
   const parts = text.split(/(\*\*[^*]+\*\*|\{[^}]+\}|\*[^*]+\*)/g);
+  const polish = (t: string, key: number) =>
+    tappable ? (
+      <SayWord key={key} text={t} />
+    ) : (
+      <span key={key} className="pl" lang="pl">
+        {t}
+      </span>
+    );
   return (
     <>
       {parts.map((p, i) => {
+        if (p.startsWith('**{') && p.endsWith('}**')) return <strong key={i}>{polish(p.slice(3, -3), i)}</strong>;
         if (p.startsWith('**') && p.endsWith('**')) return <strong key={i}>{p.slice(2, -2)}</strong>;
-        if (p.startsWith('{') && p.endsWith('}')) return <span key={i} className="pl" lang="pl">{p.slice(1, -1)}</span>;
+        if (p.startsWith('{') && p.endsWith('}')) return polish(p.slice(1, -1), i);
         if (p.startsWith('*') && p.endsWith('*') && p.length > 2) return <em key={i}>{p.slice(1, -1)}</em>;
         return <Fragment key={i}>{p}</Fragment>;
       })}

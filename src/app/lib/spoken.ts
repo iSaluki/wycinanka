@@ -34,7 +34,11 @@ export function spokenTexts(): string[] {
   for (const c of CHUNKS) add(c.pl, chunkCore(c), c.ex?.[0]);
   for (const w of FREQUENCY) add(w.pl, w.ex?.[0]);
   for (const p of PICTURES) add(p.pl);
-  for (const c of CULTURE) for (const [pl] of c.words) add(pl);
+  for (const c of CULTURE) {
+    add(...c.words.map(([pl]) => pl));
+    // Polish words in the articles say themselves when tapped.
+    for (const text of [...c.body, c.video?.caption ?? '', c.image?.caption ?? '']) add(...[...text.matchAll(/\{([^}]+)\}/g)].map((m) => m[1]));
+  }
   for (const g of PHRASEBOOK) for (const [pl] of g.phrases) add(pl);
   for (const c of CASES) add(c.example[0]);
   for (const l of ALPHABET) add(l.example[0], `${l.name}. ${l.example[0]}`);

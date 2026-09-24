@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CULTURE, CULTURE_THEMES, cultureTopic, type CultureTopic, type CultureVideo } from '../../content/culture';
+import { CULTURE, CULTURE_THEMES, cultureTopic, type CultureImage, type CultureTopic, type CultureVideo } from '../../content/culture';
 import { respell } from '../../shared/phonetics';
 import { PageHead, Rich, SectionHead, Speak } from '../components/common';
 import { IconArrow } from '../components/icons';
@@ -18,10 +18,14 @@ function Article({ topic }: { topic: CultureTopic }) {
         </p>
         <PageHead pl={topic.pl} en={topic.title} />
         {topic.when && <p className="culture-when">{topic.when}</p>}
+        <p className="muted culture-tip">
+          Tap any <span className="pl say-word-sample" lang="pl">Polish word</span> to hear it.
+        </p>
+        {topic.image && <Picture image={topic.image} />}
         <div className="stack">
           {topic.body.map((p, k) => (
             <p key={k}>
-              <Rich text={p} />
+              <Rich text={p} tappable />
             </p>
           ))}
         </div>
@@ -48,6 +52,42 @@ function Article({ topic }: { topic: CultureTopic }) {
         </Link>
       </article>
     </Shell>
+  );
+}
+
+const LICENSES: Partial<Record<CultureImage['license'], string>> = {
+  'CC BY 2.0': 'https://creativecommons.org/licenses/by/2.0/',
+  'CC BY 3.0': 'https://creativecommons.org/licenses/by/3.0/',
+  'CC BY 4.0': 'https://creativecommons.org/licenses/by/4.0/',
+  'CC BY-SA 3.0 PL': 'https://creativecommons.org/licenses/by-sa/3.0/pl/',
+  'CC BY-SA 4.0': 'https://creativecommons.org/licenses/by-sa/4.0/',
+  CC0: 'https://creativecommons.org/publicdomain/zero/1.0/',
+};
+
+/** The article's picture, with the credit its licence asks for. */
+function Picture({ image }: { image: CultureImage }) {
+  const license = LICENSES[image.license];
+  return (
+    <figure className="culture-picture">
+      <img src={image.src} alt={image.alt} width={image.width} height={image.height} loading="lazy" decoding="async" />
+      <figcaption>
+        <Rich text={image.caption} tappable />
+        <small className="credit">
+          {image.author},{' '}
+          {license ? (
+            <a href={license} target="_blank" rel="noopener noreferrer">
+              {image.license}
+            </a>
+          ) : (
+            image.license.toLowerCase()
+          )}
+          , via{' '}
+          <a href={image.source} target="_blank" rel="noopener noreferrer">
+            Wikimedia Commons
+          </a>
+        </small>
+      </figcaption>
+    </figure>
   );
 }
 
@@ -85,7 +125,7 @@ function Video({ video }: { video: CultureVideo }) {
         )}
       </div>
       <figcaption>
-        <Rich text={video.caption} />{' '}
+        <Rich text={video.caption} tappable />{' '}
         <a href={watch} target="_blank" rel="noopener noreferrer">
           Watch on YouTube
         </a>

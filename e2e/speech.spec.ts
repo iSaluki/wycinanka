@@ -38,6 +38,9 @@ export async function fakePolishVoice(page: Page) {
   });
 }
 
+// The service worker fetches the list of recordings itself, out of reach of page.route(): keep it out of these tests.
+test.use({ serviceWorkers: 'block' });
+
 const spokenTexts = (page: Page) => page.evaluate(() => (window as unknown as { __spoken: string[] }).__spoken);
 
 test('the voice reads only Polish: no English glosses, gaps or spelling labels', async ({ page }) => {
@@ -103,4 +106,25 @@ test('course text plays the recorded voice; text made up on the spot uses the de
   await input.fill('4321');
   await page.getByRole('button', { name: /^Play: cztery tysiące/ }).first().click();
   await expect.poll(() => spokenTexts(page)).toContainEqual(expect.stringMatching(/^cztery tysiące/));
+});
+
+test('Polish words in culture notes say themselves when tapped, and articles have credited pictures', async ({ page }) => {
+  const index = JSON.parse(readFileSync('public/voice-index.json', 'utf8')) as { voice: string };
+  await page.addInitScript(() => {
+    const played: string[] = [];
+    (window as unknown as { __played: string[] }).__played = played;
+    HTMLMediaElement.prototype.play = function (this: HTMLMediaElement) {
+      played.push(new URL(this.src).pathname);
+      setTimeout(() => this.onended?.(new Event('ended')), 0);
+      return Promise.resolve();
+    };
+  });
+  await page.goto('/culture/wigilia');
+  const picture = page.locator('.culture-picture img');
+  await expect(picture).toBeVisible();
+  expect(await picture.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
+  await expect(page.locator('.culture-picture .credit')).toContainText('Wikimedia Commons');
+
+  await page.locator('.culture-article p').getByRole('button', { name: 'barszcz: hear it' }).first().click();
+  await expect.poll(() => page.evaluate(() => (window as unknown as { __played: string[] }).__played)).toContain(`/voice/${index.voice}/${audioId('barszcz')}.mp3`);
 });
