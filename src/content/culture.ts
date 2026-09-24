@@ -17,6 +17,19 @@ export interface CultureTopic {
   summary: string;
   body: string[];
   words: Array<[pl: string, en: string]>;
+  /** One video that shows the tradition better than words can, from the performer's or institution's own channel. */
+  video?: CultureVideo;
+}
+
+export interface CultureVideo {
+  /** YouTube video id. */
+  youtube: string;
+  /** What it is, in a few words. */
+  title: string;
+  /** Who published it. */
+  channel: string;
+  /** Why it's worth watching: one or two sentences, with the same markup as the body. */
+  caption: string;
 }
 
 export const CULTURE_THEMES: Array<{ id: CultureTheme; pl: string; en: string }> = [
@@ -48,6 +61,12 @@ export const CULTURE: CultureTopic[] = [
       ['karp', 'carp'],
       ['Wesołych Świąt!', 'Happy Christmas!'],
     ],
+    video: {
+      youtube: 'scg9txOWa5U',
+      title: 'Why Wigilia has twelve dishes',
+      channel: 'DW Food',
+      caption: 'In English, from Deutsche Welle: the dishes of a Polish Christmas Eve, from {barszcz} with {uszka} onwards.',
+    },
   },
   {
     id: 'wielkanoc',
@@ -182,6 +201,13 @@ export const CULTURE: CultureTopic[] = [
       ['Wszystkiego najlepszego!', 'All the best!'],
       ['kwiaty', 'flowers'],
     ],
+    video: {
+      youtube: 'vKI8TO7g2OU',
+      title: 'Fans and players sing Sto lat',
+      channel: 'Piast Gliwice',
+      caption:
+        'After a match, the players and fans of the football club Piast Gliwice sing {Sto lat} to a teammate nicknamed Badi. Listen for {Sto lat, sto lat, niech żyje, żyje nam}: "a hundred years, a hundred years, long may they live".',
+    },
   },
   {
     id: 'goscinnosc',
@@ -243,6 +269,13 @@ export const CULTURE: CultureTopic[] = [
       ['kogut', 'rooster'],
       ['gwiazda', 'star'],
     ],
+    video: {
+      youtube: 'E_yxUKChkDo',
+      title: 'How a Łowicz cut-out is made',
+      channel: 'Muzeum w Łowiczu',
+      caption:
+        'A paper-cutter at the Museum in Łowicz builds a cut-out layer by layer, the style your rosette is based on. In Polish, with a sign-language interpreter; the scissors speak for themselves.',
+    },
   },
   {
     id: 'swieta-narodowe',
@@ -262,6 +295,13 @@ export const CULTURE: CultureTopic[] = [
       ['hymn', 'national anthem'],
       ['Jeszcze Polska nie zginęła.', 'Poland has not yet perished.'],
     ],
+    video: {
+      youtube: 'fhVtiR3Rt4E',
+      title: 'A stadium sings the anthem',
+      channel: 'Radio Białystok',
+      caption:
+        'November 2018, a hundred years after independence: before a league match in Białystok, the whole stadium sings {Mazurek Dąbrowskiego} under a giant white-and-red flag.',
+    },
   },
   {
     id: 'muzyka',
@@ -281,6 +321,13 @@ export const CULTURE: CultureTopic[] = [
       ['matura', 'school-leaving exams'],
       ['fortepian', 'piano'],
     ],
+    video: {
+      youtube: 'aZYYoDDmg8M',
+      title: 'The "Heroic" Polonaise, Op. 53',
+      channel: 'Chopin Institute',
+      caption:
+        'Chopin\'s best-known polonaise, played by Seong-Jin Cho, winner of the 2015 Chopin Competition, at the prize-winners\' concert in Warsaw.',
+    },
   },
 ];
 

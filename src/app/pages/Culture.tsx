@@ -1,4 +1,5 @@
-import { CULTURE, CULTURE_THEMES, cultureTopic, type CultureTopic } from '../../content/culture';
+import { useState } from 'react';
+import { CULTURE, CULTURE_THEMES, cultureTopic, type CultureTopic, type CultureVideo } from '../../content/culture';
 import { respell } from '../../shared/phonetics';
 import { PageHead, Rich, SectionHead, Speak } from '../components/common';
 import { IconArrow } from '../components/icons';
@@ -24,6 +25,7 @@ function Article({ topic }: { topic: CultureTopic }) {
             </p>
           ))}
         </div>
+        {topic.video && <Video video={topic.video} />}
         <section className="stack" aria-labelledby="words-to-know">
           <SectionHead pl="Słówka" en="words to know" />
           <ul className="culture-words" id="words-to-know">
@@ -46,6 +48,49 @@ function Article({ topic }: { topic: CultureTopic }) {
         </Link>
       </article>
     </Shell>
+  );
+}
+
+/**
+ * A YouTube video that loads only when the learner asks for it: until then nothing is fetched from YouTube,
+ * and it then plays from youtube-nocookie.com, which sets no cookies until playback starts.
+ */
+function Video({ video }: { video: CultureVideo }) {
+  const [playing, setPlaying] = useState(false);
+  const watch = `https://www.youtube.com/watch?v=${video.youtube}`;
+  return (
+    <figure className="culture-video">
+      <div className="video-frame">
+        {playing ? (
+          <iframe
+            src={`https://www.youtube-nocookie.com/embed/${video.youtube}?autoplay=1&rel=0`}
+            title={video.title}
+            allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+            // YouTube refuses to play embeds that send no referrer; send only the origin.
+            referrerPolicy="strict-origin-when-cross-origin"
+          />
+        ) : (
+          <button type="button" className="video-start" onClick={() => setPlaying(true)}>
+            <span className="video-play" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="30" height="30">
+                <path d="M8 5v14l11-7z" fill="currentColor" />
+              </svg>
+            </span>
+            <span className="video-title">
+              <span className="sr-only">Play video: </span>
+              {video.title}
+            </span>
+            <span className="video-note">Plays from YouTube · {video.channel}</span>
+          </button>
+        )}
+      </div>
+      <figcaption>
+        <Rich text={video.caption} />{' '}
+        <a href={watch} target="_blank" rel="noopener noreferrer">
+          Watch on YouTube
+        </a>
+      </figcaption>
+    </figure>
   );
 }
 

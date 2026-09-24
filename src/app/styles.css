@@ -3068,3 +3068,77 @@ dialog.confirm p {
   font-size: 1.2em;
   font-weight: 700;
 }
+
+/* Culture videos: a plain card until the learner presses play, so nothing loads from YouTube before then. */
+.culture-video {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+
+.video-frame {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  background: var(--ink);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.video-frame iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.video-start {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 8px;
+  padding: 16px;
+  border: 0;
+  background: transparent;
+  color: var(--paper);
+  font: inherit;
+  text-align: center;
+  cursor: pointer;
+}
+
+.video-play {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--czerwien);
+  color: #fff;
+  transition: transform 160ms var(--ease);
+}
+
+.video-start:hover .video-play,
+.video-start:focus-visible .video-play {
+  transform: scale(1.08);
+}
+
+.video-start:focus-visible {
+  outline: 3px solid var(--zolc);
+  outline-offset: -3px;
+}
+
+.video-title {
+  font: 700 clamp(18px, 4vw, 22px) / 1.25 var(--font-pl);
+}
+
+.video-note {
+  font-size: 14px;
+  opacity: 0.75;
+}
+
+.culture-video figcaption {
+  color: var(--ink-2);
+  font-size: 16px;
+}

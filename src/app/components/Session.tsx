@@ -201,6 +201,11 @@ export function Session({
       note = `The Polish letters matter: ${result.accents.map(([p, b]) => `${p} (not ${b})`).join(', ')}. A missing accent can make a different word.`;
     } else if (result?.verdict === 'typo') {
       note = 'Nearly — check the spelling.';
+    } else if (pass && ex.kind === 'type' && ex.also?.includes(expected)) {
+      // A different right answer from the one this card teaches: accept it, and name the one we meant.
+      // Lesson hints explain the difference ("Use until evening, with anyone"); a bare part of speech doesn't.
+      const tip = ex.hint && /\s/.test(ex.hint) ? ` ${ex.hint.replace(/[{}]/g, '')}` : '';
+      note = `Also right! This card was teaching ${ex.accepted[0]}.${tip}`;
     } else if (ex.kind === 'gap' && ex.why) {
       note = ex.why;
     } else if (!pass && 'hint' in ex && ex.hint) {
