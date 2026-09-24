@@ -8,6 +8,7 @@ import { Shell } from '../components/Shell';
 import { ApiError } from '../lib/api';
 import { useStats } from '../lib/derived';
 import { Link, navigate, useTitle } from '../lib/router';
+import { hasDeviceVoice } from '../lib/speech';
 import { DEFAULT_REMINDER_HOUR } from '../../shared/reminders';
 import { disableReminders, enableReminders, forgetThisDevice, reminderSupport, sendTestReminder, useDeviceSubscribed } from '../lib/reminders';
 import { changePassword, DEFAULT_SETTINGS, deleteAccount, downloadExport, logout, updateSettings, useApp } from '../lib/store';
@@ -150,6 +151,34 @@ function SettingsCard() {
           <Speak text="Dzień dobry, jak się masz?" label="Test the voice" />
         </div>
         {!has && <span className="help">No Polish voice is installed on this device, so audio is unavailable.</span>}
+      </div>
+      <div className="field">
+        <span id="voice-l" style={{ fontWeight: 700 }}>
+          Voice
+        </span>
+        <div className="seg" role="radiogroup" aria-labelledby="voice-l">
+          {(
+            [
+              [false, 'Recorded voice'],
+              [true, "My device's voice"],
+            ] as const
+          ).map(([device, label]) => (
+            <button
+              key={label}
+              role="radio"
+              aria-checked={!!s.deviceVoice === device}
+              aria-pressed={!!s.deviceVoice === device}
+              disabled={device && !hasDeviceVoice()}
+              onClick={() => set({ deviceVoice: device })}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <span className="help">
+          Lessons are read by a recorded neural Polish voice. Your device's own voice is used for anything typed in, like numbers in the tools
+          {hasDeviceVoice() ? ', and for everything if you choose it here.' : '; this device has no Polish voice installed.'}
+        </span>
       </div>
       <div className="field">
         <span id="theme-l" style={{ fontWeight: 700 }}>

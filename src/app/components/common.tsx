@@ -1,16 +1,22 @@
 import { Fragment, useEffect, useState, type ReactNode } from 'react';
-import { hasPolishVoice, onVoicesChanged, speak } from '../lib/speech';
+import { canSpeak, hasPolishVoice, onVoicesChanged, speak } from '../lib/speech';
 import { IconSlow, IconSpeaker } from './icons';
 
-export function usePolishVoice(): boolean {
-  const [has, setHas] = useState(hasPolishVoice());
-  useEffect(() => onVoicesChanged(() => setHas(hasPolishVoice())), []);
+/** Whether Polish can be spoken at all, or, given a text, whether that text can be: recorded, or by a device voice. */
+export function usePolishVoice(text?: string): boolean {
+  const check = () => (text === undefined ? hasPolishVoice() : canSpeak(text));
+  const [has, setHas] = useState(check);
+  useEffect(() => {
+    setHas(check());
+    return onVoicesChanged(() => setHas(check()));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [text]);
   return has;
 }
 
-/** Plays Polish text aloud. Disabled, with an explanation, when the device has no Polish voice. */
+/** Plays Polish text aloud. Disabled, with an explanation, when it can't be spoken on this device. */
 export function Speak({ text, slow, label, autoPlay }: { text: string; slow?: boolean; label?: string; autoPlay?: boolean }) {
-  const has = usePolishVoice();
+  const has = usePolishVoice(text);
   const [playing, setPlaying] = useState(false);
   const play = () => {
     setPlaying(true);

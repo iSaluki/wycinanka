@@ -12,7 +12,7 @@ import type { Card } from '../../shared/fsrs';
 import { localDay } from '../../shared/progress';
 import type { CardRow, ImportInput, LessonResult, ReviewInput, Settings, Snapshot } from '../../shared/schemas';
 import { api, ApiError } from './api';
-import { setSpeechRate } from './speech';
+import { setPreferDeviceVoice, setSpeechRate } from './speech';
 
 /**
  * App state. Signed-in learners: the server is authoritative and every change is sent to the API,
@@ -90,6 +90,7 @@ function applySettingsToDocument(s: Settings) {
   if (s.reduceMotion) root.setAttribute('data-motion', 'reduce');
   else root.removeAttribute('data-motion');
   setSpeechRate(s.speechRate ?? DEFAULT_SETTINGS.speechRate);
+  setPreferDeviceVoice(!!s.deviceVoice);
 }
 
 function fromSnapshot(snap: Snapshot): ProgressState {

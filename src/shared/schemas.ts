@@ -34,6 +34,8 @@ export const settingsSchema = z
     theme: z.enum(['system', 'light', 'dark']).optional(),
     reduceMotion: z.boolean().optional(),
     speaker: z.enum(['m', 'f']).optional(),
+    /** Read Polish with the device's own voice instead of the recorded one. */
+    deviceVoice: z.boolean().optional(),
     /** Daily practice reminder by push notification, at `reminderHour` o'clock in `timeZone`. */
     reminders: z.boolean().optional(),
     reminderHour: z.number().int().min(0).max(23).optional(),

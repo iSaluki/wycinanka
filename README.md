@@ -31,7 +31,7 @@ The research behind the course design, the curriculum, architecture and security
 | Front end | React 19 + Vite, plain CSS; self-hosted fonts (Poltawski Nowy, Signika) |
 | API | Hono on Cloudflare Workers (`src/worker`) |
 | Data | Cloudflare D1 (`migrations/`, applied by the Worker itself on first request) |
-| Audio | The browser's built-in Polish speech synthesis (free, no API) |
+| Audio | Every fixed Polish text pre-recorded with [Piper](https://github.com/OHF-Voice/piper1-gpl), a free neural voice run locally (`scripts/voice.py`), served as small MP3s; the browser's own Polish voice for text typed into the tools, or for everything if the learner prefers it |
 | Shared | FSRS scheduler, answer grader, validation and progress rules (`src/shared`), used by both browser and Worker |
 | Content | TypeScript data in `src/content`, validated by tests |
 
@@ -116,3 +116,14 @@ Designed against the OWASP Top 10 and ASVS level 1, with selected level 2 contro
 - Course: `src/content/units/*.ts`, built with the helpers in `src/content/build.ts`. IDs derive from the lesson ID and the Polish text, so don't change the Polish of an item that is already live: that would reset learners' review cards for it.
 - Frequency list: `src/content/frequency.ts`, ordered using the OpenSubtitles 2018 Polish list ([hermitdave/FrequencyWords](https://github.com/hermitdave/FrequencyWords)), grouped by dictionary form.
 - `npm run test:unit` checks content integrity: unique IDs, Unicode NFC, drills that can be answered, and distractor tiles that aren't also correct words.
+
+### Recorded voice
+
+Lessons, phrases, words and the other fixed Polish text are read by the __VOICE__ Piper voice (trained on a CC0 dataset), recorded ahead of time rather than synthesised in the browser. After adding or changing Polish text, record it:
+
+```sh
+pip install piper-tts lameenc   # once; Python 3.9+
+npm run voice                   # records only what's new, deletes what's gone
+```
+
+The first run downloads the voice model (about 60 MB) to `~/.cache/wycinanka-voice`. `src/app/lib/spoken.ts` lists every text that is recorded; each file in `public/voice/<voice>/` is named by a hash of its text, and `public/voice-index.json` lists them, so the app knows what it can play without a lookup table. `npm run test:unit` fails if any text is missing a recording. Text without one (a number typed into the tools, for example) falls back to the browser's voice.
