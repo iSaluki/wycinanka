@@ -12,23 +12,17 @@ import { Placement } from './pages/Placement';
 import { Profile } from './pages/Profile';
 import { Review } from './pages/Review';
 import { Sounds } from './pages/Sounds';
-import { Welcome, WELCOME_KEY } from './pages/Welcome';
+import { Welcome } from './pages/Welcome';
+import { welcomed } from './lib/welcome';
 import { Words } from './pages/Words';
 import { Tools } from './pages/Tools';
 import { Practice } from './pages/Practice';
 import { Pictures } from './pages/Pictures';
 import { Culture } from './pages/Culture';
+import { Phrases } from './pages/Phrases';
 import { Hub } from './pages/Hub';
 import { DISCOVER, PRACTISE } from './lib/sections';
 import { Mark } from './components/Shell';
-
-function welcomed(): boolean {
-  try {
-    return localStorage.getItem(WELCOME_KEY) === '1';
-  } catch {
-    return false;
-  }
-}
 
 export function App() {
   const path = usePath();
@@ -84,6 +78,8 @@ export function App() {
       return <Sounds />;
     case '/grammar':
       return <Grammar />;
+    case '/phrases':
+      return <Phrases />;
     case '/culture':
       return <Culture />;
     case '/study':

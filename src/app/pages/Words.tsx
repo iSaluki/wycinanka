@@ -47,7 +47,7 @@ export function Words() {
     await submitReviews([...r.ratings.entries()].map(([cardId, { rating, at }]) => ({ cardId, rating, at })));
   };
 
-  if (session) return <Session exercises={session} closeTo="/words" onFinish={finish} />;
+  if (session) return <Session exercises={session} onClose={() => setSession(null)} onFinish={finish} />;
 
   return (
     <Shell>

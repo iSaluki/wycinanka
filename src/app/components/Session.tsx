@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Rating } from '../../shared/fsrs';
 import { grade, type GradeResult } from '../../shared/grade';
-import { isGraded, type Exercise, type GradedExercise } from '../lib/exercises';
+import { isGraded, type Exercise, type ExtraTag, type GradedExercise } from '../lib/exercises';
 import { speak } from '../lib/speech';
-import { navigate } from '../lib/router';
 import { Build, Choose, Dialogue, Gap, Match, Meet, SpotlightView, TypeAnswer } from './Exercises';
 import { IconClose } from './icons';
 import { Label } from './common';
@@ -20,7 +19,7 @@ export interface SessionResult {
   /** Per-card rating from the first attempt (review sessions). */
   ratings: Map<string, { rating: Rating; at: number }>;
   /** Every first attempt, so callers can separate warm-ups from the lesson itself. */
-  attempts: Array<{ cardId: string; pass: boolean; tag?: 'warmup' }>;
+  attempts: Array<{ cardId: string; pass: boolean; tag?: ExtraTag }>;
 }
 
 interface Feedback {
@@ -77,14 +76,44 @@ function check(ex: GradedExercise, answer: string): { result: GradeResult | null
   }
 }
 
+/**
+ * Asks before leaving a session part-way through. A native <dialog> gives focus trapping, Escape to cancel
+ * and a backdrop for free.
+ */
+function ConfirmLeave({ what, onStay, onLeave }: { what: string; onStay: () => void; onLeave: () => void }) {
+  const ref = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    const d = ref.current;
+    if (d && !d.open) d.showModal();
+  }, []);
+  return (
+    <dialog ref={ref} className="confirm" aria-labelledby="leave-title" aria-describedby="leave-body" onCancel={(e) => (e.preventDefault(), onStay())}>
+      <h2 id="leave-title">Leave this {what}?</h2>
+      <p id="leave-body">Are you sure? Your progress in this {what} will be lost if you leave now.</p>
+      <div className="row wrap">
+        <button type="button" className="btn" onClick={onStay} autoFocus>
+          Keep going
+        </button>
+        <button type="button" className="btn quiet" onClick={onLeave}>
+          Leave
+        </button>
+      </div>
+    </dialog>
+  );
+}
+
 export function Session({
   exercises,
-  closeTo,
+  onClose,
+  what = 'session',
   rateable = false,
   onFinish,
 }: {
   exercises: Exercise[];
-  closeTo: string;
+  /** Called when the learner leaves early, after confirming if they had started. */
+  onClose: () => void;
+  /** What to call this in the leave prompt: "lesson", "review"… */
+  what?: string;
   rateable?: boolean;
   onFinish: (r: SessionResult) => void;
 }) {
@@ -97,6 +126,11 @@ export function Session({
   const started = useRef(Date.now());
   const finished = useRef(false);
   const continueRef = useRef<HTMLButtonElement>(null);
+  const [confirming, setConfirming] = useState(false);
+  // Before the learner has touched anything there is nothing to lose, so leaving needs no prompt.
+  const [touched, setTouched] = useState(false);
+  const begun = touched || pos > 0 || answer !== null || feedback !== null;
+  const leave = () => (begun ? setConfirming(true) : onClose());
 
   const entry = queue[pos];
   const graded = entry && isGraded(entry.ex);
@@ -116,7 +150,7 @@ export function Session({
     setPos(pos + 1);
   }, [pos, queue.length, onFinish]);
 
-  const record = (cardId: string, pass: boolean, rating: Rating, retry: boolean, tag?: 'warmup') => {
+  const record = (cardId: string, pass: boolean, rating: Rating, retry: boolean, tag?: ExtraTag) => {
     if (retry) return;
     const r = results.current;
     r.attempts.push({ cardId, pass, tag });
@@ -192,7 +226,7 @@ export function Session({
   // Enter checks, then continues.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Enter' || e.isComposing) return;
+      if (e.key !== 'Enter' || e.isComposing || confirming) return;
       if (feedback) {
         e.preventDefault();
         next();
@@ -217,7 +251,7 @@ export function Session({
   return (
     <div className="player">
       <div className="player-top">
-        <button type="button" className="icon-btn" onClick={() => navigate(closeTo)} aria-label="Leave this session">
+        <button type="button" className="icon-btn" onClick={leave} aria-label={`Leave this ${what}`}>
           <IconClose />
         </button>
         <div
@@ -235,7 +269,7 @@ export function Session({
         <span className="sr-only">{doneSteps} done</span>
       </div>
 
-      <div className="player-body" key={entry.key}>
+      <div className="player-body" key={entry.key} onPointerDownCapture={() => setTouched(true)} onKeyDownCapture={() => setTouched(true)}>
         {ex.kind === 'meet' && <Meet items={ex.items} onDone={next} />}
         {ex.kind === 'spotlight' && (
           <>
@@ -254,6 +288,7 @@ export function Session({
         {entry.retry && !feedback && <p className="muted">One more try at this one.</p>}
       </div>
 
+      {confirming && <ConfirmLeave what={what} onStay={() => setConfirming(false)} onLeave={onClose} />}
       <div className="dock">
         {feedback ? (
           <div className={`sheet ${feedback.pass ? 'good' : 'bad'}`} role="status" aria-live="polite">

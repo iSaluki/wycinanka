@@ -166,3 +166,11 @@ export const IconDiscover = (p: P) => (
     <path d="m15.5 8.5-2 5-5 2 2-5 5-2Z" />
   </svg>
 );
+
+/** Phrases: a speech bubble holding a joined-up line of words. */
+export const IconPhrases = (p: P) => (
+  <svg {...base} {...p}>
+    <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-4.5 4v-4A2.5 2.5 0 0 1 4 13.5v-8Z" />
+    <path d="M8 9.5h8" />
+  </svg>
+);

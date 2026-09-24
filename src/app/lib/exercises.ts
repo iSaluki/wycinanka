@@ -1,10 +1,17 @@
 import type { DialogueLine, Drill, FrequencyWord, Item, Lesson, Sentence, Spotlight } from '../../content/types';
 import { getCard, LESSONS, type CardSource } from '../../content/course';
 import type { Picture } from '../../content/pictures';
+import { CHUNK_CORES, chunkCore, CHUNKS, type Chunk } from '../../content/chunks';
 import { normalise } from '../../shared/grade';
 import { respell } from '../../shared/phonetics';
 
 /** Exercise model and generators for lessons and reviews. */
+
+/**
+ * Questions from earlier lessons mixed into a lesson: a warm-up opens it, and signed-in learners also get
+ * personalised revision part-way through. Neither counts towards the lesson's score.
+ */
+export type ExtraTag = 'warmup' | 'revision';
 
 export type Exercise =
   | { kind: 'meet'; items: Item[] }
@@ -30,9 +37,9 @@ export type Exercise =
       image?: string;
       /** What to read aloud, when the Polish on screen is a spelling rather than a word (phonics). */
       say?: string;
-      tag?: 'warmup';
+      tag?: ExtraTag;
     }
-  | { kind: 'type'; cardId: string; prompt: string; accepted: string[]; lang: 'pl' | 'en'; hint?: string; tag?: 'warmup' }
+  | { kind: 'type'; cardId: string; prompt: string; accepted: string[]; lang: 'pl' | 'en'; hint?: string; tag?: ExtraTag }
   | {
       kind: 'build';
       cardId: string;
@@ -43,10 +50,10 @@ export type Exercise =
       audio?: string;
       /** English meaning, shown instead of audio when there is no Polish voice. */
       meaning?: string;
-      tag?: 'warmup';
+      tag?: ExtraTag;
     }
   | { kind: 'match'; pairs: Array<{ cardId: string; pl: string; en: string; say?: string }> }
-  | { kind: 'gap'; cardId: string; text: string; en: string; options: string[]; answer: string; why?: string; tag?: 'warmup' };
+  | { kind: 'gap'; cardId: string; text: string; en: string; options: string[]; answer: string; why?: string; tag?: ExtraTag };
 
 export type GradedExercise = Exclude<Exercise, { kind: 'meet' } | { kind: 'spotlight' } | { kind: 'dialogue' }>;
 
@@ -106,8 +113,23 @@ function typePolish(item: Item): Exercise {
   return { kind: 'type', cardId: item.id, prompt: item.en, accepted: accPl(item), lang: 'pl', hint: item.hint };
 }
 
+/**
+ * Lexical chunking in sentence building: a known multi-word phrase ("nie ma sprawy", "czy mogę prosić o")
+ * becomes one tile, so learners put sentences together from chunks as fluent speakers do.
+ */
+export function mergeChunks(tokens: string[], cores: Array<{ core: string[] }> = CHUNK_CORES): string[] {
+  const out: string[] = [];
+  for (let i = 0; i < tokens.length; ) {
+    const hit = cores.find(({ core }) => core.every((w, k) => tokens[i + k]?.toLocaleLowerCase('pl') === w));
+    const len = hit ? hit.core.length : 1;
+    out.push(tokens.slice(i, i + len).join(' '));
+    i += len;
+  }
+  return out;
+}
+
 function buildPolish(s: Sentence, wordPool: string[]): Exercise {
-  const tokens = tokenise(s.pl);
+  const tokens = mergeChunks(tokenise(s.pl));
   const correct = new Set([s.pl, ...(s.altPl ?? [])].flatMap(tokenise).map(normalise));
   const extra = (s.extra?.length ? s.extra : distractors('', wordPool, 2)).filter((e) => !correct.has(normalise(e)));
   return { kind: 'build', cardId: s.id, prompt: s.en, tiles: shuffle([...tokens, ...extra]), accepted: accPl(s), lang: 'pl' };
@@ -222,6 +244,7 @@ export function reviewExercise(src: CardSource, reps: number, cardId: string, sp
     return reps % 2 === 0 ? buildPolish(sentence, pool) : buildFromAudio(sentence, pool);
   }
   if (src.kind === 'picture') return pictureChoice(src.picture, src.deck.pictures.map((p) => p.pl));
+  if (src.kind === 'chunk') return chunkExercise(src.chunk, reps);
   return wordExercise(src.word, reps, cardId);
 }
 
@@ -245,6 +268,68 @@ function wordExercise(w: FrequencyWord, reps: number, cardId: string): Exercise 
   wordPoolCache ??= LESSONS.flatMap((l) => l.items.map((i) => i.en));
   const opts = shuffle([w.en, ...distractors(w.en, wordPoolCache, 3)]);
   return { kind: 'choose', cardId, prompt: w.pl, promptLang: 'pl', options: opts, answer: w.en, audio: false };
+}
+
+/* ---------- Lexical chunks ---------- */
+
+const litHint = (c: Chunk) => (c.lit ? `Word for word it's "${c.lit}", but it means "${c.en}". Learn it as one phrase.` : undefined);
+
+/** "What does this phrase mean?" */
+export function chunkMeaning(c: Chunk): Exercise {
+  const opts = shuffle([c.en, ...distractors(c.en, CHUNKS.map((x) => x.en), 3)]);
+  return { kind: 'choose', cardId: c.id, prompt: c.pl, promptLang: 'pl', options: opts, answer: c.en, instruction: 'What does this phrase mean?', hint: litHint(c) };
+}
+
+/** "Complete the phrase": one of its words blanked, with look-alike words from other phrases. */
+export function completeChunk(c: Chunk, rand = Math.random): Exercise {
+  const words = tokenise(chunkCore(c));
+  // Never the capitalised first word: its capital letter would give the answer away.
+  const inner = words.map((w, i) => ({ w, i })).filter(({ w, i }) => i > 0 && w.length >= 3);
+  const candidates = inner.length ? inner : words.slice(1).map((w, i) => ({ w, i: i + 1 }));
+  const { w: answer } = candidates[Math.floor(rand() * candidates.length)] ?? { w: words[0] };
+  const pool = CHUNKS.filter((x) => x.id !== c.id).flatMap((x) => tokenise(chunkCore(x)));
+  const re = new RegExp(`(^|[\\s„"])${answer.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?=$|[\\s,.?!…])`);
+  return {
+    kind: 'gap',
+    cardId: c.id,
+    text: c.pl.replace(re, '$1___'),
+    en: c.en,
+    options: shuffle([answer, ...distractors(answer, pool.filter((w) => w.length >= 3), 2)]),
+    answer,
+    why: litHint(c),
+  };
+}
+
+/** Build a sentence around the phrase, with the phrase as a single tile. */
+export function buildWithChunk(c: Chunk): Exercise | null {
+  if (!c.ex) return null;
+  const [pl, en] = c.ex;
+  const tiles = mergeChunks(tokenise(pl), [{ core: tokenise(chunkCore(c)).map((w) => w.toLocaleLowerCase('pl')) }, ...CHUNK_CORES]);
+  const inSentence = new Set(tokenise(pl).map(normalise));
+  const extra = distractors('', CHUNKS.flatMap((x) => (x.ex ? tokenise(x.ex[0]) : [])).filter((w) => !inSentence.has(normalise(w))), 2);
+  return { kind: 'build', cardId: c.id, prompt: en, tiles: shuffle([...tiles, ...extra]), accepted: [pl], lang: 'pl' };
+}
+
+function typeChunk(c: Chunk): Exercise {
+  return { kind: 'type', cardId: c.id, prompt: c.en, accepted: [c.pl, chunkCore(c)], lang: 'pl', hint: litHint(c) };
+}
+
+/** Young phrases are recognised, then completed; mature ones are produced whole, typed or built into a sentence. */
+export function chunkExercise(c: Chunk, reps: number): Exercise {
+  if (reps === 0) return chunkMeaning(c);
+  if (reps === 1) return completeChunk(c);
+  return (reps % 2 === 0 && buildWithChunk(c)) || typeChunk(c);
+}
+
+/** First meeting with a set of phrases: meet them with their literal meaning, then recognise, complete and use them. */
+export function chunkLearnSession(chunks: Chunk[]): Exercise[] {
+  const items: Item[] = chunks.map((c) => ({ id: c.id, pl: c.pl, en: c.en, hint: c.lit ? `Word for word: "${c.lit}"` : undefined, chunk: true }));
+  return [
+    { kind: 'meet', items },
+    ...shuffle(chunks).map(chunkMeaning),
+    ...shuffle(chunks).map((c) => completeChunk(c)),
+    ...shuffle(chunks).flatMap((c) => buildWithChunk(c) ?? []),
+  ];
 }
 
 /* ---------- Phonics ---------- */
@@ -369,7 +454,7 @@ export function phonicsExercises(lesson: Lesson): Exercise[] {
 /* ---------- Reinforcement ---------- */
 
 /** Exercises for a set of cards (review, warm-ups, trouble spots, unit revision). */
-export function practiceExercises(cards: Array<{ id: string; reps: number }>, speaker?: 'm' | 'f', tag?: 'warmup'): Exercise[] {
+export function practiceExercises(cards: Array<{ id: string; reps: number }>, speaker?: 'm' | 'f', tag?: ExtraTag): Exercise[] {
   return cards.flatMap(({ id, reps }) => {
     const src = getCard(id);
     if (!src) return [];
