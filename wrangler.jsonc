@@ -21,6 +21,10 @@
       "migrations_dir": "migrations"
     }
   ],
+  // Worker Previews (pull request builds) need this block and do not inherit anything else here.
+  // It is left empty on purpose: Previews get no database, so they can never touch production data,
+  // and the app runs in guest mode there (the API reports accounts as unavailable).
+  "previews": {},
   "vars": {
     // PBKDF2 work factor. 30,000 keeps sign-in inside the free plan's ~10 ms CPU budget.
     // On the paid plan raise it to 100,000 (the Workers maximum); hashes upgrade on next sign-in.

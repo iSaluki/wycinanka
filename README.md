@@ -63,7 +63,9 @@ Live at **https://polish.saluki.cloud**. The repository is set up so that a Clou
 
 1. In the Cloudflare dashboard, go to **Workers & Pages → Create → Import a repository**, and pick `iSaluki/learnpolish`.
 2. Keep the defaults: project name `learnpolish`, root directory `/`, deploy command `npx wrangler deploy`. The build command can be left empty or set to `npm run build`.
-3. Select **Create and deploy**. Every push to `main` then builds and deploys automatically, and pull requests get preview builds.
+3. Select **Create and deploy**. Every push to `main` then builds and deploys automatically.
+
+Pull requests get [Worker Previews](https://developers.cloudflare.com/workers/previews/). The `previews` block in `wrangler.jsonc` is deliberately empty, so a Preview has no database: it can never touch production data, and it runs in guest mode (sign-up and sign-in say accounts aren't available in the preview).
 
 ### Add the pepper (recommended)
 

@@ -3,7 +3,7 @@ import { exports } from 'cloudflare:workers';
 import { describe, expect, it } from 'vitest';
 import { LESSONS, lessonCardIds } from '../../src/content/course';
 import { localDay } from '../../src/shared/progress';
-import { cleanUp } from '../../src/worker/index';
+import { app, cleanUp } from '../../src/worker/index';
 import { migrate } from '../../src/worker/migrate';
 import { MIGRATIONS } from '../../src/worker/migrations';
 
@@ -74,6 +74,25 @@ describe('schema', () => {
       MIGRATIONS.pop();
       await env.DB.batch([env.DB.prepare('DROP TABLE zz_test'), env.DB.prepare('DELETE FROM d1_migrations WHERE name = ?1').bind(name)]);
     }
+  });
+});
+
+describe('previews (no database binding)', () => {
+  const noDb = { ...env, DB: undefined } as unknown as typeof env;
+  it('treats everyone as a guest', async () => {
+    const r = await app.request('/api/auth/me', {}, noDb);
+    expect(r.status).toBe(200);
+    expect(await r.json()).toEqual({ user: null });
+  });
+
+  it('reports accounts as unavailable instead of crashing', async () => {
+    const r = await app.request(
+      '/api/auth/login',
+      { method: 'POST', headers: { 'Content-Type': 'application/json', Origin: 'http://localhost' }, body: '{}' },
+      noDb,
+    );
+    expect(r.status).toBe(503);
+    expect(((await r.json()) as { error: string }).error).toMatch(/preview/);
   });
 });
 

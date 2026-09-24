@@ -11,6 +11,12 @@ const IMPORT_PATH = '/api/progress/import';
 export const app = new Hono<AppEnv>();
 
 app.use('/api/*', apiHeaders);
+// Worker Previews start without production bindings, so a Preview has no database: it runs in guest mode.
+app.use('/api/*', async (c, next) => {
+  if (c.env.DB) return next();
+  if (c.req.method === 'GET' && c.req.path === '/api/auth/me') return c.json({ user: null });
+  throw new HttpError(503, "Accounts aren't available in this preview. You can still learn as a guest.");
+});
 app.use('/api/*', async (c, next) => {
   await ensureSchema(c.env);
   maybeCleanUp(c.env, c.executionCtx);
