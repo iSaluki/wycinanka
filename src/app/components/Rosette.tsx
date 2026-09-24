@@ -3,7 +3,7 @@ import { UNITS } from '../../content/course';
 /**
  * Twoja wycinanka — the learner's paper-cut rosette, built like a Łowicz wycinanka:
  * a black paper base with coloured layers glued on top.
- * One petal per course unit (1–18); each finished lesson glues on one coloured layer, from the
+ * One petal per course unit (after the alphabet); each finished lesson glues on one coloured layer, from the
  * large back leaf (lesson 1, green)… to the small front leaf (lesson 3, yellow). The six phonics
  * lessons of Unit 0 are the seeds around the centre.
  */
@@ -36,6 +36,8 @@ export function Rosette({ done, next, fresh, label }: Props) {
   const units = UNITS.filter((u) => u.n > 0);
   const phonics = UNITS.find((u) => u.n === 0)?.lessons ?? [];
   const n = units.length;
+  // Leaves were drawn for 18 petals; with more, they slim down so neighbours don't overlap.
+  const slim = Math.min(1, 18 / n);
   const total = UNITS.reduce((s, u) => s + u.lessons.length, 0);
   const count = UNITS.flatMap((u) => u.lessons).filter((l) => done.has(l.id)).length;
 
@@ -44,7 +46,7 @@ export function Rosette({ done, next, fresh, label }: Props) {
       <g transform={`translate(${C} ${C})`}>
         {/* Black paper base */}
         {units.map((u, i) => (
-          <path key={u.id} className="base" d={leafPath(BASE.tip, BASE.width, 30)} transform={`rotate(${(360 / n) * i})`} />
+          <path key={u.id} className="base" d={leafPath(BASE.tip, BASE.width * slim, 30)} transform={`rotate(${(360 / n) * i})`} />
         ))}
         <circle className="base" r="56" />
 
@@ -60,7 +62,7 @@ export function Rosette({ done, next, fresh, label }: Props) {
               const cls = ['leaf', isDone ? layer.cls : 'uncut', isNext ? 'next' : '', lesson.id === fresh ? 'fresh' : '']
                 .filter(Boolean)
                 .join(' ');
-              return <path key={lesson.id} className={cls} d={leafPath(layer.tip, layer.width)} />;
+              return <path key={lesson.id} className={cls} d={leafPath(layer.tip, layer.width * slim)} />;
             })}
             {/* Holes cut through every layer, as in real wycinanki */}
             <circle className="hole" cx="0" cy="-172" r="3.2" />

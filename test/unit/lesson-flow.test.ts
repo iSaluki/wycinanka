@@ -117,3 +117,45 @@ describe('more than one right answer', () => {
         }
   });
 });
+
+import { conversation } from '../../src/app/lib/exercises';
+
+describe('every lesson ends with a conversation', () => {
+  it('has a dialogue of at least three lines between two people in every lesson after the alphabet', () => {
+    for (const l of LESSONS.filter((x) => !x.phonics)) {
+      expect(l.dialogue?.length ?? 0, l.id).toBeGreaterThanOrEqual(3);
+      expect(new Set(l.dialogue!.map((d) => d.who)).size, l.id).toBeGreaterThanOrEqual(2);
+    }
+  });
+
+  it('listens first, asks about what was heard, reads along, then has the learner reply', () => {
+    for (const l of LESSONS.filter((x) => !x.phonics)) {
+      const ex = conversation(l);
+      expect(ex[0].kind, l.id).toBe('listen');
+      const read = ex.findIndex((e) => e.kind === 'dialogue');
+      expect(read, l.id).toBeGreaterThan(0);
+      for (const q of ex.slice(1, read)) {
+        expect(q.kind === 'choose' && q.audio, l.id).toBe(true);
+        if (q.kind === 'choose') {
+          expect(q.options, l.id).toContain(q.answer);
+          expect(new Set(q.options).size, l.id).toBe(q.options.length);
+        }
+      }
+      for (const r of ex.slice(read + 1)) {
+        expect(r.kind, l.id).toBe('choose');
+        if (r.kind !== 'choose') continue;
+        // The right reply is the line that really follows the one heard.
+        const at = l.dialogue!.findIndex((d) => d.pl === r.prompt);
+        expect(l.dialogue![at + 1].pl, l.id).toBe(r.answer);
+        expect(new Set(r.options).size, l.id).toBe(r.options.length);
+      }
+    }
+  });
+
+  it('keeps retries and revision out of the closing conversation', () => {
+    const l = LESSONS.find((x) => x.id === 'u06-l3')!;
+    const { exercises, outroStart } = lessonPlan(l);
+    expect(exercises[outroStart].kind).toBe('listen');
+    expect(exercises.slice(0, outroStart).some((e) => e.kind === 'listen' || e.kind === 'dialogue')).toBe(false);
+  });
+});

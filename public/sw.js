@@ -9,8 +9,50 @@
  * The API is never cached: progress must always come from the server.
  */
 
-const CACHE = 'wycinanka-v1';
+// Three caches, each pruned to a size: the app shell, build files and recordings. Bump a name to start it afresh;
+// activate deletes every cache not listed here.
+const CACHE = 'wycinanka-shell-v2';
+const ASSETS = 'wycinanka-assets-v2';
+const VOICE = 'wycinanka-voice-v2';
+const KEEP = [CACHE, ASSETS, VOICE];
+/** Most entries kept per cache. Build files change with every release; recordings add up (about 5 KB each). */
+const LIMITS = { [ASSETS]: 40, [VOICE]: 1500 };
 const SHELL = '/';
+
+/** Drops the oldest entries (Cache keys come back in the order they were added) beyond the cache's limit. */
+async function trim(name) {
+  const cache = await caches.open(name);
+  const keys = await cache.keys();
+  const extra = keys.length - (LIMITS[name] ?? Infinity);
+  for (let i = 0; i < extra; i++) await cache.delete(keys[i]);
+}
+
+/**
+ * Audio elements ask for byte ranges and expect "206 Partial Content", which the Cache API can't store. So
+ * recordings are fetched and cached whole, and a range is cut from the whole file when one is asked for.
+ */
+async function answerRange(req, res) {
+  const range = req.headers.get('range');
+  if (!range || res.status !== 200) return res;
+  const m = /^bytes=(\d*)-(\d*)$/.exec(range.trim());
+  const body = await res.arrayBuffer();
+  const size = body.byteLength;
+  if (!m || (!m[1] && !m[2])) return new Response(body, { status: 200, headers: res.headers });
+  let start = m[1] ? Number(m[1]) : Math.max(0, size - Number(m[2]));
+  let end = m[1] && m[2] ? Math.min(Number(m[2]), size - 1) : size - 1;
+  if (start >= size || start > end) {
+    return new Response(null, { status: 416, headers: { 'Content-Range': `bytes */${size}` } });
+  }
+  return new Response(body.slice(start, end + 1), {
+    status: 206,
+    headers: {
+      'Content-Type': res.headers.get('content-type') || 'audio/mpeg',
+      'Content-Length': String(end - start + 1),
+      'Content-Range': `bytes ${start}-${end}/${size}`,
+      'Accept-Ranges': 'bytes',
+    },
+  });
+}
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -26,7 +68,7 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches
       .keys()
-      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+      .then((keys) => Promise.all(keys.filter((k) => !KEEP.includes(k)).map((k) => caches.delete(k))))
       .then(() => self.clients.claim()),
   );
 });
@@ -68,20 +110,22 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Recordings never change, like build files: once heard, they play from the cache, offline too.
-  if (url.pathname.startsWith('/assets/') || url.pathname.startsWith('/voice/')) {
+  // Recordings and build files never change: once fetched, they come from the cache, offline too.
+  const store = url.pathname.startsWith('/assets/') ? ASSETS : url.pathname.startsWith('/voice/') ? VOICE : null;
+  if (store) {
     event.respondWith(
-      caches.match(req).then(
-        (hit) =>
-          hit ??
-          fetch(req).then((res) => {
-            if (res.ok) {
-              const copy = res.clone();
-              caches.open(CACHE).then((c) => c.put(req, copy));
-            }
-            return res;
-          }),
-      ),
+      (async () => {
+        const cache = await caches.open(store);
+        // Look up and fetch by URL alone, so a byte-range request still finds (and stores) the whole file.
+        const hit = await cache.match(url.href);
+        if (hit) return answerRange(req, hit);
+        const res = await fetch(url.href, { credentials: 'same-origin' });
+        if (res.status === 200) {
+          const copy = res.clone();
+          event.waitUntil(cache.put(url.href, copy).then(() => trim(store)).catch(() => undefined));
+        }
+        return answerRange(req, res);
+      })(),
     );
   }
 });

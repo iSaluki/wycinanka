@@ -87,7 +87,7 @@ export function AuthPage({ mode }: { mode: 'signin' | 'signup' }) {
         </PageHead>
         {signup && hasGuestProgress && (
           <div className="banner">
-            <p>Everything you've done in this visit will be added to your new account.</p>
+            <p>Everything you've done as a guest on this device will be added to your new account.</p>
           </div>
         )}
         <form className="form" onSubmit={submit} noValidate>

@@ -72,7 +72,12 @@ account.delete('/', async (c) => {
     db.prepare('DELETE FROM activity WHERE user_id = ?1').bind(user.id),
     db.prepare('DELETE FROM sessions WHERE user_id = ?1').bind(user.id),
     db.prepare('DELETE FROM push_subscriptions WHERE user_id = ?1').bind(user.id),
+    db.prepare('DELETE FROM sync_keys WHERE user_id = ?1').bind(user.id),
     db.prepare('DELETE FROM auth_throttle WHERE key = ?1').bind(`sensitive:user:${user.id}`),
+    // Sign-in counters for this username, from every network: the name is free for someone new.
+    db
+      .prepare('DELETE FROM auth_throttle WHERE key = ?1 OR substr(key, 1, ?3) = ?2')
+      .bind(`login:user:${user.username.toLowerCase()}`, `login:user:${user.username.toLowerCase()}:`, `login:user:${user.username}:`.length),
     db.prepare('DELETE FROM users WHERE id = ?1').bind(user.id),
   ]);
   clearSessionCookie(c);

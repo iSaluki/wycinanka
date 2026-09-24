@@ -69,7 +69,14 @@ export function usablePepper(pepper: string | undefined): string | null {
   if (pepper && pepper.length >= MIN_PEPPER_LENGTH) return pepper;
   if (!warned) {
     warned = true;
-    console.warn(`PEPPER secret ${pepper ? `is shorter than ${MIN_PEPPER_LENGTH} characters` : 'is not set'}; password hashes are not peppered.`);
+    // An error, not a warning, so it stands out in the Worker's logs: without a pepper a leaked database can be
+    // attacked offline. Set it with `wrangler secret put PEPPER` (README → Add the pepper).
+    console.error(
+      JSON.stringify({
+        event: 'pepper_missing',
+        message: `PEPPER secret ${pepper ? `is shorter than ${MIN_PEPPER_LENGTH} characters` : 'is not set'}; password hashes are not peppered.`,
+      }),
+    );
   }
   return null;
 }

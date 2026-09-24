@@ -27,7 +27,8 @@ export const deleteAccountSchema = z.object({ password: z.string().min(1).max(PA
 
 export const settingsSchema = z
   .object({
-    startUnit: z.number().int().min(0).max(18).optional(),
+    /** A unit's key (the number in its id, u06 → 6), not its position in the course. */
+    startUnit: z.number().int().min(0).max(99).optional(),
     placementBand: z.number().int().min(0).max(6).optional(),
     dailyGoal: z.union([z.literal(10), z.literal(20), z.literal(30), z.literal(50)]).optional(),
     speechRate: z.number().min(0.5).max(1.3).optional(),
@@ -60,6 +61,10 @@ export const lessonResultSchema = z
     /** Card ids from this lesson the learner got wrong at least once. */
     missed: z.array(contentId).max(60).default([]),
     day,
+    /** When the lesson was finished, if it is sent later than that (saved while offline). */
+    at: z.number().int().positive().optional(),
+    /** Unique per finished lesson, so a result sent twice after a lost connection is counted once. */
+    key: z.string().regex(/^[A-Za-z0-9_-]{8,40}$/).optional(),
   })
   .strict()
   .refine((r) => r.correct <= r.total, { message: 'correct cannot exceed total' });
@@ -104,11 +109,11 @@ export const transcribeSchema = z
   })
   .strict();
 
-/** A guest's session, replayed server-side once when they create an account. */
+/** A guest's progress (saved on their device), replayed server-side once when they create an account. */
 export const importSchema = z
   .object({
-    lessons: z.array(lessonResultSchema.and(z.object({ at: z.number().int().positive() }))).max(60),
-    reviews: z.array(reviewSchema.extend({ day })).max(500),
+    lessons: z.array(lessonResultSchema.and(z.object({ at: z.number().int().positive() }))).max(300),
+    reviews: z.array(reviewSchema.extend({ day })).max(3000),
     settings: settingsSchema.optional(),
   })
   .strict();

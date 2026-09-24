@@ -42,6 +42,8 @@ export const PLACEMENT: PlacementQuestion[] = [
   { id: 'p15', band: 4, prompt: "Complete: I'm a teacher (a man speaking).", text: 'Jestem ___.', options: ['nauczycielem', 'nauczyciel', 'nauczyciela'], answer: 'nauczycielem' },
   { id: 'p16', band: 4, prompt: 'Complete: I bought Mum a present.', text: 'Kupiłem ___ prezent.', options: ['mamie', 'mamę', 'mamy'], answer: 'mamie' },
   { id: 'p17', band: 5, prompt: "Complete: If I had time, I'd go to Poland.", text: 'Gdybym miał czas, ___ do Polski.', options: ['pojechałbym', 'pojadę', 'jechałem'], answer: 'pojechałbym' },
+  { id: 'p19', band: 4, prompt: 'Complete: This coffee is better.', text: 'Ta kawa jest ___.', options: ['lepsza', 'lepszy', 'najlepsza'], answer: 'lepsza' },
+  { id: 'p20', band: 5, prompt: 'Complete: I have three brothers.', text: 'Mam ___ braci.', options: ['trzech', 'trzy', 'troje'], answer: 'trzech' },
   { id: 'p18', band: 5, prompt: "Complete: I'm twenty-five.", text: 'Mam dwadzieścia pięć ___.', options: ['lat', 'lata', 'roku'], answer: 'lat' },
 ];
 

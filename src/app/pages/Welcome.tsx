@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { UNITS } from '../../content/course';
+import { unitByKey, UNITS } from '../../content/course';
+import { PLACEMENT } from '../../content/placement';
 import { Label, Speak } from '../components/common';
 import { Rosette } from '../components/Rosette';
 import { Shell } from '../components/Shell';
@@ -23,7 +24,7 @@ const CHOICES = [
     title: 'I know some basics',
     quote: '„Cześć, dziękuję, dwa piwa…”',
     gloss: '"Hi, thanks, two beers…"',
-    body: 'Take the 18-question placement check, or start at Unit 5.',
+    body: `Take the ${PLACEMENT.length}-question placement check, or start at Unit ${unitByKey(5)?.n ?? 5}.`,
     colour: 'var(--czerwien)',
     unit: 5,
     placement: true,
@@ -83,7 +84,7 @@ export function Welcome() {
               </span>
             </span>
             <p className="lede">
-              Learn Polish in five-minute lessons. Each one you finish glues another layer onto your own paper rosette, and the words you find
+              Learn Polish in short lessons of about ten minutes. Each one you finish glues another layer onto your own paper rosette, and the words you find
               hardest keep coming back until they stick.
             </p>
             <p className="muted">
@@ -126,7 +127,7 @@ export function Welcome() {
                   </button>
                   {c.placement && (
                     <button className="link-btn" onClick={() => choose(c, false)}>
-                      Skip to Unit {c.unit}
+                      Skip to Unit {unitByKey(c.unit)?.n ?? c.unit}
                     </button>
                   )}
                 </div>

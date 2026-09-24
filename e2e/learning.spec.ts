@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { PICTURE_DECKS } from '../src/content/pictures';
 import { PLACEMENT } from '../src/content/placement';
-import { LESSONS } from '../src/content/course';
+import { LESSONS, unitByKey } from '../src/content/course';
 import { solveLesson, solveUntil } from './helpers';
 
 const uniqueName = () => `e2e_${Date.now().toString(36)}${Math.floor(Math.random() * 1000)}`;
@@ -19,6 +19,12 @@ test('a new guest picks a level and completes their first lesson', async ({ page
 
   await page.getByRole('link', { name: 'Course map' }).click();
   await expect(page.locator('.lesson-link.done')).toHaveCount(1);
+
+  // A guest's progress is kept on the device: a reload loses nothing.
+  await page.reload();
+  await expect(page.locator('.lesson-link.done')).toHaveCount(1);
+  await page.goto('/');
+  await expect(page.getByText(`You've finished 1 of ${LESSONS.length} lessons`)).toBeVisible();
 });
 
 test('signing up keeps guest progress and it survives a reload', async ({ page }) => {
@@ -26,7 +32,7 @@ test('signing up keeps guest progress and it survives a reload', async ({ page }
   await page.getByRole('button', { name: 'Start with the alphabet' }).click();
   await solveLesson(page, 'u00-l1');
   await page.getByRole('link', { name: 'Create a free account' }).click();
-  await expect(page.getByText("Everything you've done in this visit will be added")).toBeVisible();
+  await expect(page.getByText("Everything you've done as a guest on this device will be added")).toBeVisible();
 
   const username = uniqueName();
   await page.getByLabel('Username').fill(username);
@@ -35,7 +41,7 @@ test('signing up keeps guest progress and it survives a reload', async ({ page }
   await expect(page.getByRole('heading', { level: 1 })).toContainText(username);
 
   await page.reload();
-  await expect(page.getByText("You've finished 1 of 60 lessons")).toBeVisible();
+  await expect(page.getByText(`You've finished 1 of ${LESSONS.length} lessons`)).toBeVisible();
 
   // Sign out, then back in.
   await page.goto('/profile');
@@ -44,7 +50,7 @@ test('signing up keeps guest progress and it survives a reload', async ({ page }
   await page.getByLabel('Username').fill(username);
   await page.getByLabel('Password', { exact: true }).fill(PASSWORD);
   await page.getByRole('button', { name: 'Sign in' }).click();
-  await expect(page.getByText("You've finished 1 of 60 lessons")).toBeVisible();
+  await expect(page.getByText(`You've finished 1 of ${LESSONS.length} lessons`)).toBeVisible();
 });
 
 test('rejects a weak password before submitting', async ({ page }) => {
@@ -60,8 +66,10 @@ test('the placement check places a strong learner at B1', async ({ page }) => {
     await expect(page.locator('.prompt-en')).toHaveText(q.prompt);
     await page.locator('button.option', { hasText: new RegExp(`^\\d${q.answer.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`) }).click();
   }
-  await expect(page.getByRole('heading', { name: 'Start at Unit 17' })).toBeVisible();
-  await page.getByRole('button', { name: 'Start at Unit 17' }).click();
+  // B1 starts with Unit 17's conditional, which now sits further along the course.
+  const b1 = `Start at Unit ${unitByKey(17)!.n}`;
+  await expect(page.getByRole('heading', { name: b1 })).toBeVisible();
+  await page.getByRole('button', { name: b1 }).click();
   await expect(page.locator('.unit.current')).toContainText('Would you?');
 });
 
@@ -71,10 +79,17 @@ test('a lesson with grammar drills and a dialogue can be completed', async ({ pa
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
 });
 
+test('lessons from the new units, with their conversations, can be completed', async ({ page }) => {
+  for (const id of ['u19-l1', 'u23-l1', 'u28-l1']) {
+    await page.goto(`/lesson/${id}`);
+    await solveLesson(page, id);
+    await expect(page.locator('.finish-stats'), id).toContainText('100%');
+  }
+});
+
 test('review works after a lesson', async ({ page }) => {
   await page.goto('/lesson/u01-l1');
   await solveLesson(page, 'u01-l1');
-  // Guest progress lives in memory, so navigate within the app rather than reloading.
   await page.getByRole('link', { name: 'Course map' }).click();
   await page.locator('nav.rail').getByRole('link', { name: /Review/ }).click();
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Powtórka');
@@ -294,7 +309,7 @@ test('leaving a lesson part-way asks first, and closing a review really closes i
   await page.getByRole('button', { name: 'Next word' }).click();
   await page.getByRole('button', { name: 'Leave this lesson' }).click();
   const dialog = page.getByRole('dialog', { name: 'Leave this lesson?' });
-  await expect(dialog).toContainText('progress in this lesson will be lost');
+  await expect(dialog).toContainText('The lesson will start again next time');
   await dialog.getByRole('button', { name: 'Keep going' }).click();
   await expect(dialog).toBeHidden();
   await expect(page).toHaveURL(/\/lesson\/u01-l1$/);

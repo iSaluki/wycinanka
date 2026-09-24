@@ -9,6 +9,23 @@ progress, push, speech), the shared engine (FSRS, grader, schemas) and the main 
 `npm run typecheck` and the unit and Worker tests (all 168 pass, typecheck clean, `npm audit` finds nothing). I also ran the
 app locally and took screenshots on a phone-sized screen. I checked the grader's behaviour by running it directly.
 
+## Status (follow-up work)
+
+Everything in the ranked list except item 10 (account recovery) has since been implemented:
+
+| # | What was done |
+|---|---|
+| 1 | The grader compares answers word by word. A changed ending is a grammar mistake (verdict `form`, never passed); a real form typed without its Polish letters (*mama* for *mamą*, *pracuje* for *pracuję*) is too. Real typos are still forgiven, using a list of every Polish form in the course (`src/content/lexicon.ts`). Feedback names the ending and, where a drill teaches it, the rule. |
+| 2 | Guest progress is saved on the device (`src/app/lib/saved.ts`) and imported on sign-up however old it is, as long as each entry's day matches its time. Results a signed-in learner can't send wait in an outbox and go when the connection is back. Lesson results carry a key so a re-send is counted once (migration `0003_sync.sql`), and may arrive up to a week late. |
+| 3, 5 | Twelve new units, 36 lessons (`src/content/units/everyday.ts`, `grammar-plus.ts`): small talk and friends, family and describing people, weather, seasons and time between the hours, free time and invitations, commands, health, comparing, should/must/can, plurals and numbers for people, *który*, *swój* and reported speech, prefixed verbs of motion and the airport, work, the phone and renting. Each sits where its grammar has been met; units keep their ids, and "Unit n" is now a unit's place in the course. |
+| 4 | Every lesson after the alphabet has a dialogue. Lessons end with the conversation heard at natural speed with no text, one or two questions answered from the sound alone, the dialogue read along, then the learner choosing their own replies. (Choosing replies is fixed-path: dialogues don't branch into different conversations yet.) |
+| 6 | GitHub Actions CI (typecheck, unit, Worker and end-to-end tests) and Dependabot. |
+| 7 | Sentence and drill ids come from their text; existing ones keep their numbers (`src/content/legacy-ids.ts`). `test/unit/card-ids.json` records every id and a test fails if one disappears or moves. |
+| 8 | C1–C10 fixed. |
+| 9 | S1–S6 fixed: failed sign-ins lock only the network they come from (with a high all-network limit); IPv6 is throttled per /64; speech has a daily budget with half kept for signed-in learners and a per-learner limit; username checks via sign-up are limited; push subscriptions can't be moved without their keys; a missing pepper logs an error. S7 (the VAPID key in D1) is accepted: moving it would break every existing subscription. |
+| 11 | The service worker caches recordings whole and answers byte-range requests from them, and keeps each cache to a size. |
+| 12 | Grammar-aware feedback; guest wording; the Learn page folds finished and far-off units and opens at the current one, with words and a time estimate per lesson; leaving a lesson or review keeps the review answers already given; hint respellings match the automatic ones (tested); a note says whose gendered forms a lesson shows; Alt/Option + letter types Polish letters; the words of a Polish answer can be tapped to hear them. |
+
 ---
 
 ## Top improvements, ranked by how much they improve the app

@@ -4,9 +4,11 @@
 
 A free Polish course for British English speakers, from complete beginner to B1. Every lesson you finish cuts a new layer into your own paper rosette. Runs entirely on Cloudflare Workers + D1, within the free plan.
 
-- **60 lessons in 19 units** (A0–B1), starting with an alphabet and phonics unit, then greetings, the seven cases, verb groups, aspect, past, future and conditional
+- **96 lessons in 31 units** (A0–B1), starting with an alphabet and phonics unit, then greetings and small talk, the seven cases, verb groups, family, weather and time, aspect, past and future, free time, commands, health, comparing, "should" and "must", the conditional, plurals for people, *który* and *swój*, reported speech, prefixed verbs of motion, and work and renting
+- **A conversation in every lesson**: each lesson ends with a dialogue, heard first at natural speed with no text, then a question or two answered from the sound alone, then read along; finally the learner picks their own replies
 - **Small steps**: lessons introduce new words three at a time and practise each group straight away before the next, with matching rounds that mix new words with ones met earlier; the grammar spotlight follows once its words are familiar
 - **More than one right answer**: typing any course word that means the English prompt is accepted (*cześć* as well as *dzień dobry* for "hello"), with a note naming the word the card was teaching and how they differ; multiple-choice questions never offer a second right answer as a wrong option
+- **Grammar mistakes are called grammar mistakes**: a wrong case or verb ending (*kawa* for *kawę*) is never waved through as a typo; the feedback names the ending and the rule behind it. Real typos in longer answers are still forgiven
 - **Help when stuck, honest about accents**: a hint button rules out wrong options or reveals the start of the answer, step by step; an answer typed without its Polish letters (*dziekuje* for *dziękuję*) isn't accepted until they're added. Answers that needed either come back sooner in review, and the finish screen lists them to look over
 - **Reinforcement, not one-off teaching**: FSRS spaced review (the algorithm used in Anki) for every word, sentence and grammar drill; each lesson opens with a warm-up from earlier ones; signed-in learners also get revision questions sprinkled through each lesson, picked at random but weighted heavily towards what they've got wrong; trouble spots by skill, a "tricky words" list and unit revision target what you get wrong most
 - **Speaking**: every lesson asks for a few things to be said aloud (repeat a new word, say a sentence, say a word from its English), checked by speech recognition and shown word by word. *Can't speak now* skips speaking for 15 minutes, and a setting turns it off. Speaking never counts against a score, because recognisers mishear accents. A **Speaking** section practises on its own: repeat after me, say it in Polish, everyday phrases, reading tricky sounds aloud, tongue twisters, and role-playing lesson dialogues line by line
@@ -20,7 +22,8 @@ A free Polish course for British English speakers, from complete beginner to B1.
 - **Daily reminders**: signed-in learners can switch on a push notification at a time they choose, sent only on days they haven't practised yet
 - **Grammar reference**: the seven cases, a declension explorer and every lesson's grammar notes
 - **Placement check** so learners can start at their own level
-- **Guest mode**: learn without an account. Nothing is saved; sign up to keep progress, and that visit's work comes with you.
+- **Guest mode**: learn without an account. Progress is kept on the device; sign up to keep it everywhere, and everything done as a guest comes with you
+- **Works offline**: a signed-in learner's results that can't be sent wait on the device and go when the connection is back, counted once however often they're re-sent
 - Mobile and desktop, light and dark themes, reduced motion, keyboard shortcuts (1–4 to choose, Enter to check)
 
 The research behind the course design, the curriculum, architecture and security model are in [docs/PLAN.md](docs/PLAN.md).
@@ -61,6 +64,8 @@ npm run typecheck
 
 The end-to-end tests complete real lessons by reading answers from the course content, so they will catch content that can't be answered.
 
+GitHub Actions (`.github/workflows/ci.yml`) runs the typecheck and all three test suites on every pull request and every push to `main`. Cloudflare deploys `main` on its own, so keep CI green before merging.
+
 ## Deploy (free plan)
 
 Live at **https://polish.saluki.cloud**. The repository is set up so that a Cloudflare dashboard deploy works with the default settings:
@@ -69,7 +74,7 @@ Live at **https://polish.saluki.cloud**. The repository is set up so that a Clou
 - `build.command` in `wrangler.jsonc` runs `npm run build`, so a plain `npx wrangler deploy` builds the front end first.
 - The Worker applies any pending migrations itself on its first request (`src/worker/migrate.ts`), using the same `d1_migrations` table as `wrangler d1 migrations apply`. No separate migration step is needed.
 - `PEPPER` is optional, so the first deploy works before any secret is set (see below).
-- Workers AI is bound as `AI` for speech transcription (Whisper). There is nothing to set up: it's part of every Workers account, and the free plan's daily allowance (10,000 neurons, roughly a few thousand short spoken answers) is shared by everyone who uses a browser without its own recognition. Beyond it, or if the binding is removed, speaking falls back to listening back and marking yourself. Transcription is throttled to 180 requests an hour per IP.
+- Workers AI is bound as `AI` for speech transcription (Whisper). There is nothing to set up: it's part of every Workers account, and the free plan's daily allowance (10,000 neurons, roughly a few thousand short spoken answers) is shared by everyone who uses a browser without its own recognition. Beyond it, or if the binding is removed, speaking falls back to listening back and marking yourself. Transcription is throttled to 180 requests an hour per network (and per learner when signed in), and stops for the day at `SPEECH_DAILY_LIMIT` in `wrangler.jsonc` (2,000 by default), of which guests may use half, so a flood of requests can't use up the allowance for everyone.
 - An hourly Cron Trigger (`triggers` in `wrangler.jsonc`) sends daily reminders (`src/worker/reminders.ts`). The Web Push (VAPID) key pair is generated on first use and stored in D1, so there is nothing to configure; `PUSH_CONTACT` in `vars` is the contact URL push services see. On the free plan one run sends at most 40 reminders, so a deployment with more learners reminded in the same hour needs the paid plan and a higher `MAX_PUSHES_PER_RUN`.
 
 ### Connect the repository (one time)
@@ -111,7 +116,7 @@ Designed against the OWASP Top 10 and ASVS level 1, with selected level 2 contro
 - Passwords: PBKDF2-HMAC-SHA256 with a per-user salt and a secret pepper (a Worker secret, never stored in D1); NIST-style policy (length and a blocklist, no composition rules)
 - Sessions: 256-bit random tokens in `__Host-` cookies (`HttpOnly`, `Secure`, `SameSite=Lax`); only their SHA-256 hash is stored; revoked on sign-out and on password change
 - CSRF: same-origin `Origin` check and JSON-only bodies on every state-changing request
-- Throttling and lockout on sign-in, registration and password-confirmed actions
+- Throttling and lockout on sign-in, registration and password-confirmed actions. Failed sign-ins lock an account only for the network they come from (IPv6 counted per /64), with a much higher limit across all networks, so nobody can lock someone else out; checking whether a username exists by trying to register is limited too
 - Strict validation (unknown fields rejected), prepared statements only, body size limits
 - Strict CSP with no inline scripts or third-party origins (the one exception: culture videos may be framed from youtube-nocookie.com, and only load when played), plus HSTS, `X-Frame-Options`, `nosniff` and more
 - Privacy: username only, no email or tracking; users can export or delete all their data
@@ -119,7 +124,8 @@ Designed against the OWASP Top 10 and ASVS level 1, with selected level 2 contro
 
 ## Content
 
-- Course: `src/content/units/*.ts`, built with the helpers in `src/content/build.ts`. IDs derive from the lesson ID and the Polish text, so don't change the Polish of an item that is already live: that would reset learners' review cards for it.
+- Course: `src/content/units/*.ts`, built with the helpers in `src/content/build.ts`, in the order set by `UNITS` in `src/content/course.ts`. A unit's id (`u06`) never changes; its "Unit n" is its place in that list, so new units can go wherever they fit.
+- Card IDs derive from the lesson ID and the Polish text (older sentences and drills keep the numbered ids they were saved under, listed in `src/content/legacy-ids.ts`), so adding, removing or reordering content never moves a learner's review history onto something else. `test/unit/card-ids.json` records every id learners may have: after adding content run `npm run ids`; when correcting the Polish of a live sentence, give it `key` (its old id) and note it in `CORRECTED` in `test/unit/card-ids.test.ts`.
 - Frequency list: `src/content/frequency.ts`, ordered using the OpenSubtitles 2018 Polish list ([hermitdave/FrequencyWords](https://github.com/hermitdave/FrequencyWords)), grouped by dictionary form.
 - `npm run test:unit` checks content integrity: unique IDs, Unicode NFC, drills that can be answered, and distractor tiles that aren't also correct words.
 

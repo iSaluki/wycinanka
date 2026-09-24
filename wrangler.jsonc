@@ -37,7 +37,10 @@
     // On the paid plan raise it to 100,000 (the Workers maximum); hashes upgrade on next sign-in.
     "PBKDF2_ITERATIONS": "30000",
     // Sent to push services with each reminder so they can contact the operator (VAPID "sub").
-    "PUSH_CONTACT": "https://polish.saluki.cloud"
+    "PUSH_CONTACT": "https://polish.saluki.cloud",
+    // Whisper transcriptions a day for everyone together, kept under the free Workers AI allowance so a flood
+    // of requests can't use it all up. Guests may use at most half; learners with an account keep the rest.
+    "SPEECH_DAILY_LIMIT": "2000"
   }
   // Optional secret (not committed): PEPPER, 32+ characters. See README → Deploying.
   // The Worker applies pending migrations itself on first request (src/worker/migrate.ts).

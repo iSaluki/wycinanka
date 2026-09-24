@@ -24,6 +24,9 @@ auth.post('/register', async (c) => {
   const problem = passwordProblem(password, username);
   if (problem) throw new HttpError(400, PASSWORD_MESSAGES[problem], { field: 'password' });
 
+  // Counted before the name is checked, so the form can't be used to test which usernames exist without limit.
+  const lock = await hit(db, `register:check:${clientIp(c)}`, POLICIES.registerCheck, now);
+  if (lock) throw tooMany(lock);
   const exists = await db.prepare('SELECT 1 FROM users WHERE username = ?1').bind(username).first();
   if (exists) throw new HttpError(409, 'That username is taken. Try another.', { field: 'username' });
 
@@ -45,10 +48,14 @@ auth.post('/login', async (c) => {
   const db = c.env.DB;
   const now = Date.now();
   const { username, password } = await readJson(c, credentialsSchema);
-  const ipKey = `login:ip:${clientIp(c)}`;
-  const userKey = `login:user:${username.toLowerCase()}`;
+  const ip = clientIp(c);
+  const ipKey = `login:ip:${ip}`;
+  const name = username.toLowerCase();
+  // Failures lock this account only for the network they come from; a far higher limit covers all networks.
+  const userKey = `login:user:${name}:${ip}`;
+  const allKey = `login:user:${name}`;
 
-  const locked = Math.max(await lockedFor(db, ipKey, now), await lockedFor(db, userKey, now));
+  const locked = Math.max(await lockedFor(db, ipKey, now), await lockedFor(db, userKey, now), await lockedFor(db, allKey, now));
   if (locked) throw tooMany(locked);
   await hit(db, ipKey, POLICIES.loginIp, now);
 
@@ -63,7 +70,7 @@ auth.post('/login', async (c) => {
   const result = await verifyPassword(password, stored, c.env.PEPPER, iter);
 
   if (!row || !result.ok) {
-    const lock = await hit(db, userKey, POLICIES.loginUser, now);
+    const lock = Math.max(await hit(db, userKey, POLICIES.loginUser, now), await hit(db, allKey, POLICIES.loginUserAll, now));
     console.log(JSON.stringify({ event: 'login_failed', locked: lock > 0 }));
     if (lock) throw tooMany(lock);
     throw new HttpError(401, 'Username or password is incorrect.');

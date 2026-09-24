@@ -9,6 +9,8 @@ export interface Env {
   PBKDF2_ITERATIONS?: string;
   /** Contact URL or mailto: sent to push services with every reminder (VAPID "sub"). */
   PUSH_CONTACT?: string;
+  /** Speech transcriptions allowed per day, across all learners, before falling back to self-checking. */
+  SPEECH_DAILY_LIMIT?: string;
 }
 
 export interface SessionUser {

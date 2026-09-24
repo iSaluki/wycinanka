@@ -151,7 +151,13 @@ export function stopSpeaking() {
   }
 }
 
-export function speak(text: string, opts: { slow?: boolean; onEnd?: () => void } = {}): void {
+/**
+ * Recordings are made slightly slower than natural speech (see scripts/voice.py). `natural` plays them, and the
+ * device voice, at the pace Poles actually talk, whatever the speed setting: for listening practice.
+ */
+const NATURAL = 1.08;
+
+export function speak(text: string, opts: { slow?: boolean; natural?: boolean; onEnd?: () => void } = {}): void {
   text = speakable(text);
   if (!text) {
     opts.onEnd?.();
@@ -162,7 +168,7 @@ export function speak(text: string, opts: { slow?: boolean; onEnd?: () => void }
   if (src && typeof Audio !== 'undefined') {
     const audio = new Audio(src);
     playing = audio;
-    audio.playbackRate = Math.min(2, Math.max(0.5, speedOf(opts.slow) / DEFAULT_RATE));
+    audio.playbackRate = opts.natural ? NATURAL : Math.min(2, Math.max(0.5, speedOf(opts.slow) / DEFAULT_RATE));
     audio.preservesPitch = true;
     audio.onended = () => {
       if (playing === audio) playing = null;
@@ -182,7 +188,7 @@ export function speak(text: string, opts: { slow?: boolean; onEnd?: () => void }
   speakWithDevice(text, opts);
 }
 
-function speakWithDevice(text: string, opts: { slow?: boolean; onEnd?: () => void }) {
+function speakWithDevice(text: string, opts: { slow?: boolean; natural?: boolean; onEnd?: () => void }) {
   if (!speechSupported() || !voice) {
     opts.onEnd?.();
     return;
@@ -192,7 +198,7 @@ function speakWithDevice(text: string, opts: { slow?: boolean; onEnd?: () => voi
     const u = new SpeechSynthesisUtterance(text);
     u.voice = voice;
     u.lang = voice.lang;
-    u.rate = speedOf(opts.slow);
+    u.rate = opts.natural ? 1 : speedOf(opts.slow);
     u.onend = () => opts.onEnd?.();
     u.onerror = () => opts.onEnd?.();
     speechSynthesis.speak(u);

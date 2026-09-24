@@ -46,12 +46,18 @@ export const u17 = unit(
           ],
         },
       },
+      dialogue: [
+        ['Kelner', 'Dobry wieczór. W czym mogę pomóc?', 'Good evening. How can I help?'],
+        ['Jack', 'Chciałbym zarezerwować stolik na jutro.', 'I\'d like to book a table for tomorrow.'],
+        ['Kelner', 'Na ile osób?', 'For how many people?'],
+        ['Jack', 'Na dwie. Wolałbym stolik przy oknie.', 'For two. I\'d prefer a table by the window.'],
+      ],
     }),
     lesson('u17-l2', 'If I had time…', 'Talk about hypotheticals with gdyby.', {
       items: [
         ['gdybym', 'if I', { altEn: ['if i were', 'if i had'] }],
         ['gdybym miał czas', 'if I had time', { altPl: ['gdybym miała czas'], altEn: ['if i had the time'] }],
-        ['gdybym był tobą', 'if I were you', { altPl: ['gdybym była tobą'] }],
+        ['gdybym był tobą', 'if I were you', { altPl: ['gdybym była tobą'], hint: 'Heard, but copied from English. {Na twoim miejscu} is the more natural way to say it.' }],
         ['na twoim miejscu', 'in your place (if I were you)', { altEn: ['if I were you', 'in your place', 'in your shoes'] }],
         ['pojechałbym', "I'd go", { altPl: ['pojechałabym'], altEn: ['i would go', "i'd travel"] }],
         ['zrobiłbym', "I'd do", { altPl: ['zrobiłabym'], altEn: ['i would do'] }],
@@ -76,6 +82,11 @@ export const u17 = unit(
           'The result clause uses the conditional: {…pojechałbym do Polski}. Polish uses the same structure for "if I had" and "if I had had", so context decides.',
         ],
       },
+      dialogue: [
+        ['Ola', 'Co byś zrobił, gdybyś miał dużo pieniędzy?', 'What would you do if you had a lot of money?'],
+        ['Tom', 'Kupiłbym dom w górach. A ty?', 'I\'d buy a house in the mountains. And you?'],
+        ['Ola', 'Pojechałabym dookoła świata!', 'I\'d travel around the world!'],
+      ],
     }),
     lesson('u17-l3', 'Sorting things out', 'Make requests and complaints in shops and offices.', {
       items: [
@@ -154,6 +165,12 @@ export const u18 = unit(
           ],
         },
       },
+      dialogue: [
+        ['Kelnerka', 'Co dla państwa?', 'What can I get you?'],
+        ['Adam', 'Poproszę dwie kawy i trzy piwa.', 'Two coffees and three beers, please.'],
+        ['Kelnerka', 'Dwie kawy, trzy piwa. Coś jeszcze?', 'Two coffees, three beers. Anything else?'],
+        ['Adam', 'Nie, dziękuję. To wszystko.', 'No, thanks. That\'s all.'],
+      ],
     }),
     lesson('u18-l2', 'A lot, a little, a few', 'Use quantity words with the genitive.', {
       items: [
@@ -184,6 +201,12 @@ export const u18 = unit(
           'Like numbers from five up, {dużo}, {mało}, {trochę}, {kilka}, {ile} and {więcej} are followed by the **genitive**: {dużo ludzi}, {trochę wody}, {kilka minut}.',
         ],
       },
+      dialogue: [
+        ['Mama', 'Chcesz więcej zupy?', 'Do you want more soup?'],
+        ['Tomek', 'Trochę, proszę.', 'A little, please.'],
+        ['Mama', 'Proszę bardzo.', 'Here you are.'],
+        ['Tomek', 'Wystarczy, dziękuję!', 'That\'s enough, thanks!'],
+      ],
     }),
     lesson('u18-l3', 'At the deli counter', 'Buy food by weight and by the packet.', {
       items: [

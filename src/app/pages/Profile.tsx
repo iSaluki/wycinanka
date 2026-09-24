@@ -373,7 +373,7 @@ export function Profile() {
         <PageHead pl={user ? user.username : 'Gość'} en={user ? 'Your profile' : 'Learning as a guest'}>
           {user
             ? `Learning since ${new Date(user.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}.`
-            : "Your progress is kept only until you close this tab. Create a free account to save it — everything from this visit comes with you."}
+            : "Your progress is saved on this device only. Create a free account to keep it safe and use it on other devices — everything you've done comes with you."}
         </PageHead>
         {!user && (
           <div className="row wrap">

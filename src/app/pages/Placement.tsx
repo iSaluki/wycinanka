@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { UNITS } from '../../content/course';
+import { unitByKey } from '../../content/course';
 import { BANDS, bandFailed, PLACEMENT, placementResult } from '../../content/placement';
 import { IconClose } from '../components/icons';
 import { Label } from '../components/common';
@@ -34,7 +34,7 @@ export function Placement() {
   };
 
   if (done) {
-    const unit = UNITS.find((u) => u.n === result.startUnit)!;
+    const unit = unitByKey(result.startUnit)!;
     const band = BANDS.find((b) => b.band === result.band);
     const right = PLACEMENT.filter((p) => answers[p.id] === p.answer).length;
     return (
@@ -54,7 +54,7 @@ export function Placement() {
             <p className="muted">{unit.summary}</p>
           </div>
           <div className="row wrap" style={{ justifyContent: 'center' }}>
-            <button className="btn red" onClick={() => accept(unit.n)}>
+            <button className="btn red" onClick={() => accept(unit.key)}>
               Start at Unit {unit.n}
             </button>
             <button className="btn quiet" onClick={() => accept(1)}>

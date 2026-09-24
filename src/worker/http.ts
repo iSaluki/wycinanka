@@ -1,6 +1,7 @@
 import type { Context, MiddlewareHandler } from 'hono';
 import type { ZodType } from 'zod';
 import type { AppEnv } from './env';
+import { ipKey } from '../shared/ip';
 
 export class HttpError extends Error {
   constructor(
@@ -74,4 +75,9 @@ export const apiHeaders: MiddlewareHandler<AppEnv> = async (c, next) => {
   h.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains');
 };
 
-export const clientIp = (c: Context<AppEnv>) => c.req.header('cf-connecting-ip') ?? 'unknown';
+/**
+ * Who a request comes from, for throttling. IPv6 users are usually given a whole /64 network, so rotating
+ * addresses inside it would dodge every per-IP limit: IPv6 is keyed by its /64 prefix instead.
+ */
+export const clientIp = (c: Context<AppEnv>) => ipKey(c.req.header('cf-connecting-ip') ?? 'unknown');
+

@@ -1,5 +1,5 @@
 import { CHUNKS } from '../../content/chunks';
-import { getUnitOfLesson, LESSONS, UNITS } from '../../content/course';
+import { getUnitOfLesson, LESSONS, startPosition, UNITS } from '../../content/course';
 import { TONGUE_TWISTERS } from '../../content/sounds';
 import type { Lesson } from '../../content/types';
 import { preferForm, readAloud, sayAfterMe, sayInPolish, shuffle, type Exercise } from './exercises';
@@ -15,7 +15,7 @@ const SIZE = 10;
 export function speakingLessons(done: Set<string>, startUnit = 1): Lesson[] {
   const finished = LESSONS.filter((l) => !l.phonics && done.has(l.id));
   if (finished.length) return finished;
-  const unit = UNITS.find((u) => u.n === Math.max(1, startUnit)) ?? UNITS[1];
+  const unit = UNITS.find((u) => u.n === Math.max(1, startPosition(startUnit))) ?? UNITS[1];
   return unit.lessons.filter((l) => !l.phonics).slice(0, 2);
 }
 
@@ -24,7 +24,7 @@ export function conversationLessons(done: Set<string>, startUnit = 1): { lessons
   const withDialogue = LESSONS.filter((l) => (l.dialogue?.length ?? 0) > 1);
   const finished = withDialogue.filter((l) => done.has(l.id));
   if (finished.length) return { lessons: finished, preview: false };
-  const from = LESSONS.findIndex((l) => getUnitOfLesson(l.id)!.n >= startUnit);
+  const from = LESSONS.findIndex((l) => getUnitOfLesson(l.id)!.n >= startPosition(startUnit));
   const next = withDialogue.find((l) => LESSONS.indexOf(l) >= from) ?? withDialogue[0];
   return { lessons: next ? [next] : [], preview: true };
 }

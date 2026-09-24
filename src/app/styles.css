@@ -1013,6 +1013,23 @@ a.mini-card:hover h3 {
   font-size: 16px;
 }
 
+/* A unit's lessons fold away when the unit is finished or far ahead. */
+.unit-lessons > summary {
+  cursor: pointer;
+  width: fit-content;
+  padding: 4px 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+.unit-lessons[open] > summary .show {
+  display: none;
+}
+.lesson-meta {
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+
 .lesson-list {
   display: grid;
   padding: 0;
@@ -1084,6 +1101,43 @@ a.mini-card:hover h3 {
   padding: 10px 18px 0;
 }
 
+/* A note under the progress bar, e.g. whose gendered forms a lesson shows. */
+.player-banner {
+  margin-top: -6px;
+}
+.player-banner p {
+  margin: 0;
+  font-size: 14px;
+}
+
+/* Typing Polish letters on a physical keyboard: only worth saying where there is one. */
+.keys-tip {
+  margin: 4px 0 0;
+  font-size: 14px;
+  color: var(--ink-3);
+}
+@media (hover: none), (max-width: 640px) {
+  .keys-tip {
+    display: none;
+  }
+}
+
+/* Words of a Polish answer, each tappable to hear it on its own. */
+.tap-words {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0 0.3em;
+}
+.tap-words button {
+  all: unset;
+  cursor: pointer;
+  border-bottom: 1.5px dotted currentColor;
+}
+.tap-words button:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
 .player-top {
   display: flex;
   align-items: center;
@@ -1096,6 +1150,11 @@ a.mini-card:hover h3 {
   display: flex;
   gap: 2px;
   height: 12px;
+}
+
+/* Long lessons: thinner gaps, so the stripes still read as one band on a phone. */
+.stripes.many {
+  gap: 1px;
 }
 
 .stripes span {
@@ -1559,6 +1618,28 @@ table.plain .pl {
   gap: 12px;
 }
 
+/* Listening at natural speed: who is talking, without the words. */
+.listen-who {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.listen-who li {
+  padding: 6px 12px;
+  border: 1.5px solid var(--rule-strong);
+  border-radius: 999px;
+  font-weight: 600;
+  color: var(--ink-3);
+  transition: background 0.2s var(--ease), color 0.2s var(--ease);
+}
+.listen-who li.talking {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--on-ink);
+}
 .bubble {
   display: grid;
   gap: 4px;

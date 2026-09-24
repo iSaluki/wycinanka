@@ -20,6 +20,9 @@ const chunkByPl = new Map(CHUNKS.map((c) => [c.pl, c]));
 const chunkByEn = new Map(CHUNKS.map((c) => [c.en, c]));
 const picturesByEn = new Map(PICTURES.map((p) => [p.en, p]));
 const chunkByExample = new Map(CHUNKS.flatMap((c) => (c.ex ? [[c.ex[1], c] as const] : [])));
+const lines = LESSONS.flatMap((l) => (l.dialogue ?? []).map((d, i) => ({ ...d, next: l.dialogue![i + 1] })));
+/** Dialogue lines with this Polish: the same line (Dzień dobry!) can appear in several conversations. */
+const linesByPl = (pl: string) => lines.filter((d) => d.pl === pl);
 
 /** Instructions of speaking exercises. */
 export const SPEAKING = ['Say it after me', 'Say it in Polish', 'Read it aloud', 'Your turn: say your line'];
@@ -49,7 +52,7 @@ export async function solveLesson(page: Page, _lessonId: string, onStep?: (kind:
       await page.getByRole('button', { name: 'Continue' }).click();
       continue;
     }
-    for (const name of ['Next word', 'Next phrase', 'Start practising', 'Practise these', 'Practise it', 'Got it', 'Finish']) {
+    for (const name of ['Next word', 'Next phrase', 'Start practising', 'Practise these', 'Practise it', 'Got it', 'Finish', 'Continue']) {
       const b = page.getByRole('button', { name, exact: true });
       if (await b.isVisible()) {
         await b.click();
@@ -71,6 +74,12 @@ export async function solveLesson(page: Page, _lessonId: string, onStep?: (kind:
       await clickOption(await spokenPrompt());
     } else if (kind === 'What does this mean?' || kind === 'Listen. What does it mean?') {
       await clickOption(byPl.get(await spokenPrompt())!.en);
+    } else if (kind === 'From the conversation: what does this mean?') {
+      const texts = await optionTexts();
+      await clickOption(linesByPl(await spokenPrompt()).map((d) => d.en).find((en) => texts.includes(en))!);
+    } else if (kind.startsWith('Your turn as ')) {
+      const texts = await optionTexts();
+      await clickOption(linesByPl(await text('.prompt-pl')).map((d) => d.next?.pl).find((pl) => pl && texts.includes(pl))!);
     } else if (kind === 'What does this phrase mean?') {
       await clickOption(chunkByPl.get(await text('.prompt-pl'))!.en);
     } else if (kind === 'What is this in Polish?') {
@@ -111,7 +120,8 @@ export async function solveLesson(page: Page, _lessonId: string, onStep?: (kind:
       const en = await text('.player-body p.muted');
       const gapText = (await text('.gap-text')).replace(/\s+/g, ' ');
       const d = drills.find((x) => x.en === en && x.text.replace('___', '').replace(/\s+/g, ' ').trim() === gapText.replace(/ /g, '').trim()) ??
-        drills.find((x) => x.en === en);
+        // A phrase gap with the same English as a drill ("How's it going?") is the phrase's.
+        (chunkByEn.has(en) ? undefined : drills.find((x) => x.en === en));
       if (d) await clickOption(d.answer);
       else {
         // A phrase with one word missing: the answer is the phrase's word the gapped text lacks.

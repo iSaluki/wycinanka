@@ -57,7 +57,7 @@ export function Home() {
     <Shell>
       <div className="stack-lg">
         <header className="hello stack" style={{ gap: 8 }}>
-          <Label pl={user ? user.username : 'gość'} en={user ? 'signed in' : 'guest — progress is not saved'} />
+          <Label pl={user ? user.username : 'gość'} en={user ? 'signed in' : 'guest — saved on this device'} />
           <h1>
             <span className="pl-greeting" lang="pl">
               {pl}
@@ -65,7 +65,7 @@ export function Home() {
             {user ? `, ${user.username}` : ''}.
           </h1>
           <p className="muted">
-            {en}. {fresh ? 'Your first lesson takes about five minutes.' : `You've finished ${stats.done.size} of ${TOTAL_LESSONS} lessons.`}
+            {en}. {fresh ? 'Your first lesson takes under ten minutes.' : `You've finished ${stats.done.size} of ${TOTAL_LESSONS} lessons.`}
           </p>
         </header>
         <InstallPrompt />
@@ -196,8 +196,8 @@ export function Home() {
         {!user && !fresh && (
           <div className="banner">
             <p>
-              Guest progress disappears when you close this tab. <Link to="/signup">Create a free account</Link> to keep it — everything
-              you've done today comes with you.
+              Your progress is saved on this device only. <Link to="/signup">Create a free account</Link> to keep it — everything
+              you've done so far comes with you.
             </p>
           </div>
         )}

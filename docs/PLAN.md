@@ -393,3 +393,15 @@ Deviations from the plan:
 - Recognition by the browser, then Whisper on Workers AI (the `AI` binding in `wrangler.jsonc`), then listening back.
 - Local development and the end-to-end tests run `wrangler dev --local`, without Workers AI (it needs a Cloudflare
   account); speaking then falls back to listening back, as it does in Worker Previews.
+
+### 10.2 Third release (after the audit in docs/AUDIT.md)
+
+- **Twelve new units (36 lessons)** placed where their grammar fits: small talk, family and people, weather and
+  time, free time, commands, health, comparing, should/must, plurals for people, który/swój/reported speech,
+  prefixed verbs of motion, work and home. The course is now 96 lessons in 31 units. Unit ids never change;
+  "Unit n" is a unit's place in `UNITS`.
+- **A conversation in every lesson**: listen at natural speed with no text, answer from the sound, read along, reply.
+- **Grading**: a wrong ending is a grammar mistake, never a typo.
+- **Offline and guests**: guest progress is kept on the device; signed-in results wait in an outbox when offline.
+- **Stable card ids** from the text, with the old numbered ids kept, and a recorded list guarded by a test.
+- **CI** on every pull request; sign-in lockouts per network; a daily speech budget; service-worker caching fixed.

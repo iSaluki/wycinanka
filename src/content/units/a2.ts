@@ -48,6 +48,11 @@ export const u11 = unit(
           ],
         },
       },
+      dialogue: [
+        ['Ola', 'Gdzie byłeś wczoraj?', 'Where were you yesterday?'],
+        ['Tom', 'Byłem w pracy. A ty?', 'I was at work. And you?'],
+        ['Ola', 'Byłam w domu. Było zimno!', 'I was at home. It was cold!'],
+      ],
     }),
     lesson('u11-l2', 'I worked, I watched', 'Form the past of regular verbs.', {
       items: [
@@ -88,6 +93,12 @@ export const u11 = unit(
           ],
         },
       },
+      dialogue: [
+        ['Marek', 'Co robiłaś w weekend?', 'What did you do at the weekend?'],
+        ['Kasia', 'Czytałam i oglądałam filmy. A ty?', 'I read and watched films. And you?'],
+        ['Marek', 'Pracowałem.', 'I worked.'],
+        ['Kasia', 'Biedny!', 'Poor you!'],
+      ],
     }),
     lesson('u11-l3', 'I went, I ate', 'Use common irregular past forms.', {
       items: [
@@ -110,6 +121,11 @@ export const u11 = unit(
         ['Wczoraj Tom ___ do kina.', 'Yesterday Tom went to the cinema (walking).', ['poszedł', 'poszła', 'pojechał'], 'poszedł'],
         ['Anna ___ do Krakowa.', 'Anna went to Kraków (by train).', ['pojechała', 'poszła', 'pojechał'], 'pojechała', 'A long distance means transport: pojechać.'],
         ['(ja — Ewa) ___ dużo kawy.', 'Ewa: I drank a lot of coffee.', ['piłam', 'piłem', 'piła'], 'piłam'],
+      ],
+      dialogue: [
+        ['Emma', 'Wczoraj pojechałam do Krakowa.', 'Yesterday I went to Kraków.'],
+        ['Piotr', 'Super! Co jadłaś?', 'Great! What did you eat?'],
+        ['Emma', 'Pierogi! I piłam dużo kawy.', 'Pierogi! And I drank a lot of coffee.'],
       ],
     }),
   ],
@@ -168,6 +184,12 @@ export const u12 = unit(
           ['Przeczytałem książkę.', "I read the book (and finished it)."],
         ],
       },
+      dialogue: [
+        ['Mama', 'Zjadłeś już obiad?', 'Have you had lunch yet?'],
+        ['Tomek', 'Tak, zjadłem zupę.', 'Yes, I ate the soup.'],
+        ['Mama', 'A przeczytałeś książkę?', 'And have you read the book?'],
+        ['Tomek', 'Jeszcze nie. Czytam!', 'Not yet. I\'m reading it!'],
+      ],
     }),
     lesson('u12-l2', 'More pairs', 'Learn high-frequency aspect pairs.', {
       items: [
@@ -191,6 +213,12 @@ export const u12 = unit(
         ['Czy możesz ___ drzwi?', 'Can you open the door?', ['otworzyć', 'otwierać'], 'otworzyć', 'One single action → perfective.'],
         ['Zawsze ___ klucze!', 'I always forget my keys!', ['zapominam', 'zapomnę'], 'zapominam', '"Always" → repeated → imperfective.'],
         ['Kiedy ___ do domu?', 'When will you come back home?', ['wrócisz', 'wracasz'], 'wrócisz', 'Perfective present form = future.'],
+      ],
+      dialogue: [
+        ['Kasia', 'Co powiedziałeś?', 'What did you say?'],
+        ['Tom', 'Zamknij okno, proszę. Zimno mi.', 'Close the window, please. I\'m cold.'],
+        ['Kasia', 'Dobrze. A drzwi?', 'OK. And the door?'],
+        ['Tom', 'Drzwi już zamknąłem.', 'I\'ve already closed the door.'],
       ],
     }),
     lesson('u12-l3', 'Signal words', 'Let time words guide your choice of aspect.', {
@@ -222,6 +250,11 @@ export const u12 = unit(
           'Signal words help with aspect: {codziennie, często, zawsze, zwykle} point to the imperfective; {już, właśnie, w końcu} often point to the perfective.',
         ],
       },
+      dialogue: [
+        ['Ewa', 'Byłeś już w Gdańsku?', 'Have you been to Gdańsk yet?'],
+        ['Ben', 'Nie, nigdy nie byłem.', 'No, I\'ve never been.'],
+        ['Ewa', 'Szkoda! Musisz w końcu pojechać.', 'Shame! You must go some time.'],
+      ],
     }),
   ],
 );
@@ -271,6 +304,12 @@ export const u13 = unit(
           ],
         },
       },
+      dialogue: [
+        ['Marta', 'Co będziesz robić jutro?', 'What will you do tomorrow?'],
+        ['Ben', 'Będę pracować. A wieczorem będę w domu.', 'I\'ll be working. And in the evening I\'ll be at home.'],
+        ['Marta', 'A w sobotę?', 'And on Saturday?'],
+        ['Ben', 'W sobotę będę w Krakowie.', 'On Saturday I\'ll be in Kraków.'],
+      ],
     }),
     lesson('u13-l2', "I'll ring you", 'Make promises with perfective verbs.', {
       items: [
@@ -299,6 +338,12 @@ export const u13 = unit(
           'So there are two futures: {będę robić} (I\'ll be doing — process) and {zrobię} (I\'ll get it done — result).',
         ],
       },
+      dialogue: [
+        ['Ola', 'Kupisz chleb?', 'Will you buy some bread?'],
+        ['Adam', 'Tak, kupię chleb i mleko.', 'Yes, I\'ll buy bread and milk.'],
+        ['Ola', 'Dziękuję! Zadzwonisz ze sklepu?', 'Thanks! Will you ring from the shop?'],
+        ['Adam', 'Dobrze, zadzwonię.', 'OK, I\'ll ring.'],
+      ],
     }),
     lesson('u13-l3', 'Next week', 'Talk about plans and intentions.', {
       items: [
@@ -373,6 +418,12 @@ export const u14 = unit(
           ],
         },
       },
+      dialogue: [
+        ['Kelner', 'Kawa z mlekiem?', 'Coffee with milk?'],
+        ['Emma', 'Nie, dla mnie herbata z cytryną.', 'No, tea with lemon for me.'],
+        ['Kelner', 'A dla pana?', 'And for you, sir?'],
+        ['Jack', 'Kawa z mlekiem i z cukrem.', 'Coffee with milk and sugar.'],
+      ],
     }),
     lesson('u14-l2', 'I am a teacher', 'Say what job someone does.', {
       items: [
@@ -404,6 +455,12 @@ export const u14 = unit(
           'But after {to jest} ("this is") and after {jako} ("as"), keep the plain form: {To jest lekarz}, {Pracuję jako lekarz}.',
         ],
       },
+      dialogue: [
+        ['Piotr', 'Czym się zajmujesz?', 'What do you do?'],
+        ['Emma', 'Jestem nauczycielką. A ty?', 'I\'m a teacher. And you?'],
+        ['Piotr', 'Jestem lekarzem.', 'I\'m a doctor.'],
+        ['Emma', 'Naprawdę? Moja siostra też jest lekarką!', 'Really? My sister is a doctor too!'],
+      ],
     }),
     lesson('u14-l3', 'By bus, by train', 'Say how you travel.', {
       items: [
@@ -426,6 +483,11 @@ export const u14 = unit(
         ['Jadę ___.', "I'm going by train.", ['pociągiem', 'pociąg', 'pociągu'], 'pociągiem'],
         ['Lecimy ___.', "We're flying.", ['samolotem', 'samolot', 'samolocie'], 'samolotem'],
         ['Jeździsz ___?', 'Do you go by tram?', ['tramwajem', 'tramwaj', 'tramwaju'], 'tramwajem'],
+      ],
+      dialogue: [
+        ['Kasia', 'Jak jeździsz do pracy?', 'How do you get to work?'],
+        ['Tom', 'Autobusem. A ty?', 'By bus. And you?'],
+        ['Kasia', 'Rowerem, a zimą tramwajem.', 'By bike, and by tram in winter.'],
       ],
     }),
   ],
@@ -473,6 +535,11 @@ export const u15 = unit(
           ],
         },
       },
+      dialogue: [
+        ['Ola', 'Dokąd idziesz?', 'Where are you going?'],
+        ['Jack', 'Idę do sklepu. A ty?', 'I\'m going to the shop. And you?'],
+        ['Ola', 'Jadę do pracy. Codziennie jeżdżę tramwajem.', 'I\'m going to work. I go by tram every day.'],
+      ],
     }),
     lesson('u15-l2', 'To the shop, to Poland', 'Use do + genitive for destinations.', {
       items: [
@@ -514,6 +581,11 @@ export const u15 = unit(
           ],
         },
       },
+      dialogue: [
+        ['Marek', 'Jedziesz do Polski na wakacje?', 'Are you going to Poland on holiday?'],
+        ['Emma', 'Tak, jadę do Krakowa. A ty?', 'Yes, I\'m going to Kraków. And you?'],
+        ['Marek', 'Ja jadę do Londynu, do siostry.', 'I\'m going to London, to my sister\'s.'],
+      ],
     }),
     lesson('u15-l3', 'At the station', 'Buy tickets and handle delays.', {
       items: [
@@ -593,6 +665,12 @@ export const u16 = unit(
           ],
         },
       },
+      dialogue: [
+        ['Kasia', 'Podoba ci się Kraków?', 'Do you like Kraków?'],
+        ['Tom', 'Bardzo mi się podoba!', 'I really like it!'],
+        ['Kasia', 'A smakuje ci polska kuchnia?', 'And do you like Polish food?'],
+        ['Tom', 'Tak, bardzo mi smakuje. Ale jest mi zimno!', 'Yes, it\'s delicious. But I\'m cold!'],
+      ],
     }),
     lesson('u16-l2', 'Presents for Mum', 'Give things to people.', {
       items: [
@@ -635,6 +713,12 @@ export const u16 = unit(
           ],
         },
       },
+      dialogue: [
+        ['Ola', 'Co kupiłeś mamie na urodziny?', 'What did you buy Mum for her birthday?'],
+        ['Adam', 'Kwiaty. A ty?', 'Flowers. And you?'],
+        ['Ola', 'Kupiłam jej książkę.', 'I bought her a book.'],
+        ['Adam', 'Świetny prezent!', 'Great present!'],
+      ],
     }),
     lesson('u16-l3', 'I think that…', 'Give opinions and react.', {
       items: [
@@ -652,6 +736,12 @@ export const u16 = unit(
         ['Niestety nie mogę przyjść.', "Unfortunately I can't come.", { altEn: ["Sadly, I can't come.", 'Unfortunately, I cannot come.', "Unfortunately, I can't come."], extra: ['może', 'na'] }],
         ['Szkoda, że cię nie było.', "Shame you weren't there.", { altEn: ["It's a pity you weren't there.", "What a shame you weren't there.", "Pity you weren't there."], extra: ['ty', 'byłeś'] }],
         ['Zgadzam się z tobą.', 'I agree with you.', { extra: ['ty', 'ci'] }],
+      ],
+      dialogue: [
+        ['Piotr', 'Myślę, że to dobry pomysł.', 'I think it\'s a good idea.'],
+        ['Emma', 'Zgadzam się. Ale niestety nie mam czasu.', 'I agree. But unfortunately I don\'t have time.'],
+        ['Piotr', 'Szkoda! Naprawdę?', 'Shame! Really?'],
+        ['Emma', 'Naprawdę. Może w przyszłym tygodniu.', 'Really. Maybe next week.'],
       ],
     }),
   ],
