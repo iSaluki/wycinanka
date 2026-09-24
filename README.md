@@ -9,6 +9,7 @@ A free Polish course for British English speakers, from complete beginner to B1.
 - **More than one right answer**: typing any course word that means the English prompt is accepted (*cześć* as well as *dzień dobry* for "hello"), with a note naming the word the card was teaching and how they differ; multiple-choice questions never offer a second right answer as a wrong option
 - **Help when stuck, honest about accents**: a hint button rules out wrong options or reveals the start of the answer, step by step; an answer typed without its Polish letters (*dziekuje* for *dziękuję*) isn't accepted until they're added. Answers that needed either come back sooner in review, and the finish screen lists them to look over
 - **Reinforcement, not one-off teaching**: FSRS spaced review (the algorithm used in Anki) for every word, sentence and grammar drill; each lesson opens with a warm-up from earlier ones; signed-in learners also get revision questions sprinkled through each lesson, picked at random but weighted heavily towards what they've got wrong; trouble spots by skill, a "tricky words" list and unit revision target what you get wrong most
+- **Speaking**: every lesson asks for a few things to be said aloud (repeat a new word, say a sentence, say a word from its English), checked by speech recognition and shown word by word. *Can't speak now* skips speaking for 15 minutes, and a setting turns it off. Speaking never counts against a score, because recognisers mishear accents. A **Speaking** section practises on its own: repeat after me, say it in Polish, everyday phrases, reading tricky sounds aloud, tongue twisters, and role-playing lesson dialogues line by line
 - **Lexical chunks**: 36 everyday phrases (*nie ma sprawy*, *czy mogę prosić o…*, *mam ochotę na…*) learnt as whole units, each with its word-for-word meaning to show why translating piece by piece fails. In sentence building, known phrases are a single tile, and multi-word lesson items are flagged as phrases to learn whole
 - **The 500 most frequent words**, learnt in batches of eight
 - **Picture flashcards**: 72 everyday objects in nine themed decks. Meet each picture with its Polish and English name, then name it from four Polish words; learnt pictures come back on the spaced-review schedule. Images are [Twemoji](https://github.com/jdecked/twemoji) (CC BY 4.0), self-hosted in `public/pictures`
@@ -31,6 +32,7 @@ The research behind the course design, the curriculum, architecture and security
 | Front end | React 19 + Vite, plain CSS; self-hosted fonts (Poltawski Nowy, Signika) |
 | API | Hono on Cloudflare Workers (`src/worker`) |
 | Data | Cloudflare D1 (`migrations/`, applied by the Worker itself on first request) |
+| Speech recognition | The browser's own (Web Speech API) where it has one; otherwise a short WAV clip is transcribed on the Worker by Whisper on Workers AI (`src/worker/routes/speech.ts`, nothing stored); otherwise learners listen back and mark themselves |
 | Audio | Every fixed Polish text pre-recorded with [Piper](https://github.com/OHF-Voice/piper1-gpl), a free neural voice run locally (`scripts/voice.py`), served as small MP3s; the browser's own Polish voice for text typed into the tools, or for everything if the learner prefers it |
 | Shared | FSRS scheduler, answer grader, validation and progress rules (`src/shared`), used by both browser and Worker |
 | Content | TypeScript data in `src/content`, validated by tests |
@@ -42,10 +44,12 @@ Requires Node 22 (see `.node-version`).
 ```sh
 npm install
 cp .dev.vars.example .dev.vars        # local-only pepper for password hashing
-npx wrangler dev                       # builds, then app + API on http://localhost:8787
+npx wrangler dev --local               # builds, then app + API on http://localhost:8787
 ```
 
-For fast front-end iteration, run `npx wrangler dev` in one terminal and `npm run dev` in another. Vite proxies `/api` to the Worker.
+`--local` runs without Workers AI, which always runs on Cloudflare and needs `npx wrangler login`. Speaking still works: browsers with their own speech recognition use it, and others fall back to listening back. Drop `--local` (after logging in) to try Whisper transcription locally; it counts towards your account's Workers AI allowance.
+
+For fast front-end iteration, run `npx wrangler dev --local` in one terminal and `npm run dev` in another. Vite proxies `/api` to the Worker.
 
 ## Test
 
@@ -65,6 +69,7 @@ Live at **https://polish.saluki.cloud**. The repository is set up so that a Clou
 - `build.command` in `wrangler.jsonc` runs `npm run build`, so a plain `npx wrangler deploy` builds the front end first.
 - The Worker applies any pending migrations itself on its first request (`src/worker/migrate.ts`), using the same `d1_migrations` table as `wrangler d1 migrations apply`. No separate migration step is needed.
 - `PEPPER` is optional, so the first deploy works before any secret is set (see below).
+- Workers AI is bound as `AI` for speech transcription (Whisper). There is nothing to set up: it's part of every Workers account, and the free plan's daily allowance (10,000 neurons, roughly a few thousand short spoken answers) is shared by everyone who uses a browser without its own recognition. Beyond it, or if the binding is removed, speaking falls back to listening back and marking yourself. Transcription is throttled to 180 requests an hour per IP.
 - An hourly Cron Trigger (`triggers` in `wrangler.jsonc`) sends daily reminders (`src/worker/reminders.ts`). The Web Push (VAPID) key pair is generated on first use and stored in D1, so there is nothing to configure; `PUSH_CONTACT` in `vars` is the contact URL push services see. On the free plan one run sends at most 40 reminders, so a deployment with more learners reminded in the same hour needs the paid plan and a higher `MAX_PUSHES_PER_RUN`.
 
 ### Connect the repository (one time)
@@ -110,6 +115,7 @@ Designed against the OWASP Top 10 and ASVS level 1, with selected level 2 contro
 - Strict validation (unknown fields rejected), prepared statements only, body size limits
 - Strict CSP with no inline scripts or third-party origins (the one exception: culture videos may be framed from youtube-nocookie.com, and only load when played), plus HSTS, `X-Frame-Options`, `nosniff` and more
 - Privacy: username only, no email or tracking; users can export or delete all their data
+- Speaking: the microphone is used only while the learner has tapped it. Clips sent to the Worker are transcribed and discarded, never stored or logged. Browsers' own recognisers are run by the browser maker (Chrome sends audio to Google), and the speaking section says which is in use; recordings for playing back stay in the page (`blob:` media, allowed by the CSP)
 
 ## Content
 

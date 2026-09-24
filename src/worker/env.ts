@@ -2,6 +2,8 @@ export interface Env {
   /** Absent in Worker Previews, which do not inherit production bindings (see wrangler.jsonc `previews`). */
   DB: D1Database;
   ASSETS: Fetcher;
+  /** Workers AI, for transcribing spoken answers. Absent in Worker Previews. */
+  AI?: Ai;
   /** Worker secret used to pepper password hashes. At least 32 characters. Optional: see crypto.ts. */
   PEPPER?: string;
   PBKDF2_ITERATIONS?: string;

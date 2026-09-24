@@ -21,6 +21,7 @@ import { Pictures } from './pages/Pictures';
 import { Culture } from './pages/Culture';
 import { Phrases } from './pages/Phrases';
 import { Hub } from './pages/Hub';
+import { Speaking } from './pages/Speaking';
 import { DISCOVER, PRACTISE } from './lib/sections';
 import { Mark } from './components/Shell';
 
@@ -80,6 +81,8 @@ export function App() {
       return <Grammar />;
     case '/phrases':
       return <Phrases />;
+    case '/speaking':
+      return <Speaking />;
     case '/culture':
       return <Culture />;
     case '/study':

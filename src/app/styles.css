@@ -2737,6 +2737,15 @@ details.spot > div {
   border-color: var(--ink);
 }
 
+/* Cards that start something rather than go somewhere (speaking practice). */
+button.hub-card {
+  width: 100%;
+  background: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
 .hub-icon {
   display: grid;
   place-items: center;
@@ -3205,4 +3214,141 @@ dialog.confirm p {
 .culture-picture .credit {
   color: var(--ink-3);
   font-size: 13px;
+}
+
+/* ---------- Speaking ---------- */
+
+.say-it {
+  display: grid;
+  gap: 16px;
+}
+
+.say-target {
+  display: grid;
+  gap: 6px;
+}
+
+/* Words as heard: green when heard, underlined in yellow when nearly, red when missed. */
+.said-ok {
+  color: var(--zielen);
+}
+
+.said-close {
+  text-decoration: underline wavy var(--zolc);
+  text-underline-offset: 0.18em;
+  text-decoration-thickness: 2px;
+}
+
+.said-miss {
+  color: var(--czerwien);
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+
+.mic-area {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 0;
+}
+
+.mic {
+  --level: 0;
+  display: grid;
+  place-items: center;
+  width: 76px;
+  height: 76px;
+  flex: none;
+  border: 0;
+  border-radius: 50%;
+  background: var(--czerwien);
+  color: #fff;
+  cursor: pointer;
+  /* The ring grows with the input level while listening. */
+  box-shadow: 0 0 0 calc(4px + var(--level) * 14px) color-mix(in srgb, var(--czerwien) 22%, transparent);
+  transition: box-shadow 80ms linear, background 160ms var(--ease);
+}
+
+.mic svg {
+  width: 34px;
+  height: 34px;
+}
+
+.mic:hover {
+  background: var(--czerwien-deep);
+}
+
+.mic[data-state='listening'] {
+  animation: mic-pulse 1.4s var(--ease) infinite;
+}
+
+.mic[data-state='checking'] {
+  background: var(--ink-3);
+  cursor: progress;
+}
+
+@keyframes mic-pulse {
+  50% {
+    background: var(--czerwien-deep);
+  }
+}
+
+.mic-label {
+  color: var(--ink-2);
+  font-size: 17px;
+}
+
+.heard {
+  margin: 0;
+}
+
+.self-check {
+  display: grid;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1.5px solid var(--rule-strong);
+  border-radius: var(--r);
+}
+
+.self-check p {
+  margin: 0;
+}
+
+.speak.mine {
+  color: var(--blekit);
+}
+
+.speaking-note {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  color: var(--ink-2);
+}
+
+.speaking-note svg {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  margin-top: 2px;
+}
+
+.conversations {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 10px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.conversations li {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1.5px solid var(--rule-strong);
+  border-radius: var(--r);
+}
+
+.conversations .pl {
+  font: 700 20px/1.2 var(--font-pl);
 }

@@ -5,6 +5,7 @@ import { Rosette } from '../components/Rosette';
 import { Session, type SessionResult } from '../components/Session';
 import { useStats } from '../lib/derived';
 import { isGraded, lessonForSpeaker, lessonPlan, practiceExercises } from '../lib/exercises';
+import { speakingPaused } from '../lib/listen';
 import { revisionCards, sprinkle, warmupCards } from '../lib/reinforce';
 import { Link, navigate, useTitle } from '../lib/router';
 import { completeLesson, getState, submitReviews, useApp } from '../lib/store';
@@ -18,6 +19,7 @@ interface Outcome {
   revised: number;
   /** Lesson cards the learner got wrong at least once, to look over before leaving. */
   missed: string[];
+  spoken: SessionResult['spoken'];
 }
 
 export function LessonPage({ id }: { id: string }) {
@@ -26,6 +28,7 @@ export function LessonPage({ id }: { id: string }) {
   useTitle(lesson?.title ?? 'Lesson');
   const speaker = useApp((s) => s.settings.speaker);
   const signedIn = useApp((s) => !!s.user);
+  const speakingOn = useApp((s) => s.settings.speaking !== false);
   const [run, setRun] = useState(0);
   const exercises = useMemo(() => {
     if (!lesson) return [];
@@ -33,7 +36,7 @@ export function LessonPage({ id }: { id: string }) {
     // Each lesson opens with three quick questions from earlier lessons: spaced retrieval of old material.
     const warmCards = warmupCards(progress, lesson.id);
     const warm = practiceExercises(warmCards, speaker, 'warmup');
-    const { exercises: main, introEnd } = lessonPlan(lessonForSpeaker(lesson, speaker));
+    const { exercises: main, introEnd } = lessonPlan(lessonForSpeaker(lesson, speaker), { speaking: speakingOn && !speakingPaused() });
     if (!signedIn) return [...warm, ...main];
     // Signed-in learners also get revision sprinkled through the lesson, weighted towards their mistakes.
     const n = Math.min(4, Math.max(2, Math.round(main.filter(isGraded).length / 6)));
@@ -43,7 +46,7 @@ export function LessonPage({ id }: { id: string }) {
     const until = main[main.length - 1]?.kind === 'dialogue' ? main.length - 1 : main.length;
     return [...warm, ...sprinkle(main, revision, from, until)];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lesson, speaker, signedIn, run]);
+  }, [lesson, speaker, signedIn, speakingOn, run]);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
 
   if (!lesson || !unit) return <NotFound />;
@@ -63,7 +66,7 @@ export function LessonPage({ id }: { id: string }) {
     if (extra.length) {
       await submitReviews(extra.flatMap((a) => (r.ratings.get(a.cardId) ? [{ cardId: a.cardId, ...r.ratings.get(a.cardId)! }] : [])));
     }
-    setOutcome({ ...out, revised: extra.filter((a) => a.tag === 'revision').length, missed });
+    setOutcome({ ...out, revised: extra.filter((a) => a.tag === 'revision').length, missed, spoken: r.spoken });
   };
 
   if (outcome) return <Finish lessonId={lesson.id} outcome={outcome} onRetry={() => (setOutcome(null), setRun(run + 1))} />;
@@ -105,6 +108,12 @@ function Finish({ lessonId, outcome, onRetry }: { lessonId: string; outcome: Out
         {outcome.revised > 0 && (
           <p className="muted" style={{ maxWidth: '46ch' }}>
             You also revised {outcome.revised} thing{outcome.revised === 1 ? '' : 's'} from earlier lessons, picked from what you've found hardest.
+          </p>
+        )}
+        {outcome.spoken.tried > 0 && (
+          <p className="muted" style={{ maxWidth: '46ch' }}>
+            You said {outcome.spoken.said} of {outcome.spoken.tried} thing{outcome.spoken.tried === 1 ? '' : 's'} aloud clearly.{' '}
+            <Link to="/speaking">More speaking practice</Link>
           </p>
         )}
         {outcome.missed.length > 0 && <Missed ids={outcome.missed} />}

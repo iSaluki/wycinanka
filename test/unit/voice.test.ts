@@ -4,7 +4,8 @@ import { getCard, LESSONS } from '../../src/content/course';
 import { CHUNK_DECKS } from '../../src/content/chunks';
 import { PICTURES } from '../../src/content/pictures';
 import { FREQUENCY } from '../../src/content/frequency';
-import { chunkLearnSession, lessonForSpeaker, lessonPlan, reviewExercise, type Exercise } from '../../src/app/lib/exercises';
+import { chunkLearnSession, lessonForSpeaker, lessonPlan, reviewExercise, rolePlay, type Exercise } from '../../src/app/lib/exercises';
+import { speakingRound, type SpeakingMode } from '../../src/app/lib/speaking';
 import { audioId, audioKey } from '../../src/app/lib/speech';
 import { spokenTexts } from '../../src/app/lib/spoken';
 
@@ -30,6 +31,8 @@ function spokenBy(e: Exercise): string[] {
       return e.lang === 'pl' ? e.accepted : [e.prompt];
     case 'build':
       return [...e.accepted, ...(e.audio ? [e.audio] : [])];
+    case 'speak':
+      return [e.pl, ...(e.cue ? [e.cue.pl] : [])];
   }
 }
 
@@ -64,6 +67,13 @@ describe('recorded voice', () => {
       for (const speaker of [undefined, 'f'] as const)
         for (let run = 0; run < 3; run++) for (const e of lessonPlan(lessonForSpeaker(l, speaker)).exercises) check(e, `${l.id} (${speaker ?? 'default'})`);
     for (const d of CHUNK_DECKS) for (const e of chunkLearnSession(d.chunks)) check(e, d.id);
+    // Speaking practice plays the voice for everything it asks the learner to say.
+    const courseLessons = LESSONS.filter((l) => !l.phonics);
+    for (const mode of ['repeat', 'translate', 'sounds', 'phrases', 'twisters'] as SpeakingMode[])
+      for (const speaker of [undefined, 'f'] as const)
+        for (let run = 0; run < 5; run++) for (const e of speakingRound(mode, courseLessons, speaker)) check(e, `speaking: ${mode}`);
+    for (const l of LESSONS)
+      for (const as of [0, 1]) for (const e of rolePlay(l.dialogue ?? [], l.id, as)) check(e, `${l.id} role-play`);
     const cards = [...LESSONS.flatMap((l) => [...l.items, ...l.sentences, ...l.drills].map((x) => x.id)), ...PICTURES.map((p) => p.id), ...FREQUENCY.map((w) => w.id), ...CHUNK_DECKS.flatMap((d) => d.chunks.map((c) => c.id))];
     for (const id of cards) for (const reps of [0, 1, 2, 3, 4]) for (const speaker of [undefined, 'm', 'f'] as const) check(reviewExercise(getCard(id)!, reps, id, speaker), id);
   });

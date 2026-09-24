@@ -181,6 +181,27 @@ function SettingsCard() {
         </span>
       </div>
       <div className="field">
+        <span id="speaking-l" style={{ fontWeight: 700 }}>
+          Speaking in lessons
+        </span>
+        <div className="seg" role="radiogroup" aria-labelledby="speaking-l">
+          {(
+            [
+              [true, 'On'],
+              [false, 'Off'],
+            ] as const
+          ).map(([on, label]) => (
+            <button key={label} role="radio" aria-checked={(s.speaking !== false) === on} aria-pressed={(s.speaking !== false) === on} onClick={() => set({ speaking: on })}>
+              {label}
+            </button>
+          ))}
+        </div>
+        <span className="help">
+          Lessons ask you to say a few words and a sentence aloud. <i>Can't speak now</i> in a lesson leaves them out for 15 minutes; switch them
+          off here to leave them out altogether. <Link to="/speaking">Speaking practice</Link> is always there.
+        </span>
+      </div>
+      <div className="field">
         <span id="theme-l" style={{ fontWeight: 700 }}>
           Theme
         </span>

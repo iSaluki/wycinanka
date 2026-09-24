@@ -64,13 +64,36 @@ export type Exercise =
       tag?: ExtraTag;
     }
   | { kind: 'match'; pairs: MatchPair[] }
-  | { kind: 'gap'; cardId: string; text: string; en: string; options: string[]; answer: string; why?: string; tag?: ExtraTag };
+  | { kind: 'gap'; cardId: string; text: string; en: string; options: string[]; answer: string; why?: string; tag?: ExtraTag }
+  | SpeakExercise;
+
+/**
+ * Say something aloud. Checked by speech recognition where the device has it, or by listening back.
+ * Speaking is practice on top of a lesson: it never counts towards the score or the review schedule, so a
+ * recogniser that mishears a learner can't hold them back.
+ */
+export interface SpeakExercise {
+  kind: 'speak';
+  cardId: string;
+  /**
+   * repeat: hear it and say it back. translate: say the Polish for the English.
+   * read: read the Polish aloud before hearing it. reply: say your line after the other speaker's.
+   */
+  mode: 'repeat' | 'translate' | 'read' | 'reply';
+  /** The Polish to say, as shown and played afterwards. */
+  pl: string;
+  /** Every way of saying it that counts. */
+  accepted: string[];
+  en?: string;
+  /** The other speaker's line before yours (reply). */
+  cue?: DialogueLine;
+}
 
 export type MatchPair = { cardId: string; pl: string; en: string; say?: string };
 
-export type GradedExercise = Exclude<Exercise, { kind: 'meet' } | { kind: 'spotlight' } | { kind: 'dialogue' }>;
+export type GradedExercise = Exclude<Exercise, { kind: 'meet' } | { kind: 'spotlight' } | { kind: 'dialogue' } | SpeakExercise>;
 
-export const isGraded = (e: Exercise): e is GradedExercise => !['meet', 'spotlight', 'dialogue'].includes(e.kind);
+export const isGraded = (e: Exercise): e is GradedExercise => !['meet', 'spotlight', 'dialogue', 'speak'].includes(e.kind);
 
 /* ---------- Hints ---------- */
 
@@ -287,6 +310,42 @@ export function stepwise(items: Item[], check: (item: Item) => Exercise, pair?: 
 
 const wordPair = (i: Item): MatchPair => ({ cardId: i.id, pl: i.pl, en: i.en });
 
+/* ---------- Speaking ---------- */
+
+/** Hear a word or sentence, then say it back. */
+export function sayAfterMe(x: { id: string; pl: string; en: string; altPl?: string[] }): SpeakExercise {
+  return { kind: 'speak', cardId: x.id, mode: 'repeat', pl: x.pl, accepted: accPl(x), en: x.en };
+}
+
+/** Say the Polish for the English: the hardest kind of recall, out loud. */
+export function sayInPolish(x: { id: string; pl: string; en: string; altPl?: string[] }): SpeakExercise {
+  const also = sameMeaning(x.en, x.pl);
+  return { kind: 'speak', cardId: x.id, mode: 'translate', pl: x.pl, accepted: [...accPl(x), ...also], en: x.en };
+}
+
+/** Read a word aloud from its spelling, then hear it. */
+export function readAloud(id: string, pl: string, en?: string): SpeakExercise {
+  return { kind: 'speak', cardId: id, mode: 'read', pl, accepted: [pl], en };
+}
+
+/**
+ * Role-play a dialogue: the learner takes one speaker's part and says each of their lines after hearing the
+ * line before it. Lines are keyed by position, as dialogue lines have no card of their own.
+ */
+export function rolePlay(lines: DialogueLine[], lessonId: string, as = 1): SpeakExercise[] {
+  const who = [...new Set(lines.map((l) => l.who))][as] ?? lines[0]?.who;
+  return lines.flatMap((l, i) =>
+    l.who === who
+      ? [{ kind: 'speak', cardId: `${lessonId}:line-${i}`, mode: 'reply', pl: l.pl, accepted: [l.pl], en: l.en, cue: lines[i - 1] } satisfies SpeakExercise]
+      : [],
+  );
+}
+
+export interface PlanOptions {
+  /** Include speaking exercises (on unless switched off or paused). */
+  speaking?: boolean;
+}
+
 export interface LessonPlan {
   exercises: Exercise[];
   /** Index of the first exercise after the new material has been introduced and first practised. */
@@ -298,8 +357,8 @@ export interface LessonPlan {
  * then the grammar spotlight, now that the words it explains are familiar; then listening, recall, sentences
  * and grammar drills, typed answers, and finally the dialogue.
  */
-export function lessonPlan(lesson: Lesson): LessonPlan {
-  if (lesson.phonics) return phonicsPlan(lesson);
+export function lessonPlan(lesson: Lesson, { speaking = true }: PlanOptions = {}): LessonPlan {
+  if (lesson.phonics) return phonicsPlan(lesson, speaking);
   const near = nearbyLessons(lesson);
   const enPool = near.flatMap((l) => l.items.map((i) => i.en));
   const plPool = near.flatMap((l) => l.items.map((i) => i.pl));
@@ -319,6 +378,11 @@ export function lessonPlan(lesson: Lesson): LessonPlan {
   const last = sentences[sentences.length - 1];
   const finale: Exercise[] = last ? [Math.random() < 0.5 ? buildFromAudio(last, wordPool) : translateToEnglish(last)] : [];
   const gaps: Exercise[] = lesson.drills.map(gapFor);
+  // Speaking: say two of the new words after the voice, say one from its English, and say a sentence already built.
+  const spoken = shuffle(lesson.items);
+  const repeat: Exercise[] = speaking ? spoken.slice(0, 2).map(sayAfterMe) : [];
+  const recall: Exercise[] = speaking ? spoken.slice(2, 3).map(sayInPolish) : [];
+  const saySentence: Exercise[] = speaking && builds.length ? [sayAfterMe(sentences[0])] : [];
 
   // Interleave grammar drills with sentence building so neither arrives as a block.
   const middle: Exercise[] = [];
@@ -335,9 +399,12 @@ export function lessonPlan(lesson: Lesson): LessonPlan {
       ...intro,
       ...(lesson.spotlight ? [{ kind: 'spotlight', spotlight: lesson.spotlight } as Exercise] : []),
       ...listen,
+      ...repeat,
       ...pickPl,
       ...middle,
+      ...saySentence,
       ...produce,
+      ...recall,
       ...finale,
       ...(lesson.dialogue ? [{ kind: 'dialogue', lines: lesson.dialogue } as Exercise] : []),
     ],
@@ -563,7 +630,7 @@ function hearWord(item: Item, which = 1): Exercise {
 }
 
 /** A phonics lesson: meet a few sounds at a time and say what each sounds like, then map spelling ↔ sound, read words and hear words. */
-function phonicsPlan(lesson: Lesson): LessonPlan {
+function phonicsPlan(lesson: Lesson, speaking = true): LessonPlan {
   const pool = LESSONS.filter((l) => l.phonics).flatMap((l) => l.items);
   const items = shuffle(lesson.items);
   const hearable = items.filter((i) => (i.ex?.[1] ? soundAlikes(i.ex[1]).length : 0) > 0);
@@ -576,6 +643,8 @@ function phonicsPlan(lesson: Lesson): LessonPlan {
       ...shuffle(items).slice(0, 3).map((i) => spellingOf(i, pool)),
       ...lesson.drills.map(gapFor),
       ...items.map((i) => readWord(i, pool)),
+      // Now say them: read two of the example words aloud before hearing them.
+      ...(speaking ? items.slice(0, 2).map((i) => readAloud(i.id, i.ex?.[2] ?? firstExample(i))) : []),
       ...hearable.slice(0, 3).map((i) => hearWord(i)),
     ],
   };

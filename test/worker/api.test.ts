@@ -8,6 +8,7 @@ import { migrate } from '../../src/worker/migrate';
 import { MIGRATIONS } from '../../src/worker/migrations';
 import { sendReminders } from '../../src/worker/reminders';
 import { b64url } from '../../src/worker/crypto';
+import { cleanTranscript, WHISPER } from '../../src/worker/routes/speech';
 
 const ORIGIN = 'https://wycinanka.test';
 const worker = (exports as unknown as { default: Fetcher }).default;
@@ -456,6 +457,80 @@ describe('daily reminders', () => {
   it('sends a test reminder only to the learner\'s own subscribed device', async () => {
     const { c } = await signedUp();
     expect((await c.call('POST', '/api/push/test', { endpoint: 'https://fcm.googleapis.com/fcm/send/nobody' })).status).toBe(404);
+  });
+});
+
+describe('speech transcription', () => {
+  /** A tiny WAV: a RIFF header and a little silence. */
+  const wav = btoa('RIFF' + '\0'.repeat(40) + 'WAVEfmt ' + '\0'.repeat(200));
+  const ctx = { waitUntil: () => undefined, passThroughOnException: () => undefined, props: {} } as unknown as ExecutionContext;
+  const calls: Array<{ model: string; input: Record<string, unknown> }> = [];
+  const withAi = (run: (input: Record<string, unknown>) => unknown) =>
+    ({
+      ...env,
+      AI: {
+        run: async (model: string, input: Record<string, unknown>) => {
+          calls.push({ model, input });
+          return run(input);
+        },
+      },
+    }) as unknown as typeof env;
+  let ip = 0;
+  const post = (body: unknown, e: typeof env, headers: Record<string, string> = {}) =>
+    app.request(
+      '/api/speech/transcribe',
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', origin: 'http://localhost', 'cf-connecting-ip': `198.51.100.${++ip}`, ...headers },
+        body: JSON.stringify(body),
+      },
+      e,
+      ctx,
+    );
+
+  it('transcribes a recording as Polish with Whisper, for guests too, and stores nothing', async () => {
+    calls.length = 0;
+    const r = await post({ audio: wav }, withAi(() => ({ text: ' Dzień dobry. ' })));
+    expect(r.status).toBe(200);
+    expect(await r.json()).toEqual({ text: 'Dzień dobry.' });
+    expect(calls).toHaveLength(1);
+    expect(calls[0].model).toBe(WHISPER);
+    expect(calls[0].input).toMatchObject({ audio: wav, language: 'pl' });
+  });
+
+  it('accepts only a WAV recording, and nothing else in the body', async () => {
+    const e = withAi(() => ({ text: 'x' }));
+    expect((await post({ audio: btoa('not a wav file at all') }, e)).status).toBe(400);
+    expect((await post({ audio: wav, extra: 1 }, e)).status).toBe(400);
+    expect((await post({}, e)).status).toBe(400);
+  });
+
+  it('allows a recording of about ten seconds, and no more', async () => {
+    const e = withAi(() => ({ text: 'x' }));
+    const tenSeconds = btoa('RIFF' + '\0'.repeat(16_000 * 2 * 10));
+    expect((await post({ audio: tenSeconds }, e)).status).toBe(200);
+    const tooLong = btoa('RIFF' + '\0'.repeat(16_000 * 2 * 12));
+    expect([400, 413]).toContain((await post({ audio: tooLong }, e)).status);
+  });
+
+  it('says so when recognition is unavailable, so the app can fall back', async () => {
+    expect((await post({ audio: wav }, { ...env, AI: undefined } as unknown as typeof env)).status).toBe(503);
+    const r = await post({ audio: wav }, withAi(() => { throw new Error('daily allowance used up'); }));
+    expect(r.status).toBe(503);
+  });
+
+  it('is throttled per IP', async () => {
+    const e = withAi(() => ({ text: 'tak' }));
+    const headers = { 'cf-connecting-ip': '198.51.100.250' };
+    let last = 0;
+    for (let i = 0; i < 181; i++) last = (await post({ audio: wav }, e, headers)).status;
+    expect(last).toBe(429);
+  });
+
+  it('drops the subtitle credits Whisper imagines in silence', () => {
+    expect(cleanTranscript('Napisy stworzone przez społeczność Amara.org')).toBe('');
+    expect(cleanTranscript('Dziękuję za obejrzenie!')).toBe('');
+    expect(cleanTranscript('Dziękuję.')).toBe('Dziękuję.');
   });
 });
 

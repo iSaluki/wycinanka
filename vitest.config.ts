@@ -20,6 +20,8 @@ export default defineConfig(async () => {
           plugins: [
             cloudflareTest({
               wrangler: { configPath: './wrangler.jsonc' },
+              // Workers AI (speech transcription) needs a Cloudflare account; the tests replace it with a stand-in.
+              remoteBindings: false,
               miniflare: {
                 bindings: {
                   TEST_MIGRATIONS: migrations,
