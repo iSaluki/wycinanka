@@ -4,7 +4,7 @@ import type { Item } from '../../content/types';
 import { GENDER_LABEL, PageHead, SectionHead, Speak } from '../components/common';
 import { Session, type SessionResult } from '../components/Session';
 import { Shell } from '../components/Shell';
-import { pictureChoice, shuffle, type Exercise } from '../lib/exercises';
+import { pictureChoice, shuffle, stepwise, type Exercise } from '../lib/exercises';
 import { useTitle } from '../lib/router';
 import { dueCards, submitReviews, useApp } from '../lib/store';
 
@@ -14,10 +14,14 @@ const deckOf = new Map(PICTURE_DECKS.flatMap((d) => d.pictures.map((p) => [p.id,
 
 const quiz = (p: Picture) => pictureChoice(p, deckOf.get(p.id)!.pictures.map((x) => x.pl));
 
-/** First meeting: each picture with its Polish and English, then pick the Polish for each picture. */
+/**
+ * First meeting: a few pictures at a time with their Polish and English, naming each one straight away,
+ * then a final mixed round naming every picture in the deck.
+ */
 function learnSession(pictures: Picture[]): Exercise[] {
   const items: Item[] = pictures.map((p) => ({ id: p.id, pl: p.pl, en: p.en, g: p.g, img: p.img }));
-  return [{ kind: 'meet', items }, ...shuffle(pictures).map(quiz)];
+  const byId = new Map(pictures.map((p) => [p.id, p]));
+  return [...stepwise(items, (i) => quiz(byId.get(i.id)!)), ...shuffle(pictures).map(quiz)];
 }
 
 type Mode = { kind: 'learn' | 'practise'; deck: PictureDeck } | { kind: 'review' };

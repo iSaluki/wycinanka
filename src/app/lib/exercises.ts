@@ -14,7 +14,8 @@ import { respell } from '../../shared/phonetics';
 export type ExtraTag = 'warmup' | 'revision';
 
 export type Exercise =
-  | { kind: 'meet'; items: Item[] }
+  /** New material, a few at a time. `from` and `total` place this group within everything the session introduces. */
+  | { kind: 'meet'; items: Item[]; from?: number; total?: number }
   | { kind: 'spotlight'; spotlight: Spotlight }
   | { kind: 'dialogue'; lines: DialogueLine[] }
   | {
@@ -52,12 +53,52 @@ export type Exercise =
       meaning?: string;
       tag?: ExtraTag;
     }
-  | { kind: 'match'; pairs: Array<{ cardId: string; pl: string; en: string; say?: string }> }
+  | { kind: 'match'; pairs: MatchPair[] }
   | { kind: 'gap'; cardId: string; text: string; en: string; options: string[]; answer: string; why?: string; tag?: ExtraTag };
+
+export type MatchPair = { cardId: string; pl: string; en: string; say?: string };
 
 export type GradedExercise = Exclude<Exercise, { kind: 'meet' } | { kind: 'spotlight' } | { kind: 'dialogue' }>;
 
 export const isGraded = (e: Exercise): e is GradedExercise => !['meet', 'spotlight', 'dialogue'].includes(e.kind);
+
+/* ---------- Hints ---------- */
+
+/** How many hints a question offers: rule out wrong options down to two, or reveal the start of the answer. */
+export function hintLimit(ex: GradedExercise): number {
+  switch (ex.kind) {
+    case 'choose':
+    case 'gap':
+      return Math.max(0, ex.options.length - 2);
+    case 'type':
+      return 2;
+    case 'build':
+      return Math.max(0, Math.min(2, tokenise(ex.accepted[0]).length - 1));
+    default:
+      return 0;
+  }
+}
+
+/** The wrong options `hints` hints have ruled out, always in the same order so each hint removes one more. */
+export function ruledOut(options: readonly string[], answer: string, hints: number): string[] {
+  return options.filter((o) => o !== answer).slice(0, hints);
+}
+
+/** The start of each word, the rest hidden: "Dzień dobry" → "D···· d····" after one hint, "Dzi·· dob··" after two. */
+export function maskAnswer(answer: string, hints: number): string {
+  return answer
+    .split(/(\s+)/)
+    .map((w) => {
+      if (!w.trim()) return w;
+      const letters = [...w];
+      const show = hints <= 1 ? 1 : Math.max(2, Math.ceil(letters.length / 2));
+      return letters.map((c, i) => (i < show || !/\p{L}/u.test(c) ? c : '·')).join('');
+    })
+    .join('');
+}
+
+/** The first `hints` words of a sentence to build. */
+export const sentenceStart = (answer: string, hints: number) => tokenise(answer).slice(0, hints).join(' ');
 
 const PUNCT_EDGE = /^[„"“«(¿¡]+|[.,!?;:…"”»)]+$/g;
 
@@ -173,24 +214,66 @@ export function lessonForSpeaker(lesson: Lesson, speaker?: 'm' | 'f'): Lesson {
   };
 }
 
+/** How many new things to meet before practising them. Working memory holds about four new items. */
+export const GROUP_SIZE = 3;
+
+/** Split new material into even groups of at most `size`: 8 → 3, 3, 2 rather than 3, 3, 1, 1. */
+export function introGroups<T>(xs: readonly T[], size = GROUP_SIZE): T[][] {
+  const n = Math.ceil(xs.length / size);
+  const out: T[][] = [];
+  for (let k = 0, at = 0; k < n; k++) {
+    const len = Math.ceil((xs.length - at) / (n - k));
+    out.push(xs.slice(at, at + len));
+    at += len;
+  }
+  return out;
+}
+
 /**
- * Build the sequence for a lesson: meet the words, read the spotlight, then practise with
- * recognition before production, and finish with the dialogue.
+ * Teach a few things at a time instead of all at once: meet a small group, answer a question on each straight
+ * away, then meet the next group. From the second group on, a matching round mixes the new words with ones met
+ * earlier, so older words are recalled again before they fade.
  */
-export function lessonExercises(lesson: Lesson): Exercise[] {
-  if (lesson.phonics) return phonicsExercises(lesson);
+export function stepwise(items: Item[], check: (item: Item) => Exercise, pair?: (item: Item) => MatchPair): Exercise[] {
+  const out: Exercise[] = [];
+  const seen: Item[] = [];
+  introGroups(items).forEach((group, k) => {
+    out.push({ kind: 'meet', items: group, from: seen.length, total: items.length });
+    out.push(...shuffle(group).map(check));
+    if (pair && k > 0) {
+      const earlier = shuffle(seen).slice(0, Math.max(0, 5 - group.length));
+      out.push({ kind: 'match', pairs: shuffle([...group, ...earlier]).map(pair) });
+    }
+    seen.push(...group);
+  });
+  return out;
+}
+
+const wordPair = (i: Item): MatchPair => ({ cardId: i.id, pl: i.pl, en: i.en });
+
+export interface LessonPlan {
+  exercises: Exercise[];
+  /** Index of the first exercise after the new material has been introduced and first practised. */
+  introEnd: number;
+}
+
+/**
+ * Build the sequence for a lesson in small steps: meet a few words and use them at once, group by group;
+ * then the grammar spotlight, now that the words it explains are familiar; then listening, recall, sentences
+ * and grammar drills, typed answers, and finally the dialogue.
+ */
+export function lessonPlan(lesson: Lesson): LessonPlan {
+  if (lesson.phonics) return phonicsPlan(lesson);
   const near = nearbyLessons(lesson);
   const enPool = near.flatMap((l) => l.items.map((i) => i.en));
   const plPool = near.flatMap((l) => l.items.map((i) => i.pl));
   const wordPool = near.flatMap((l) => l.sentences.flatMap((s) => tokenise(s.pl)));
-  const items = shuffle(lesson.items);
-  const half = Math.ceil(items.length / 2);
 
-  const recognise: Exercise[] = items.slice(0, half).map((i) => chooseMeaning(i, enPool));
-  const matchItems = shuffle(lesson.items).slice(0, 5);
-  const match: Exercise = { kind: 'match', pairs: matchItems.map((i) => ({ cardId: i.id, pl: i.pl, en: i.en })) };
-  const listen: Exercise[] = items.slice(half, half + 2).map((i) => chooseMeaning(i, enPool, true));
-  const pickPl: Exercise[] = items.slice(half + 2, half + 3).map((i) => choosePolish(i, plPool));
+  const intro = stepwise(lesson.items, (i) => chooseMeaning(i, enPool), wordPair);
+  // A second pass, mixed across the whole lesson: hear it, then find the Polish for the English.
+  const mixed = shuffle(lesson.items);
+  const listen: Exercise[] = mixed.slice(0, 2).map((i) => chooseMeaning(i, enPool, true));
+  const pickPl: Exercise[] = mixed.slice(2, 4).map((i) => choosePolish(i, plPool));
   const produce: Exercise[] = shuffle(lesson.items)
     .sort((a, b) => a.pl.length - b.pl.length)
     .slice(0, 4)
@@ -210,19 +293,22 @@ export function lessonExercises(lesson: Lesson): Exercise[] {
     if (b.length) middle.push(b.shift()!);
   }
 
-  return [
-    { kind: 'meet', items: lesson.items },
-    ...(lesson.spotlight ? [{ kind: 'spotlight', spotlight: lesson.spotlight } as Exercise] : []),
-    ...recognise,
-    match,
-    ...listen,
-    ...pickPl,
-    ...middle,
-    ...produce,
-    ...finale,
-    ...(lesson.dialogue ? [{ kind: 'dialogue', lines: lesson.dialogue } as Exercise] : []),
-  ];
+  return {
+    introEnd: intro.length,
+    exercises: [
+      ...intro,
+      ...(lesson.spotlight ? [{ kind: 'spotlight', spotlight: lesson.spotlight } as Exercise] : []),
+      ...listen,
+      ...pickPl,
+      ...middle,
+      ...produce,
+      ...finale,
+      ...(lesson.dialogue ? [{ kind: 'dialogue', lines: lesson.dialogue } as Exercise] : []),
+    ],
+  };
 }
+
+export const lessonExercises = (lesson: Lesson): Exercise[] => lessonPlan(lesson).exercises;
 
 /** One exercise for a review card. Mature cards are asked productively (typed); young ones by recognition. */
 export function reviewExercise(src: CardSource, reps: number, cardId: string, speaker?: 'm' | 'f'): Exercise {
@@ -321,12 +407,15 @@ export function chunkExercise(c: Chunk, reps: number): Exercise {
   return (reps % 2 === 0 && buildWithChunk(c)) || typeChunk(c);
 }
 
-/** First meeting with a set of phrases: meet them with their literal meaning, then recognise, complete and use them. */
+/**
+ * First meeting with a set of phrases: meet a few at a time with their literal meaning and recognise each one,
+ * then complete and use them all.
+ */
 export function chunkLearnSession(chunks: Chunk[]): Exercise[] {
   const items: Item[] = chunks.map((c) => ({ id: c.id, pl: c.pl, en: c.en, hint: c.lit ? `Word for word: "${c.lit}"` : undefined, chunk: true }));
+  const byId = new Map(chunks.map((c) => [c.id, c]));
   return [
-    { kind: 'meet', items },
-    ...shuffle(chunks).map(chunkMeaning),
+    ...stepwise(items, (i) => chunkMeaning(byId.get(i.id)!)),
     ...shuffle(chunks).map((c) => completeChunk(c)),
     ...shuffle(chunks).flatMap((c) => buildWithChunk(c) ?? []),
   ];
@@ -361,7 +450,7 @@ export function soundAlikes(word: string): string[] {
 const firstExample = (item: Item) => item.ex?.[0] ?? item.pl;
 /** Phonics items are spellings ("ch / h", "b → p at the end"): read their example words aloud instead. */
 const sayExamples = (item: Item) => (item.ex?.length ? item.ex.join(', ') : undefined);
-const phonicsPair = (i: Item) => ({ cardId: i.id, pl: i.pl, en: i.en, say: sayExamples(i) });
+const phonicsPair = (i: Item): MatchPair => ({ cardId: i.id, pl: i.pl, en: i.en, say: sayExamples(i) });
 
 /** "How does it sound?" — spelling to sound. */
 function soundOf(item: Item, pool: Item[]): Exercise {
@@ -434,21 +523,23 @@ function hearWord(item: Item, which = 1): Exercise {
   };
 }
 
-/** A phonics lesson: meet each sound, then map spelling ↔ sound, read words and hear words. */
-export function phonicsExercises(lesson: Lesson): Exercise[] {
+/** A phonics lesson: meet a few sounds at a time and say what each sounds like, then map spelling ↔ sound, read words and hear words. */
+function phonicsPlan(lesson: Lesson): LessonPlan {
   const pool = LESSONS.filter((l) => l.phonics).flatMap((l) => l.items);
   const items = shuffle(lesson.items);
   const hearable = items.filter((i) => (i.ex?.[1] ? soundAlikes(i.ex[1]).length : 0) > 0);
-  return [
-    { kind: 'meet', items: lesson.items },
-    ...(lesson.spotlight ? [{ kind: 'spotlight', spotlight: lesson.spotlight } as Exercise] : []),
-    ...items.map((i) => soundOf(i, pool)),
-    { kind: 'match', pairs: shuffle(lesson.items).slice(0, 5).map(phonicsPair) },
-    ...shuffle(items).slice(0, 3).map((i) => spellingOf(i, pool)),
-    ...lesson.drills.map(gapFor),
-    ...items.map((i) => readWord(i, pool)),
-    ...hearable.slice(0, 3).map((i) => hearWord(i)),
-  ];
+  const intro = stepwise(lesson.items, (i) => soundOf(i, pool), phonicsPair);
+  return {
+    introEnd: intro.length,
+    exercises: [
+      ...intro,
+      ...(lesson.spotlight ? [{ kind: 'spotlight', spotlight: lesson.spotlight } as Exercise] : []),
+      ...shuffle(items).slice(0, 3).map((i) => spellingOf(i, pool)),
+      ...lesson.drills.map(gapFor),
+      ...items.map((i) => readWord(i, pool)),
+      ...hearable.slice(0, 3).map((i) => hearWord(i)),
+    ],
+  };
 }
 
 /* ---------- Reinforcement ---------- */

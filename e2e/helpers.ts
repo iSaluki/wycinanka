@@ -42,7 +42,7 @@ export async function solveLesson(page: Page, _lessonId: string, onStep?: (kind:
       await page.getByRole('button', { name: 'Continue' }).click();
       continue;
     }
-    for (const name of ['Next word', 'Next phrase', 'Start practising', 'Got it', 'Finish']) {
+    for (const name of ['Next word', 'Next phrase', 'Start practising', 'Practise these', 'Practise it', 'Got it', 'Finish']) {
       const b = page.getByRole('button', { name, exact: true });
       if (await b.isVisible()) {
         await b.click();
@@ -111,4 +111,19 @@ export async function solveLesson(page: Page, _lessonId: string, onStep?: (kind:
     await onStep?.(kind, 'after');
   }
   throw new Error('Lesson did not finish');
+}
+
+class Reached extends Error {}
+
+/** Answer correctly until an exercise with this instruction comes up, and leave it unanswered. */
+export async function solveUntil(page: Page, instruction: string) {
+  try {
+    await solveLesson(page, '', async (kind, phase) => {
+      if (phase === 'before' && kind === instruction) throw new Reached();
+    });
+  } catch (e) {
+    if (e instanceof Reached) return;
+    throw e;
+  }
+  throw new Error(`No "${instruction}" exercise came up`);
 }

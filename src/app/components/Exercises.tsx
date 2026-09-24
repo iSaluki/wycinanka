@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import type { DialogueLine, Item, Spotlight } from '../../content/types';
 import { POLISH_LETTERS } from '../../shared/grade';
-import { shuffle, type Exercise, type ExtraTag } from '../lib/exercises';
+import { maskAnswer, ruledOut, sentenceStart, shuffle, type Exercise, type ExtraTag } from '../lib/exercises';
 import { speak } from '../lib/speech';
 import { respell } from '../../shared/phonetics';
 import { chunkFor } from '../../content/chunks';
@@ -16,16 +16,30 @@ export interface AnswerProps<E> {
   onAnswer: (a: string | null) => void;
   /** Result shown after checking, so options can be coloured. */
   checked?: { pass: boolean; answer: string | null };
+  /** Hints taken so far on this question. */
+  hints?: number;
+}
+
+function HintLine({ label, text, lang }: { label: string; text: string; lang: 'pl' | 'en' }) {
+  return (
+    <p className="hint-line" role="status">
+      {label}{' '}
+      <span className={lang === 'pl' ? 'pl' : undefined} lang={lang}>
+        {text}
+      </span>
+    </p>
+  );
 }
 
 /* ---------- Choose ---------- */
 
-export function Choose({ ex, locked, onAnswer, checked }: AnswerProps<Of<'choose'>>) {
+export function Choose({ ex, locked, onAnswer, checked, hints = 0 }: AnswerProps<Of<'choose'>>) {
   const [picked, setPicked] = useState<string | null>(null);
   const hasVoice = usePolishVoice();
-  useEffect(() => setPicked(null), [ex]);
+  useEffect(() => setPicked(null), [ex, hints]);
+  const out = ruledOut(ex.options, ex.answer, hints);
   const pick = (o: string) => {
-    if (locked) return;
+    if (locked || out.includes(o)) return;
     setPicked(o);
     onAnswer(o);
   };
@@ -68,13 +82,14 @@ export function Choose({ ex, locked, onAnswer, checked }: AnswerProps<Of<'choose
       <div className={`options ${ex.options.every((o) => o.length < 24) ? 'grid-2' : ''}`} role="group" aria-label="Answers">
         {ex.options.map((o, i) => {
           const state = checked ? (o === ex.answer ? 'right' : o === picked ? 'wrong' : '') : '';
+          const gone = !state && out.includes(o);
           return (
             <button
               key={o}
               type="button"
-              className={`option ${style === 'pl' ? 'pl-opt' : style === 'say' ? 'say-opt' : ''} ${state}`}
+              className={`option ${style === 'pl' ? 'pl-opt' : style === 'say' ? 'say-opt' : ''} ${state} ${gone ? 'ruled-out' : ''}`}
               aria-pressed={picked === o}
-              disabled={locked && !state}
+              disabled={(locked && !state) || gone}
               onClick={() => pick(o)}
               lang={style === 'pl' ? 'pl' : 'en'}
             >
@@ -110,7 +125,7 @@ function Instruction({ tag, children }: { tag?: ExtraTag; children: ReactNode })
 
 /* ---------- Type ---------- */
 
-export function TypeAnswer({ ex, locked, onAnswer }: AnswerProps<Of<'type'>>) {
+export function TypeAnswer({ ex, locked, onAnswer, hints = 0 }: AnswerProps<Of<'type'>>) {
   const [value, setValue] = useState('');
   const ref = useRef<HTMLInputElement>(null);
   useEffect(() => {
@@ -158,6 +173,7 @@ export function TypeAnswer({ ex, locked, onAnswer }: AnswerProps<Of<'type'>>) {
         enterKeyHint="done"
         maxLength={200}
       />
+      {hints > 0 && !locked && <HintLine label="It starts:" text={maskAnswer(ex.accepted[0], hints)} lang={ex.lang} />}
       {toPolish && (
         <div className="diacritics" aria-label="Polish letters">
           {POLISH_LETTERS.map((l) => (
@@ -173,7 +189,7 @@ export function TypeAnswer({ ex, locked, onAnswer }: AnswerProps<Of<'type'>>) {
 
 /* ---------- Build ---------- */
 
-export function Build({ ex, locked, onAnswer }: AnswerProps<Of<'build'>>) {
+export function Build({ ex, locked, onAnswer, hints = 0 }: AnswerProps<Of<'build'>>) {
   const [chosen, setChosen] = useState<number[]>([]);
   const hasVoice = usePolishVoice();
   useEffect(() => setChosen([]), [ex]);
@@ -195,6 +211,7 @@ export function Build({ ex, locked, onAnswer }: AnswerProps<Of<'build'>>) {
         )}
       </div>
       {ex.audio && hasVoice && locked && ex.meaning && <p className="build-meaning">{ex.meaning}</p>}
+      {hints > 0 && !locked && <HintLine label="It starts:" text={`${sentenceStart(ex.accepted[0], hints)} …`} lang="pl" />}
       <div className="build-line" aria-label="Your sentence" aria-live="polite">
         {chosen.map((i, pos) => (
           <button
@@ -231,12 +248,13 @@ export function Build({ ex, locked, onAnswer }: AnswerProps<Of<'build'>>) {
 
 /* ---------- Gap ---------- */
 
-export function Gap({ ex, locked, onAnswer, checked }: AnswerProps<Of<'gap'>>) {
+export function Gap({ ex, locked, onAnswer, checked, hints = 0 }: AnswerProps<Of<'gap'>>) {
   const [picked, setPicked] = useState<string | null>(null);
-  useEffect(() => setPicked(null), [ex]);
+  useEffect(() => setPicked(null), [ex, hints]);
   const [before, after] = ex.text.split('___');
+  const out = ruledOut(ex.options, ex.answer, hints);
   const pick = (o: string) => {
-    if (locked) return;
+    if (locked || out.includes(o)) return;
     setPicked(o);
     onAnswer(o);
   };
@@ -252,13 +270,14 @@ export function Gap({ ex, locked, onAnswer, checked }: AnswerProps<Of<'gap'>>) {
       <div className="options grid-2" role="group" aria-label="Choices">
         {ex.options.map((o, i) => {
           const state = checked ? (o === ex.answer ? 'right' : o === picked ? 'wrong' : '') : '';
+          const gone = !state && out.includes(o);
           return (
             <button
               key={o}
               type="button"
-              className={`option pl-opt ${state}`}
+              className={`option pl-opt ${state} ${gone ? 'ruled-out' : ''}`}
               aria-pressed={picked === o}
-              disabled={locked && !state}
+              disabled={(locked && !state) || gone}
               onClick={() => pick(o)}
               lang="pl"
             >
@@ -343,8 +362,10 @@ export function Match({
 
 /* ---------- Meet ---------- */
 
-export function Meet({ items, onDone }: { items: Item[]; onDone: () => void }) {
+export function Meet({ items, from = 0, total = items.length, onDone }: { items: Item[]; from?: number; total?: number; onDone: () => void }) {
   const [i, setI] = useState(0);
+  // Part of a lesson that introduces its words a few at a time.
+  const grouped = total > items.length;
   const item = items[i];
   const last = i === items.length - 1;
   // Multi-word items are lexical chunks; show the literal meaning when we know it.
@@ -361,11 +382,11 @@ export function Meet({ items, onDone }: { items: Item[]; onDone: () => void }) {
           <span lang="pl" className="pl" style={{ fontStyle: 'italic', color: 'var(--czerwien)' }}>
             nowe
           </span>{' '}
-          {items[0]?.ex ? 'New sounds' : items[0]?.img ? 'New pictures' : items[0]?.chunk ? 'New phrases' : 'New words'} · {i + 1} of {items.length}
+          {items[0]?.ex ? 'New sounds' : items[0]?.img ? 'New pictures' : items[0]?.chunk ? 'New phrases' : 'New words'} · {from + i + 1} of {total}
         </div>
         <div className="dots" aria-hidden="true">
-          {items.map((_, k) => (
-            <span key={k} className={k <= i ? 'on' : ''} />
+          {Array.from({ length: total }, (_, k) => (
+            <span key={k} className={k <= from + i ? 'on' : ''} />
           ))}
         </div>
       </div>
@@ -420,7 +441,7 @@ export function Meet({ items, onDone }: { items: Item[]; onDone: () => void }) {
           Back
         </button>
         <button type="button" className="btn" onClick={() => (last ? onDone() : setI(i + 1))}>
-          {last ? 'Start practising' : items[0]?.chunk ? 'Next phrase' : 'Next word'}
+          {last ? (grouped ? `Practise ${items.length === 1 ? 'it' : 'these'}` : 'Start practising') : items[0]?.chunk ? 'Next phrase' : 'Next word'}
         </button>
       </div>
     </div>
