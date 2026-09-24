@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react';
-import { getLesson, getUnitOfLesson, lessonCardIds, nextLessonAfter } from '../../content/course';
-import { Label } from '../components/common';
+import { getCard, getLesson, getUnitOfLesson, lessonCardIds, nextLessonAfter } from '../../content/course';
+import { Label, Speak } from '../components/common';
 import { Rosette } from '../components/Rosette';
 import { Session, type SessionResult } from '../components/Session';
 import { useStats } from '../lib/derived';
-import { isGraded, lessonExercises, lessonForSpeaker, practiceExercises } from '../lib/exercises';
+import { isGraded, lessonForSpeaker, lessonPlan, practiceExercises } from '../lib/exercises';
 import { revisionCards, sprinkle, warmupCards } from '../lib/reinforce';
 import { Link, navigate, useTitle } from '../lib/router';
 import { completeLesson, getState, submitReviews, useApp } from '../lib/store';
@@ -16,6 +16,8 @@ interface Outcome {
   added: number;
   /** Personalised revision questions answered during the lesson. */
   revised: number;
+  /** Lesson cards the learner got wrong at least once, to look over before leaving. */
+  missed: string[];
 }
 
 export function LessonPage({ id }: { id: string }) {
@@ -31,12 +33,13 @@ export function LessonPage({ id }: { id: string }) {
     // Each lesson opens with three quick questions from earlier lessons: spaced retrieval of old material.
     const warmCards = warmupCards(progress, lesson.id);
     const warm = practiceExercises(warmCards, speaker, 'warmup');
-    const main = lessonExercises(lessonForSpeaker(lesson, speaker));
+    const { exercises: main, introEnd } = lessonPlan(lessonForSpeaker(lesson, speaker));
     if (!signedIn) return [...warm, ...main];
     // Signed-in learners also get revision sprinkled through the lesson, weighted towards their mistakes.
     const n = Math.min(4, Math.max(2, Math.round(main.filter(isGraded).length / 6)));
     const revision = practiceExercises(revisionCards(progress, lesson.id, n, warmCards.map((c) => c.id)), speaker, 'revision');
-    const from = main.findIndex(isGraded) + 2;
+    // Never while new words are still being introduced: old material there would crowd out the new.
+    const from = introEnd;
     const until = main[main.length - 1]?.kind === 'dialogue' ? main.length - 1 : main.length;
     return [...warm, ...sprinkle(main, revision, from, until)];
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -50,7 +53,8 @@ export function LessonPage({ id }: { id: string }) {
     const lessonAttempts = r.attempts.filter((a) => !a.tag);
     const correct = lessonAttempts.filter((a) => a.pass).length + (r.correct - r.attempts.filter((a) => a.pass).length);
     const total = lessonAttempts.length + (r.total - r.attempts.length);
-    const missed = [...new Set(lessonAttempts.filter((a) => !a.pass && own.has(a.cardId)).map((a) => a.cardId))];
+    // Answers that needed a hint or an accent fix enter review as "Hard", like a miss, so they come back sooner.
+    const missed = [...new Set(lessonAttempts.filter((a) => (!a.pass || a.helped) && own.has(a.cardId)).map((a) => a.cardId))];
     // Matching-pair misses are recorded on the result, not as attempts.
     for (const m of r.missed) if (own.has(m) && !missed.includes(m)) missed.push(m);
     // Warm-up and revision answers are real reviews of earlier cards.
@@ -59,7 +63,7 @@ export function LessonPage({ id }: { id: string }) {
     if (extra.length) {
       await submitReviews(extra.flatMap((a) => (r.ratings.get(a.cardId) ? [{ cardId: a.cardId, ...r.ratings.get(a.cardId)! }] : [])));
     }
-    setOutcome({ ...out, revised: extra.filter((a) => a.tag === 'revision').length });
+    setOutcome({ ...out, revised: extra.filter((a) => a.tag === 'revision').length, missed });
   };
 
   if (outcome) return <Finish lessonId={lesson.id} outcome={outcome} onRetry={() => (setOutcome(null), setRun(run + 1))} />;
@@ -103,6 +107,7 @@ function Finish({ lessonId, outcome, onRetry }: { lessonId: string; outcome: Out
             You also revised {outcome.revised} thing{outcome.revised === 1 ? '' : 's'} from earlier lessons, picked from what you've found hardest.
           </p>
         )}
+        {outcome.missed.length > 0 && <Missed ids={outcome.missed} />}
         {outcome.score < 70 && (
           <p className="muted" style={{ maxWidth: '46ch' }}>
             The words you missed will come back sooner in review. Practising the lesson again today also helps.
@@ -137,5 +142,34 @@ function Finish({ lessonId, outcome, onRetry }: { lessonId: string; outcome: Out
       </div>
       <div />
     </main>
+  );
+}
+
+/** The words and sentences missed in this lesson, with their meanings: one last look while they're fresh. */
+function Missed({ ids }: { ids: string[] }) {
+  const rows = ids.flatMap((id) => {
+    const src = getCard(id);
+    if (src?.kind === 'item') return [{ id, pl: src.item.pl, en: src.item.en }];
+    if (src?.kind === 'sentence') return [{ id, pl: src.sentence.pl, en: src.sentence.en }];
+    if (src?.kind === 'drill') return [{ id, pl: src.drill.text.replace('___', src.drill.answer), en: src.drill.en }];
+    return [];
+  });
+  if (!rows.length) return null;
+  return (
+    <section className="missed" aria-labelledby="missed-title">
+      <h2 id="missed-title">Worth another look</h2>
+      <p className="muted">Missed, or answered with help. These come back sooner in review.</p>
+      <ul>
+        {rows.map((r) => (
+          <li key={r.id}>
+            <Speak text={r.pl} />
+            <span className="pl" lang="pl">
+              {r.pl}
+            </span>
+            <span className="muted">{r.en}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

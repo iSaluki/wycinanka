@@ -2993,3 +2993,78 @@ dialog.confirm p {
   color: var(--ink-3);
   overflow-wrap: anywhere;
 }
+
+/* Hints */
+.dock-row {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+}
+
+.hint-line {
+  margin: 0;
+  padding: 8px 12px;
+  border-left: 4px solid var(--zolc);
+  background: var(--paper-2);
+  font-size: 16px;
+}
+
+.hint-line .pl {
+  font-size: 1.15em;
+  letter-spacing: 0.04em;
+}
+
+.option.ruled-out {
+  opacity: 0.35;
+  text-decoration: line-through;
+}
+
+/* Missed words on the finish screen */
+.missed {
+  width: 100%;
+  max-width: 480px;
+  text-align: left;
+}
+
+.missed h2 {
+  font-size: 20px;
+  margin-bottom: 6px;
+}
+
+.missed ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--rule);
+}
+
+.missed li {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  column-gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.missed li .pl {
+  font-size: 18px;
+  overflow-wrap: anywhere;
+}
+
+.missed li .muted {
+  grid-column: 2;
+}
+
+.nudge {
+  margin: 0;
+  padding: 10px 14px;
+  border-left: 4px solid var(--zolc);
+  background: var(--paper-2);
+  font-size: 16px;
+}
+
+.nudge .pl {
+  font-size: 1.2em;
+  font-weight: 700;
+}

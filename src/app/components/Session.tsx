@@ -1,16 +1,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Rating } from '../../shared/fsrs';
 import { grade, type GradeResult } from '../../shared/grade';
-import { isGraded, type Exercise, type ExtraTag, type GradedExercise } from '../lib/exercises';
+import { hintLimit, isGraded, type Exercise, type ExtraTag, type GradedExercise } from '../lib/exercises';
 import { speak } from '../lib/speech';
 import { Build, Choose, Dialogue, Gap, Match, Meet, SpotlightView, TypeAnswer } from './Exercises';
 import { IconClose } from './icons';
 import { Label } from './common';
 
 /**
- * Runs a sequence of exercises: check → feedback → continue. Wrong answers come back once at the end
- * (retrieval until correct), but only first attempts count towards the score.
+ * Runs a sequence of exercises: check → feedback → continue. Wrong answers come back once, a few questions
+ * later (retrieval until correct, while it's still fresh), but only first attempts count towards the score.
  */
+
+/** How many questions later a missed one comes back. */
+const RETRY_GAP = 3;
 
 export interface SessionResult {
   correct: number;
@@ -19,7 +22,7 @@ export interface SessionResult {
   /** Per-card rating from the first attempt (review sessions). */
   ratings: Map<string, { rating: Rating; at: number }>;
   /** Every first attempt, so callers can separate warm-ups from the lesson itself. */
-  attempts: Array<{ cardId: string; pass: boolean; tag?: ExtraTag }>;
+  attempts: Array<{ cardId: string; pass: boolean; tag?: ExtraTag; helped?: boolean }>;
 }
 
 interface Feedback {
@@ -130,6 +133,9 @@ export function Session({
   const finished = useRef(false);
   const continueRef = useRef<HTMLButtonElement>(null);
   const [confirming, setConfirming] = useState(false);
+  // Help given on the current question: hints taken, and whether missing Polish letters were pointed out.
+  const [hints, setHints] = useState(0);
+  const [accentNudge, setAccentNudge] = useState<Array<[string, string]> | null>(null);
   // Before the learner has touched anything there is nothing to lose, so leaving needs no prompt.
   const [touched, setTouched] = useState(false);
   const begun = touched || pos > 0 || answer !== null || feedback !== null;
@@ -142,6 +148,8 @@ export function Session({
   const next = useCallback(() => {
     setFeedback(null);
     setAnswer(null);
+    setHints(0);
+    setAccentNudge(null);
     started.current = Date.now();
     if (pos + 1 >= queue.length) {
       if (!finished.current) {
@@ -153,10 +161,10 @@ export function Session({
     setPos(pos + 1);
   }, [pos, queue.length, onFinish]);
 
-  const record = (cardId: string, pass: boolean, rating: Rating, retry: boolean, tag?: ExtraTag) => {
+  const record = (cardId: string, pass: boolean, rating: Rating, retry: boolean, tag?: ExtraTag, helped?: boolean) => {
     if (retry) return;
     const r = results.current;
-    r.attempts.push({ cardId, pass, tag });
+    r.attempts.push({ cardId, pass, tag, ...(helped ? { helped } : {}) });
     r.total++;
     if (pass) r.correct++;
     else r.missed.add(cardId);
@@ -167,16 +175,30 @@ export function Session({
     if (!entry || !graded || answer === null || feedback) return;
     const ex = entry.ex as GradedExercise;
     if (ex.kind === 'match') return;
-    const { result, pass, expected, lang } = check(ex, answer);
-    const close = result && (result.verdict === 'accent' || result.verdict === 'typo');
-    const rating: Rating = !pass ? 1 : close ? 2 : 3;
-    record(ex.cardId, pass, rating, entry.retry, ex.tag);
-    if (!pass && !entry.retry) setQueue((q) => [...q, { ex, retry: true, key: q.length }]);
+    const checked = check(ex, answer);
+    const { result, expected, lang } = checked;
+    // Missing Polish letters aren't waved through: the first time, say which ones and let the learner fix them.
+    if (result?.verdict === 'accent' && !accentNudge) {
+      setAccentNudge(result.accents);
+      return;
+    }
+    const pass = checked.pass && result?.verdict !== 'accent';
+    const helped = hints > 0 || !!accentNudge;
+    const close = result?.verdict === 'typo';
+    const rating: Rating = !pass ? 1 : close || helped ? 2 : 3;
+    record(ex.cardId, pass, rating, entry.retry, ex.tag, helped);
+    if (!pass && !entry.retry)
+      setQueue((q) => {
+        // Back in a few questions, but never after a closing dialogue.
+        const end = q[q.length - 1]?.ex.kind === 'dialogue' ? q.length - 1 : q.length;
+        const at = Math.max(pos + 1, Math.min(pos + 1 + RETRY_GAP, end));
+        return [...q.slice(0, at), { ex, retry: true, key: q.length }, ...q.slice(at)];
+      });
 
     const [pl, en] = PRAISE[Math.floor(Math.random() * PRAISE.length)];
     let note: string | undefined;
     if (result?.verdict === 'accent') {
-      note = `Watch the Polish letters: ${result.accents.map(([p, b]) => `${p} (not ${b})`).join(', ')}.`;
+      note = `The Polish letters matter: ${result.accents.map(([p, b]) => `${p} (not ${b})`).join(', ')}. A missing accent can make a different word.`;
     } else if (result?.verdict === 'typo') {
       note = 'Nearly — check the spelling.';
     } else if (ex.kind === 'gap' && ex.why) {
@@ -189,7 +211,17 @@ export function Session({
     setFeedback({
       pass,
       title: pass ? (close ? 'Prawie!' : pl) : 'Niestety',
-      subtitle: pass ? (close ? 'Nearly!' : en) : 'Not quite',
+      subtitle: pass
+        ? close
+          ? 'Nearly!'
+          : accentNudge
+            ? `${en} Polish letters fixed.`
+            : hints
+              ? `${en} With a hint, so it'll come back sooner.`
+              : en
+        : result?.verdict === 'accent'
+          ? 'Polish letters missing'
+          : 'Not quite',
       answer: showAnswer ? expected : undefined,
       answerLang: lang,
       meaning: showAnswer && lang === 'pl' ? meaningOf(ex) : undefined,
@@ -217,6 +249,14 @@ export function Session({
       cardId: ex.pairs[0]?.cardId ?? '',
       rating: 3,
     });
+  };
+
+  const limit = entry && graded ? hintLimit(entry.ex as GradedExercise) : 0;
+  const takeHint = () => {
+    if (feedback || hints >= limit) return;
+    setHints(hints + 1);
+    // A ruled-out option can't stay picked.
+    if (entry.ex.kind === 'choose' || entry.ex.kind === 'gap') setAnswer(null);
   };
 
   const setRating = (rating: Rating) => {
@@ -273,17 +313,36 @@ export function Session({
       </div>
 
       <div className="player-body" key={entry.key} onPointerDownCapture={() => setTouched(true)} onKeyDownCapture={() => setTouched(true)}>
-        {ex.kind === 'meet' && <Meet items={ex.items} onDone={next} />}
+        {ex.kind === 'meet' && <Meet items={ex.items} from={ex.from} total={ex.total} onDone={next} />}
         {ex.kind === 'spotlight' && (
           <>
             <SpotlightView s={ex.spotlight} />
           </>
         )}
         {ex.kind === 'dialogue' && <Dialogue lines={ex.lines} />}
-        {ex.kind === 'choose' && <Choose ex={ex} locked={!!feedback} onAnswer={setAnswer} checked={feedback ? { pass: feedback.pass, answer } : undefined} />}
-        {ex.kind === 'type' && <TypeAnswer ex={ex} locked={!!feedback} onAnswer={setAnswer} />}
-        {ex.kind === 'build' && <Build ex={ex} locked={!!feedback} onAnswer={setAnswer} />}
-        {ex.kind === 'gap' && <Gap ex={ex} locked={!!feedback} onAnswer={setAnswer} checked={feedback ? { pass: feedback.pass, answer } : undefined} />}
+        {ex.kind === 'choose' && (
+          <Choose ex={ex} locked={!!feedback} hints={hints} onAnswer={setAnswer} checked={feedback ? { pass: feedback.pass, answer } : undefined} />
+        )}
+        {ex.kind === 'type' && <TypeAnswer ex={ex} locked={!!feedback} hints={hints} onAnswer={setAnswer} />}
+        {ex.kind === 'build' && <Build ex={ex} locked={!!feedback} hints={hints} onAnswer={setAnswer} />}
+        {ex.kind === 'gap' && (
+          <Gap ex={ex} locked={!!feedback} hints={hints} onAnswer={setAnswer} checked={feedback ? { pass: feedback.pass, answer } : undefined} />
+        )}
+        {accentNudge && !feedback && (
+          <p className="nudge" role="alert">
+            <b>Almost — add the Polish letters.</b> You need{' '}
+            {accentNudge.map(([p, b], i) => (
+              <span key={p}>
+                {i > 0 && ', '}
+                <span lang="pl" className="pl">
+                  {p}
+                </span>{' '}
+                (not {b})
+              </span>
+            ))}
+            . Use the letter buttons, then check again.
+          </p>
+        )}
         {ex.kind === 'match' && !feedback && (
           <Match ex={ex} onDone={onMatchDone} onMiss={(id) => matchMisses.current.add(id)} />
         )}
@@ -339,9 +398,22 @@ export function Session({
             Finish
           </button>
         ) : graded && ex.kind !== 'match' ? (
-          <button type="button" className="btn block" onClick={submit} disabled={answer === null}>
-            Check
-          </button>
+          <div className={limit > 0 ? 'dock-row' : undefined}>
+            {limit > 0 && (
+              <button
+                type="button"
+                className="btn quiet"
+                onClick={takeHint}
+                disabled={hints >= limit}
+                title="Get some help. Answers given with a hint come back sooner in review."
+              >
+                {hints === 0 ? 'Hint' : `Hint ${hints}/${limit}`}
+              </button>
+            )}
+            <button type="button" className="btn block" onClick={submit} disabled={answer === null}>
+              Check
+            </button>
+          </div>
         ) : null}
       </div>
     </div>

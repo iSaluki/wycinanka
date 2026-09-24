@@ -89,9 +89,13 @@ the first unit of that band. Nothing is ever locked: every unit can be opened fr
 
 ### 2.2 A lesson (5–8 minutes)
 
-1. **Meet** — new words/phrases as tappable cards (Polish, audio, British English gloss, a pronunciation hint).
-2. **Grammar spotlight** (if the lesson has one) — one idea, one table, two examples.
-3. **Practise** — 10–14 mixed exercises generated from the lesson's items:
+1. **Meet, a few at a time** — new words/phrases as tappable cards (Polish, audio, British English gloss, a
+   pronunciation hint), in groups of at most three (8 words → 3, 3, 2). Each group is practised straight away
+   (one recognition question per word), and from the second group on a matching round mixes the new words with
+   earlier ones. Meeting all the words before using any of them overloads working memory (about four new items);
+   small groups with immediate retrieval don't. Revision from earlier lessons only starts once this is done.
+2. **Grammar spotlight** (if the lesson has one) — one idea, one table, two examples, now that its words are familiar.
+3. **Practise** — mixed exercises generated from the lesson's items:
    - *Choose the meaning* (Polish → English, multiple choice)
    - *Say it in Polish* (English → Polish, typed, with diacritic bar)
    - *Listen and choose* (audio only)
@@ -102,7 +106,19 @@ the first unit of that band. Nothing is ever locked: every unit can be opened fr
 5. **Finish** — accuracy, XP, the new petal is cut into the learner's wycinanka, and the lesson's items
    enter the review deck.
 
-Mistakes are re-queued at the end of the lesson (retrieval until correct), not punished.
+Mistakes come back once, three questions later (retrieval until correct, while it's still fresh), not punished.
+
+**Help when stuck.** Every question except matching has a **Hint** button with up to two steps: multiple-choice
+questions lose a wrong option per hint (never below two), typed answers reveal the start of each word
+(*D···· d····*, then *Dzi·· dob··*), and sentence building reveals the first words. An answer given after a hint
+counts as right but is rated **Hard**, so it returns sooner in review.
+
+**Accents are not optional.** A typed answer that is right except for missing Polish letters is not accepted:
+the learner is told which letters (*ę, not e*) and fixes it. Fixed, it counts as right but rated Hard; submitted
+again without them, it is wrong. Many minimal pairs differ only by a diacritic (*sad* "orchard" / *sąd* "court", *kasa* / *kasą*), so
+waving them through teaches the wrong spelling.
+
+The finish screen lists everything missed or answered with help, with audio, for one last look.
 
 ### 2.3 Review (daily)
 

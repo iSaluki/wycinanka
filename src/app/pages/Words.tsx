@@ -5,29 +5,29 @@ import { PageHead, SectionHead, Speak } from '../components/common';
 import { respell } from '../../shared/phonetics';
 import { Session, type SessionResult } from '../components/Session';
 import { Shell } from '../components/Shell';
-import { shuffle, type Exercise } from '../lib/exercises';
+import { shuffle, stepwise, type Exercise } from '../lib/exercises';
 import { useTitle } from '../lib/router';
 import { submitReviews, useApp } from '../lib/store';
 
 const BANDS = Array.from({ length: FREQUENCY.length / BAND_SIZE }, (_, i) => FREQUENCY.slice(i * BAND_SIZE, (i + 1) * BAND_SIZE));
 const LEARN_BATCH = 8;
 
-/** Meet a batch of new words, then recognise and recall each one. Results seed their review cards. */
+/** Meet a batch of new words a few at a time, recognising each one straight away, then recall some. Results seed their review cards. */
 function learnSession(words: typeof FREQUENCY): Exercise[] {
   const items: Item[] = words.map((w) => ({ id: w.id, pl: w.pl, en: w.en, hint: w.ex ? `${w.ex[0]} — ${w.ex[1]}` : undefined }));
   const enPool = FREQUENCY.slice(0, 200).map((w) => w.en);
-  const choose: Exercise[] = shuffle(words).map((w) => ({
+  const choose = (w: Item): Exercise => ({
     kind: 'choose',
     cardId: w.id,
     prompt: w.pl,
     promptLang: 'pl',
     answer: w.en,
     options: shuffle([w.en, ...shuffle(enPool.filter((e) => e !== w.en)).slice(0, 3)]),
-  }));
+  });
   const type: Exercise[] = shuffle(words)
     .slice(0, 4)
     .map((w) => ({ kind: 'type', cardId: w.id, prompt: w.en, accepted: [w.pl], lang: 'pl', hint: w.pos }));
-  return [{ kind: 'meet', items }, ...choose, { kind: 'match', pairs: shuffle(words).slice(0, 5).map((w) => ({ cardId: w.id, pl: w.pl, en: w.en })) }, ...type];
+  return [...stepwise(items, choose, (w) => ({ cardId: w.id, pl: w.pl, en: w.en })), ...type];
 }
 
 export function Words() {
