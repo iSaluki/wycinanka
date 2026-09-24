@@ -371,3 +371,37 @@ test('phrases are learnt whole: meet them, complete them, build sentences from t
   expect(chunkTiles).toBeGreaterThan(0);
   await expect(page.getByText('Added 6 phrases to your review deck')).toBeVisible();
 });
+
+test('signed-in learners are told about a badge when they earn it, and see all their badges in their profile', async ({ page }) => {
+  await page.goto('/signup');
+  const username = uniqueName();
+  await page.getByLabel('Username').fill(username);
+  await page.getByLabel('Password', { exact: true }).fill(PASSWORD);
+  await page.getByRole('button', { name: 'Create account' }).click();
+  await expect(page.getByRole('heading', { level: 1 })).toContainText(username);
+
+  await page.goto('/lesson/u01-l1');
+  await solveLesson(page, 'u01-l1');
+  const toast = page.locator('.badge-toast');
+  await expect(toast).toBeVisible();
+  await expect(toast).toContainText('First step');
+  await toast.getByRole('link', { name: 'See your badges' }).click();
+  await expect(page).toHaveURL(/\/profile/);
+  await expect(page.locator('.badge-card.earned').first()).toContainText('Pierwszy krok');
+  await expect(page.locator('.badge-card').filter({ hasText: 'Dziesiątka' })).toContainText('1 of 10 lessons');
+
+  // Told once: after a reload, nothing new to announce.
+  await page.goto('/');
+  await page.reload();
+  await expect(page.getByRole('heading', { level: 1 })).toContainText(username);
+  await expect(page.locator('.badge-toast')).toHaveCount(0);
+});
+
+test('guests do not collect badges, but are told they could', async ({ page }) => {
+  await page.goto('/lesson/u01-l1');
+  await solveLesson(page, 'u01-l1');
+  await expect(page.locator('.badge-toast')).toHaveCount(0);
+  await page.goto('/profile');
+  await expect(page.locator('#badges')).toContainText('Create a free account');
+  await expect(page.locator('.badge-card')).toHaveCount(0);
+});

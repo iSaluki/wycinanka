@@ -44,6 +44,11 @@ export const settingsSchema = z
     /** Daily practice reminder by push notification, at `reminderHour` o'clock in `timeZone`. */
     reminders: z.boolean().optional(),
     reminderHour: z.number().int().min(0).max(23).optional(),
+    /** Badges the learner has been told about, and when (ms). Badges themselves are worked out from progress. */
+    badges: z
+      .record(z.string().regex(/^[a-z0-9-]{1,40}$/), z.number().int().positive())
+      .refine((b) => Object.keys(b).length <= 100, 'Too many badges')
+      .optional(),
     timeZone: z
       .string()
       .max(64)

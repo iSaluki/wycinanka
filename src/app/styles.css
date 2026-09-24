@@ -3523,3 +3523,151 @@ dialog.confirm p {
   background: var(--zielen);
   color: var(--on-ink);
 }
+
+/* ---------- Badges ---------- */
+
+.medal {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+}
+.medal svg {
+  position: absolute;
+  inset: 0;
+}
+.medal .petal {
+  fill: var(--medal);
+}
+.medal .disc {
+  fill: var(--paper);
+  stroke: var(--medal);
+  stroke-width: 3;
+}
+.medal .mark {
+  position: relative;
+  font: 700 15px var(--font-ui);
+  color: var(--ink);
+}
+.medal.locked {
+  --medal: var(--rule-strong);
+}
+.medal.locked .mark {
+  color: var(--ink-3);
+}
+.medal.tone-czerwien {
+  --medal: var(--czerwien);
+}
+.medal.tone-zielen {
+  --medal: var(--zielen);
+}
+.medal.tone-zolc {
+  --medal: var(--zolc);
+}
+.medal.tone-blekit {
+  --medal: var(--blekit);
+}
+.medal.tone-pomarancz {
+  --medal: var(--pomarancz);
+}
+.medal.tone-amarant {
+  --medal: var(--amarant);
+}
+
+.badge-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.badge-card {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 14px;
+  border: 1.5px solid var(--rule);
+  border-radius: var(--r);
+}
+.badge-card.earned {
+  border-color: var(--ink);
+}
+.badge-text {
+  flex: 1;
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.badge-text b {
+  font: 700 19px var(--font-pl);
+}
+.badge-en {
+  font-weight: 600;
+}
+.badge-how,
+.badge-when,
+.badge-progress {
+  font-size: 14px;
+  color: var(--ink-2);
+}
+.badge-progress {
+  display: grid;
+  gap: 4px;
+  margin-top: 4px;
+}
+.badge-progress .bar {
+  display: block;
+  height: 6px;
+  background: var(--paper-3);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.badge-progress .bar span {
+  display: block;
+  height: 100%;
+  background: var(--ink-2);
+}
+
+/* "New badge!": top of the screen, clear of the lesson dock and the tab bar. */
+.badge-toast {
+  position: fixed;
+  z-index: 60;
+  top: 14px;
+  left: 0;
+  right: 0;
+  margin: 0 auto;
+  width: min(440px, calc(100vw - 32px));
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  padding: 14px 16px;
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  border-radius: var(--r);
+  box-shadow: 0 10px 30px rgb(0 0 0 / 0.18);
+  animation: rise 300ms var(--ease);
+}
+.badge-toast-text {
+  display: grid;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+.badge-toast-text .label {
+  font-size: 14px;
+  color: var(--ink-3);
+}
+.badge-toast-text .label [lang='pl'] {
+  font: italic 400 15px var(--font-pl);
+  color: var(--czerwien);
+}
+.badge-toast-text a {
+  font-size: 14px;
+  width: fit-content;
+}
+.badge-toast .icon-btn {
+  width: 36px;
+  height: 36px;
+  font-size: 20px;
+}

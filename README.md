@@ -22,6 +22,7 @@ A free Polish course for British English speakers, from complete beginner to B1.
 - **Daily reminders**: signed-in learners can switch on a push notification at a time they choose, sent only on days they haven't practised yet
 - **Grammar reference**: the seven cases, a declension explorer and every lesson's grammar notes
 - **Placement check** so learners can start at their own level
+- **Badges**: learners with an account collect 24 badges for milestones (first lesson, streaks, perfect lessons, whole levels, review counts, the 500 words, every picture and phrase). A note appears when one is earned, once, on whichever device; the profile shows every badge with progress towards the ones still to come. Badges are worked out from the progress already saved with the account, so the only thing stored is when the learner was told
 - **Guest mode**: learn without an account. Progress is kept on the device; sign up to keep it everywhere, and everything done as a guest comes with you
 - **Works offline**: a signed-in learner's results that can't be sent wait on the device and go when the connection is back, counted once however often they're re-sent
 - Mobile and desktop, light and dark themes, reduced motion, keyboard shortcuts (1–4 to choose, Enter to check)

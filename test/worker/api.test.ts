@@ -335,6 +335,12 @@ describe('progress', () => {
     expect((await c.call('PUT', '/api/progress/settings', { dailyGoal: 30, theme: 'dark' })).json.settings).toEqual({ dailyGoal: 30, theme: 'dark' });
     expect((await c.call('PUT', '/api/progress/settings', { dailyGoal: 999 })).status).toBe(400);
     expect((await c.call('PUT', '/api/progress/settings', { isAdmin: true })).status).toBe(400);
+    // Badges the learner has been told about, with when.
+    const badges = { 'first-lesson': Date.now() };
+    expect((await c.call('PUT', '/api/progress/settings', { badges })).json.settings.badges).toEqual(badges);
+    expect((await c.call('PUT', '/api/progress/settings', { badges: { 'Not A Badge!': 1 } })).status).toBe(400);
+    const many = Object.fromEntries(Array.from({ length: 101 }, (_, i) => [`b-${i}`, 1]));
+    expect((await c.call('PUT', '/api/progress/settings', { badges: many })).status).toBe(400);
   });
 
   it('counts a lesson sent twice with the same key only once', async () => {
