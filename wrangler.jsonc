@@ -7,6 +7,9 @@
   "build": { "command": "npm run build" },
   "routes": [{ "pattern": "polish.saluki.cloud", "custom_domain": true }],
   "observability": { "enabled": true },
+  // Hourly: sends daily practice reminders at each learner's chosen local hour (src/worker/reminders.ts),
+  // then tidies expired sessions. One of the free plan's five Cron Triggers.
+  "triggers": { "crons": ["0 * * * *"] },
   "assets": {
     "directory": "./dist/client",
     "binding": "ASSETS",
@@ -28,7 +31,9 @@
   "vars": {
     // PBKDF2 work factor. 30,000 keeps sign-in inside the free plan's ~10 ms CPU budget.
     // On the paid plan raise it to 100,000 (the Workers maximum); hashes upgrade on next sign-in.
-    "PBKDF2_ITERATIONS": "30000"
+    "PBKDF2_ITERATIONS": "30000",
+    // Sent to push services with each reminder so they can contact the operator (VAPID "sub").
+    "PUSH_CONTACT": "https://polish.saluki.cloud"
   }
   // Optional secret (not committed): PEPPER, 32+ characters. See README → Deploying.
   // The Worker applies pending migrations itself on first request (src/worker/migrate.ts).

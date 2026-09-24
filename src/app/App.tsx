@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { match, navigate, usePath } from './lib/router';
 import { init, useApp } from './lib/store';
+import { refreshReminders } from './lib/reminders';
 import { AuthPage } from './pages/Auth';
 import { Grammar } from './pages/Grammar';
 import { Home } from './pages/Home';
@@ -16,6 +17,9 @@ import { Words } from './pages/Words';
 import { Tools } from './pages/Tools';
 import { Practice } from './pages/Practice';
 import { Pictures } from './pages/Pictures';
+import { Culture } from './pages/Culture';
+import { Hub } from './pages/Hub';
+import { DISCOVER, PRACTISE } from './lib/sections';
 import { Mark } from './components/Shell';
 
 function welcomed(): boolean {
@@ -34,7 +38,7 @@ export function App() {
   const hasProgress = useApp((s) => s.progress.lessons.size > 0 || s.progress.cards.size > 0);
 
   useEffect(() => {
-    void init();
+    void init().then(refreshReminders);
   }, []);
 
   // First visit as a guest: choose a starting level before anything else.
@@ -58,6 +62,8 @@ export function App() {
   const practice = match('/practice/:kind/:id', path);
   if (practice) return <Practice key={path} kind={practice.kind} id={practice.id} />;
   if (path === '/tools' || match('/tools/:id', path)) return <Tools />;
+  const culture = match('/culture/:id', path);
+  if (culture) return <Culture key={culture.id} id={culture.id} />;
 
   switch (path) {
     case '/':
@@ -78,6 +84,12 @@ export function App() {
       return <Sounds />;
     case '/grammar':
       return <Grammar />;
+    case '/culture':
+      return <Culture />;
+    case '/study':
+      return <Hub group={PRACTISE} />;
+    case '/discover':
+      return <Hub group={DISCOVER} />;
     case '/profile':
       return <Profile />;
     case '/signin':

@@ -5,6 +5,7 @@ import { respell } from '../../shared/phonetics';
 import { GoalRing, Label, SectionHead, Speak } from '../components/common';
 import { IconArrow } from '../components/icons';
 import { Rosette } from '../components/Rosette';
+import { InstallPrompt } from '../components/InstallPrompt';
 import { Shell } from '../components/Shell';
 import { useStats } from '../lib/derived';
 import { trickyCards, troubleSpots } from '../lib/reinforce';
@@ -60,6 +61,7 @@ export function Home() {
             {en}. {fresh ? 'Your first lesson takes about five minutes.' : `You've finished ${stats.done.size} of ${TOTAL_LESSONS} lessons.`}
           </p>
         </header>
+        <InstallPrompt />
 
         <section className="rosette-wrap only-narrow" aria-label="Your rosette">
           <div style={{ width: 'min(280px, 76vw)' }}>

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import type { DialogueLine, Item, Spotlight } from '../../content/types';
 import { POLISH_LETTERS } from '../../shared/grade';
-import type { Exercise } from '../lib/exercises';
+import { shuffle, type Exercise } from '../lib/exercises';
 import { speak } from '../lib/speech';
 import { respell } from '../../shared/phonetics';
 import { GENDER_LABEL, Rich, Speak, usePolishVoice } from './common';
@@ -51,7 +51,7 @@ export function Choose({ ex, locked, onAnswer, checked }: AnswerProps<Of<'choose
         </figure>
       ) : (
         <div className="prompt-row">
-          {ex.promptLang === 'pl' && <Speak text={ex.prompt} autoPlay={ex.audio} />}
+          {ex.promptLang === 'pl' && <Speak text={ex.say ?? ex.prompt} autoPlay={ex.audio} />}
           {ex.audio && <Speak text={ex.prompt} slow />}
           {hidePrompt ? (
             <span className="muted">Tap to hear it again</span>
@@ -188,6 +188,7 @@ export function Build({ ex, locked, onAnswer }: AnswerProps<Of<'build'>>) {
           <span className="prompt-en">{ex.audio ? ex.meaning : ex.prompt}</span>
         )}
       </div>
+      {ex.audio && hasVoice && locked && ex.meaning && <p className="build-meaning">{ex.meaning}</p>}
       <div className="build-line" aria-label="Your sentence" aria-live="polite">
         {chosen.map((i, pos) => (
           <button
@@ -278,8 +279,8 @@ export function Match({
   onDone: (misses: number) => void;
   onMiss: (cardId: string) => void;
 }) {
-  const left = useMemo(() => [...ex.pairs].sort(() => Math.random() - 0.5), [ex]);
-  const right = useMemo(() => [...ex.pairs].sort(() => Math.random() - 0.5), [ex]);
+  const left = useMemo(() => shuffle(ex.pairs), [ex]);
+  const right = useMemo(() => shuffle(ex.pairs), [ex]);
   const [sel, setSel] = useState<{ side: 'pl' | 'en'; id: string } | null>(null);
   const [gone, setGone] = useState<Set<string>>(new Set());
   const [shake, setShake] = useState<string | null>(null);
@@ -287,7 +288,10 @@ export function Match({
 
   const choose = (side: 'pl' | 'en', id: string) => {
     if (gone.has(id)) return;
-    if (side === 'pl') speak(ex.pairs.find((p) => p.cardId === id)!.pl);
+    if (side === 'pl') {
+      const p = ex.pairs.find((x) => x.cardId === id)!;
+      speak(p.say ?? p.pl);
+    }
     if (!sel || sel.side === side) {
       setSel({ side, id });
       return;

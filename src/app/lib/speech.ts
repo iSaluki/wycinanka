@@ -37,8 +37,25 @@ export const setSpeechRate = (r: number) => {
   rate = r;
 };
 
+/**
+ * The part of a prompt that should be read aloud. English glosses in brackets, gaps, the slash between
+ * spelling alternatives and a figure before "=" are for the eye only: a filled-in "woda (water)" is read
+ * as "woda", and "20 = dwadzieścia" as "dwadzieścia".
+ */
+export function speakable(text: string): string {
+  return text
+    .replace(/^[^=]*=\s*/, '')
+    .replace(/\s*\([^)]*\)/g, '')
+    .replace(/_{2,}/g, '')
+    .replace(/\s+\/\s+/g, ', ')
+    .replace(/\s+/g, ' ')
+    .replace(/ ([.,!?])/g, '$1')
+    .trim();
+}
+
 export function speak(text: string, opts: { slow?: boolean; onEnd?: () => void } = {}): void {
-  if (!speechSupported() || !voice) {
+  text = speakable(text);
+  if (!speechSupported() || !voice || !text) {
     opts.onEnd?.();
     return;
   }

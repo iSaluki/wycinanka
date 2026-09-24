@@ -6,6 +6,8 @@ import { localDay } from '../../src/shared/progress';
 import { app, cleanUp } from '../../src/worker/index';
 import { migrate } from '../../src/worker/migrate';
 import { MIGRATIONS } from '../../src/worker/migrations';
+import { sendReminders } from '../../src/worker/reminders';
+import { b64url } from '../../src/worker/crypto';
 
 const ORIGIN = 'https://wycinanka.test';
 const worker = (exports as unknown as { default: Fetcher }).default;
@@ -354,15 +356,106 @@ describe('account', () => {
   it('deletes the account and every row belonging to it', async () => {
     const { c, username } = await signedUp();
     await c.call('POST', '/api/progress/lesson', { lessonId: LESSONS[0].id, correct: 5, total: 5, day: today });
+    expect((await c.call('POST', '/api/push/subscribe', await subscription())).status).toBe(200);
     const user = await env.DB.prepare('SELECT id FROM users WHERE username = ?1').bind(username).first<{ id: string }>();
     expect((await c.call('DELETE', '/api/account', { password: 'nope nope nope' })).status).toBe(403);
     expect((await c.call('DELETE', '/api/account', { password: PASSWORD })).status).toBe(200);
-    for (const table of ['users', 'sessions', 'cards', 'lesson_progress', 'activity']) {
+    for (const table of ['users', 'sessions', 'cards', 'lesson_progress', 'activity', 'push_subscriptions']) {
       const col = table === 'users' ? 'id' : 'user_id';
       const n = await env.DB.prepare(`SELECT COUNT(*) AS n FROM ${table} WHERE ${col} = ?1`).bind(user!.id).first<{ n: number }>();
       expect(n!.n, table).toBe(0);
     }
     expect((await c.call('GET', '/api/auth/me')).json.user).toBeNull();
+  });
+});
+
+let endpointCounter = 0;
+/** A browser push subscription, as PushSubscription.toJSON() gives it. */
+async function subscription(host = 'https://fcm.googleapis.com') {
+  const pair = (await crypto.subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits'])) as CryptoKeyPair;
+  const raw = (await crypto.subtle.exportKey('raw', pair.publicKey)) as ArrayBuffer;
+  const auth = crypto.getRandomValues(new Uint8Array(16));
+  return { endpoint: `${host}/fcm/send/device-${Date.now()}-${++endpointCounter}`, keys: { p256dh: b64url(raw), auth: b64url(auth) } };
+}
+
+describe('daily reminders', () => {
+  it('hands out one stable public key', async () => {
+    const { c } = await signedUp();
+    const a = await c.call('GET', '/api/push/key');
+    expect(a.status).toBe(200);
+    expect(a.json.publicKey).toMatch(/^[A-Za-z0-9_-]{87}$/);
+    expect((await c.call('GET', '/api/push/key')).json.publicKey).toBe(a.json.publicKey);
+    expect((await client().call('GET', '/api/push/key')).status).toBe(401);
+  });
+
+  it('subscribes and unsubscribes a device, and refuses endpoints that are not push services', async () => {
+    const { c, username } = await signedUp();
+    const sub = await subscription();
+    expect((await c.call('POST', '/api/push/subscribe', sub)).status).toBe(200);
+    expect((await c.call('POST', '/api/push/subscribe', sub)).status).toBe(200);
+    const count = async () =>
+      (await env.DB.prepare('SELECT COUNT(*) AS n FROM push_subscriptions s JOIN users u ON u.id = s.user_id WHERE u.username = ?1').bind(username).first<{ n: number }>())!.n;
+    expect(await count()).toBe(1);
+    expect((await c.call('POST', '/api/push/subscribe', await subscription('https://attacker.example'))).status).toBe(400);
+    expect((await c.call('POST', '/api/push/subscribe', { ...sub, keys: { p256dh: 'x', auth: 'y' } })).status).toBe(400);
+    // Someone else can't remove it.
+    const other = await signedUp();
+    await other.c.call('POST', '/api/push/unsubscribe', { endpoint: sub.endpoint });
+    expect(await count()).toBe(1);
+    expect((await c.call('POST', '/api/push/unsubscribe', { endpoint: sub.endpoint })).status).toBe(200);
+    expect(await count()).toBe(0);
+  });
+
+  it('accepts reminder settings and rejects nonsense', async () => {
+    const { c } = await signedUp();
+    const ok = await c.call('PUT', '/api/progress/settings', { reminders: true, reminderHour: 8, timeZone: 'Europe/Warsaw' });
+    expect(ok.json.settings).toMatchObject({ reminders: true, reminderHour: 8, timeZone: 'Europe/Warsaw' });
+    expect((await c.call('PUT', '/api/progress/settings', { reminderHour: 24 })).status).toBe(400);
+    expect((await c.call('PUT', '/api/progress/settings', { timeZone: "'; DROP TABLE users" })).status).toBe(400);
+  });
+
+  it('reminds at the chosen hour, once a day, and not after practice', async () => {
+    const now = Date.UTC(2031, 0, 15, 19, 0);
+    const day = '2031-01-15';
+    const lazy = await signedUp();
+    const keen = await signedUp();
+    const later = await signedUp();
+    const expired = await signedUp();
+    for (const [u, hour] of [[lazy, 19], [keen, 19], [later, 7], [expired, 19]] as const) {
+      await u.c.call('PUT', '/api/progress/settings', { reminders: true, reminderHour: hour, timeZone: 'UTC' });
+    }
+    const subs = new Map<string, string>();
+    for (const u of [lazy, keen, later, expired]) {
+      const sub = await subscription();
+      subs.set(u.username, sub.endpoint);
+      await u.c.call('POST', '/api/push/subscribe', sub);
+    }
+    const keenId = (await env.DB.prepare('SELECT id FROM users WHERE username = ?1').bind(keen.username).first<{ id: string }>())!.id;
+    await env.DB.prepare('INSERT INTO activity (user_id, day, xp) VALUES (?1, ?2, 12)').bind(keenId, day).run();
+
+    const sent: string[] = [];
+    const fetcher = (async (url: string) => {
+      sent.push(url);
+      return new Response(null, { status: url === subs.get(expired.username) ? 410 : 201 });
+    }) as unknown as typeof fetch;
+
+    const first = await sendReminders(env, now, fetcher);
+    expect(sent).toContain(subs.get(lazy.username));
+    expect(sent).not.toContain(subs.get(keen.username));
+    expect(sent).not.toContain(subs.get(later.username));
+    expect(first.practised).toBeGreaterThanOrEqual(1);
+    expect(first.gone).toBeGreaterThanOrEqual(1);
+    const gone = await env.DB.prepare('SELECT COUNT(*) AS n FROM push_subscriptions WHERE endpoint = ?1').bind(subs.get(expired.username)).first<{ n: number }>();
+    expect(gone!.n).toBe(0);
+
+    sent.length = 0;
+    await sendReminders(env, now + 30 * 60_000, fetcher);
+    expect(sent).not.toContain(subs.get(lazy.username));
+  });
+
+  it('sends a test reminder only to the learner\'s own subscribed device', async () => {
+    const { c } = await signedUp();
+    expect((await c.call('POST', '/api/push/test', { endpoint: 'https://fcm.googleapis.com/fcm/send/nobody' })).status).toBe(404);
   });
 });
 

@@ -8,6 +8,8 @@ import { Shell } from '../components/Shell';
 import { ApiError } from '../lib/api';
 import { useStats } from '../lib/derived';
 import { Link, navigate, useTitle } from '../lib/router';
+import { DEFAULT_REMINDER_HOUR } from '../../shared/reminders';
+import { disableReminders, enableReminders, forgetThisDevice, reminderSupport, sendTestReminder, useDeviceSubscribed } from '../lib/reminders';
 import { changePassword, DEFAULT_SETTINGS, deleteAccount, downloadExport, logout, updateSettings, useApp } from '../lib/store';
 import { PasswordInput } from './Auth';
 
@@ -25,11 +27,87 @@ function Heatmap() {
   );
 }
 
-function Switch({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
+function Switch({ label, checked, disabled, onChange }: { label: string; checked: boolean; disabled?: boolean; onChange: (v: boolean) => void }) {
+  const id = `sw-${label.toLowerCase().replace(/[^a-z]+/g, '-')}`;
   return (
     <div className="toggle">
-      <span id={`sw-${label}`}>{label}</span>
-      <button type="button" role="switch" className="switch" aria-checked={checked} aria-labelledby={`sw-${label}`} onClick={() => onChange(!checked)} />
+      <span id={id}>{label}</span>
+      <button type="button" role="switch" className="switch" aria-checked={checked} aria-labelledby={id} disabled={disabled} onClick={() => onChange(!checked)} />
+    </div>
+  );
+}
+
+const HOURS = Array.from({ length: 17 }, (_, i) => i + 6); // 06:00 to 22:00
+const hourLabel = (h: number) => `${String(h).padStart(2, '0')}:00`;
+
+function RemindersField() {
+  const user = useApp((s) => s.user);
+  const s = useApp((st) => st.settings);
+  const [device, recheck] = useDeviceSubscribed();
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const support = reminderSupport();
+  const hour = s.reminderHour ?? DEFAULT_REMINDER_HOUR;
+  const on = !!s.reminders && device === true;
+
+  const run = async (work: () => Promise<void>, done?: string) => {
+    setBusy(true);
+    setMsg(null);
+    try {
+      await work();
+      if (done) setMsg({ ok: true, text: done });
+    } catch (e) {
+      setMsg({ ok: false, text: e instanceof Error ? e.message : 'Something went wrong. Try again.' });
+    } finally {
+      setBusy(false);
+      recheck();
+    }
+  };
+
+  const toggle = (v: boolean) =>
+    run(
+      () => (v ? enableReminders(hour) : disableReminders()),
+      v ? `Reminders are on. You'll get one at ${hourLabel(hour)} on days you haven't practised yet.` : undefined,
+    );
+
+  let help: string | null = null;
+  if (!user) help = 'Create a free account to get a daily reminder to practise.';
+  else if (support === 'install-first') help = 'On iPhone and iPad, add Wycinanka to your home screen first (Share → Add to Home Screen), then switch reminders on from the app.';
+  else if (support === 'blocked') help = 'Notifications are blocked for this site. Allow them in your browser settings to get reminders.';
+  else if (support === 'unsupported') help = "This browser can't show reminders.";
+  const usable = !!user && support === 'ok';
+
+  return (
+    <div className="field">
+      <Switch label="Daily reminder to practise" checked={on} disabled={!usable || busy || device === null} onChange={toggle} />
+      {usable && on && (
+        <div className="row wrap">
+          <label htmlFor="rem-hour">Remind me at</label>
+          <select
+            id="rem-hour"
+            value={hour}
+            disabled={busy}
+            onChange={(e) => void run(() => updateSettings({ reminderHour: Number(e.target.value) }))}
+          >
+            {HOURS.map((h) => (
+              <option key={h} value={h}>
+                {hourLabel(h)}
+              </option>
+            ))}
+          </select>
+          <button type="button" className="btn small quiet" disabled={busy} onClick={() => void run(sendTestReminder, 'Test reminder sent. It should arrive in a moment.')}>
+            Send a test
+          </button>
+        </div>
+      )}
+      {msg && (
+        <div className={`banner ${msg.ok ? '' : 'error'}`} role="status">
+          <p>{msg.text}</p>
+        </div>
+      )}
+      <span className="help">
+        {help ?? "A notification on days you haven't practised yet, sent at your chosen time. Switching it off stops reminders on all your devices."}
+      </span>
     </div>
   );
 }
@@ -104,6 +182,7 @@ function SettingsCard() {
         <span className="help">Past-tense verbs change with the speaker's gender. Both forms are always accepted.</span>
       </div>
       <Switch label="Reduce motion" checked={!!s.reduceMotion} onChange={(v) => set({ reduceMotion: v })} />
+      <RemindersField />
     </section>
   );
 }
@@ -135,6 +214,7 @@ function AccountCard() {
     e.preventDefault();
     try {
       await deleteAccount(deletePw);
+      await forgetThisDevice();
       navigate('/', { replace: true });
     } catch (err) {
       setDelErr(err instanceof ApiError ? err.message : 'The account could not be deleted.');
@@ -176,7 +256,7 @@ function AccountCard() {
           <button className="btn quiet" onClick={() => downloadExport().catch((e) => alert(e.message))}>
             Download my data
           </button>
-          <button className="btn quiet" onClick={() => logout().then(() => navigate('/'))}>
+          <button className="btn quiet" onClick={() => forgetThisDevice().then(logout).then(() => navigate('/'))}>
             Sign out
           </button>
         </div>

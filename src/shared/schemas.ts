@@ -34,6 +34,14 @@ export const settingsSchema = z
     theme: z.enum(['system', 'light', 'dark']).optional(),
     reduceMotion: z.boolean().optional(),
     speaker: z.enum(['m', 'f']).optional(),
+    /** Daily practice reminder by push notification, at `reminderHour` o'clock in `timeZone`. */
+    reminders: z.boolean().optional(),
+    reminderHour: z.number().int().min(0).max(23).optional(),
+    timeZone: z
+      .string()
+      .max(64)
+      .regex(/^[A-Za-z][A-Za-z0-9_+\-/]*$/, 'Expected an IANA time zone such as Europe/London')
+      .optional(),
   })
   .strict();
 export type Settings = z.infer<typeof settingsSchema>;
@@ -66,6 +74,15 @@ export const reviewBatchSchema = z
     reviews: z.array(reviewSchema).min(1).max(100),
   })
   .strict();
+
+export const pushSubscriptionSchema = z
+  .object({
+    endpoint: z.string().url().max(1024),
+    keys: z.object({ p256dh: z.string().regex(/^[A-Za-z0-9_-]{80,100}={0,2}$/), auth: z.string().regex(/^[A-Za-z0-9_-]{16,32}={0,2}$/) }).strict(),
+  })
+  .strict();
+
+export const pushEndpointSchema = z.object({ endpoint: z.string().url().max(1024) }).strict();
 
 /** A guest's session, replayed server-side once when they create an account. */
 export const importSchema = z

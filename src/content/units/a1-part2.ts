@@ -9,7 +9,7 @@ export const u06 = unit(
   [
     lesson('u06-l1', 'Something to drink', 'Order drinks politely.', {
       items: [
-        ['poproszę', "I'd like", { altEn: ['please', 'i would like', "i'll have"], hint: 'The standard way to order: "po-PRO-sheh".' }],
+        ['poproszę', "I'd like (ordering)", { altEn: ["i'd like", 'please', 'i would like', "i'll have"], hint: 'The standard way to order: "po-PRO-sheh".' }],
         ['kawa', 'coffee', { g: 'f' }],
         ['sok', 'juice', { g: 'm' }],
         ['piwo', 'beer', { g: 'n' }],

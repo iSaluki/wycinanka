@@ -127,6 +127,7 @@ export function Words() {
                 </small>
                 {w.ex && (
                   <span className="ex">
+                    <Speak text={w.ex[0]} label={`Play the example: ${w.ex[0]}`} />
                     <span className="pl" lang="pl">
                       {w.ex[0]}
                     </span>{' '}
@@ -134,7 +135,7 @@ export function Words() {
                   </span>
                 )}
               </div>
-              <Speak text={w.ex ? `${w.pl}. ${w.ex[0]}` : w.pl} label={`Play ${w.pl}`} />
+              <Speak text={w.pl} label={`Play ${w.pl}`} />
             </li>
           ))}
         </ol>
