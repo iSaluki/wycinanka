@@ -1,12 +1,14 @@
 import { useMemo, useState } from 'react';
 import { getCard, getLesson, getUnitOfLesson, lessonCardIds, nextLessonAfter } from '../../content/course';
+import { cultureAfter } from '../../content/culture-stops';
 import { Label, Speak } from '../components/common';
 import { Rosette } from '../components/Rosette';
 import { Session, type SessionResult } from '../components/Session';
+import { markCultureSeen, useCultureSeen } from '../lib/cultureStops';
 import { useStats } from '../lib/derived';
-import { isGraded, lessonForSpeaker, lessonPlan, practiceExercises } from '../lib/exercises';
+import { isGraded, lessonForSpeaker, lessonPlan, pictureRound, practiceExercises, shuffle } from '../lib/exercises';
 import { speakingPaused } from '../lib/listen';
-import { revisionCards, sprinkle, warmupCards } from '../lib/reinforce';
+import { lessonPictures, revisionCards, sprinkle, warmupCards } from '../lib/reinforce';
 import { Link, navigate, useTitle } from '../lib/router';
 import { completeLesson, getState, submitReviews, useApp } from '../lib/store';
 import { NotFound } from './NotFound';
@@ -17,6 +19,8 @@ interface Outcome {
   added: number;
   /** Personalised revision questions answered during the lesson. */
   revised: number;
+  /** Picture flashcards named during the lesson. */
+  pictures: number;
   /** Lesson cards the learner got wrong at least once, to look over before leaving. */
   missed: string[];
   spoken: SessionResult['spoken'];
@@ -37,14 +41,21 @@ export function LessonPage({ id }: { id: string }) {
     const warmCards = warmupCards(progress, lesson.id);
     const warm = practiceExercises(warmCards, speaker, 'warmup');
     const { exercises: main, introEnd } = lessonPlan(lessonForSpeaker(lesson, speaker), { speaking: speakingOn && !speakingPaused() });
-    if (!signedIn) return [...warm, ...main];
+    // A couple of picture flashcards, a new one met and named or known ones named again (not in the sound lessons).
+    const { fresh, known } = lesson.phonics ? { fresh: [], known: [] } : lessonPictures(progress);
+    const pictures = pictureRound(fresh, known);
     // Signed-in learners also get revision sprinkled through the lesson, weighted towards their mistakes.
     const n = Math.min(4, Math.max(2, Math.round(main.filter(isGraded).length / 6)));
-    const revision = practiceExercises(revisionCards(progress, lesson.id, n, warmCards.map((c) => c.id)), speaker, 'revision');
+    const revision = signedIn
+      ? practiceExercises(revisionCards(progress, lesson.id, n, warmCards.map((c) => c.id)), speaker, 'revision').map((e) => [e])
+      : [];
     // Never while new words are still being introduced: old material there would crowd out the new.
     const from = introEnd;
     const until = main[main.length - 1]?.kind === 'dialogue' ? main.length - 1 : main.length;
-    return [...warm, ...sprinkle(main, revision, from, until)];
+    // Groups stay together, so a new picture is named straight after it is met.
+    const extra = shuffle([...revision, ...pictures]);
+    const groups = sprinkle(main.map((e) => [e]), extra, from, until);
+    return [...warm, ...groups.flat()];
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lesson, speaker, signedIn, speakingOn, run]);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
@@ -66,7 +77,7 @@ export function LessonPage({ id }: { id: string }) {
     if (extra.length) {
       await submitReviews(extra.flatMap((a) => (r.ratings.get(a.cardId) ? [{ cardId: a.cardId, ...r.ratings.get(a.cardId)! }] : [])));
     }
-    setOutcome({ ...out, revised: extra.filter((a) => a.tag === 'revision').length, missed, spoken: r.spoken });
+    setOutcome({ ...out, revised: extra.filter((a) => a.tag === 'revision').length, pictures: extra.filter((a) => a.tag === 'picture').length, missed, spoken: r.spoken });
   };
 
   if (outcome) return <Finish lessonId={lesson.id} outcome={outcome} onRetry={() => (setOutcome(null), setRun(run + 1))} />;
@@ -77,6 +88,10 @@ function Finish({ lessonId, outcome, onRetry }: { lessonId: string; outcome: Out
   const stats = useStats();
   const user = useApp((s) => s.user);
   const next = nextLessonAfter(lessonId);
+  // A culture break after this lesson is offered next, with a way straight past it.
+  const seen = useCultureSeen();
+  const after = cultureAfter(lessonId);
+  const culture = after && !seen.has(after.id) ? after : undefined;
   useTitle('Lesson complete');
   const [headline, english] =
     outcome.score >= 90 ? ['Wspaniale!', 'Wonderful!'] : outcome.score >= 70 ? ['Dobra robota!', 'Good work!'] : ['Zrobione!', 'Done!'];
@@ -110,6 +125,11 @@ function Finish({ lessonId, outcome, onRetry }: { lessonId: string; outcome: Out
             You also revised {outcome.revised} thing{outcome.revised === 1 ? '' : 's'} from earlier lessons, picked from what you've found hardest.
           </p>
         )}
+        {outcome.pictures > 0 && (
+          <p className="muted" style={{ maxWidth: '46ch' }}>
+            You named {outcome.pictures} picture{outcome.pictures === 1 ? '' : 's'} along the way. <Link to="/pictures">More picture flashcards</Link>
+          </p>
+        )}
         {outcome.spoken.tried > 0 && (
           <p className="muted" style={{ maxWidth: '46ch' }}>
             You said {outcome.spoken.said} of {outcome.spoken.tried} thing{outcome.spoken.tried === 1 ? '' : 's'} aloud clearly.{' '}
@@ -131,7 +151,16 @@ function Finish({ lessonId, outcome, onRetry }: { lessonId: string; outcome: Out
           </div>
         )}
         <div className="row wrap" style={{ justifyContent: 'center' }}>
-          {next ? (
+          {culture ? (
+            <>
+              <button className="btn red" onClick={() => navigate(`/course/culture/${culture.id}`)}>
+                Culture break: {culture.title}
+              </button>
+              <button className="btn quiet" onClick={() => (markCultureSeen(culture.id), navigate(next ? `/lesson/${next.id}` : '/learn'))}>
+                {next ? 'Skip to the next lesson' : 'Skip'}
+              </button>
+            </>
+          ) : next ? (
             <button className="btn red" onClick={() => navigate(`/lesson/${next.id}`)}>
               Next: {next.title}
             </button>

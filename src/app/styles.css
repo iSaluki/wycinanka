@@ -3183,8 +3183,54 @@ dialog.confirm p {
 }
 
 .culture-tip {
-  margin-top: -8px !important;
+  color: var(--ink-3);
   font-size: 15px;
+}
+
+/* At a glance: the note in a nutshell, before the full text. */
+.culture-glance {
+  display: grid;
+  gap: 10px;
+  padding: 16px 18px;
+  border: 1.5px solid var(--rule);
+  border-left: 4px solid var(--czerwien);
+  border-radius: var(--r);
+  background: var(--paper-2);
+}
+
+.culture-glance .glance-summary {
+  font: 600 19px/1.4 var(--font-ui);
+}
+
+.glance-words {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.glance-words li {
+  font-size: 19px;
+}
+
+.glance-words .en {
+  color: var(--ink-3);
+  font-size: 15px;
+}
+
+.culture-lead {
+  font-size: 19px;
+  line-height: 1.55;
+}
+
+/* Key points, highlighted like a marker pen so a skim picks them up. */
+.culture-article strong {
+  padding: 0 2px;
+  background: linear-gradient(transparent 55%, color-mix(in srgb, var(--zolc) 45%, transparent) 55%);
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
 }
 
 /* Culture pictures */
@@ -3351,4 +3397,48 @@ dialog.confirm p {
 
 .conversations .pl {
   font: 700 20px/1.2 var(--font-pl);
+}
+
+/* ---------- Culture breaks in the course ---------- */
+
+.culture-break {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  padding: 12px 14px;
+  border-left: 4px solid var(--amarant);
+  background: var(--paper-2);
+}
+
+.culture-break p {
+  margin: 0;
+  flex: 1 1 260px;
+  font-size: 16px;
+}
+
+.lesson-link.culture-stop .dot {
+  border-radius: 50%;
+  transform: none;
+  border-style: dashed;
+  border-color: var(--amarant);
+}
+
+.lesson-link.culture-stop.done .dot {
+  background: var(--amarant);
+  border-style: solid;
+}
+
+.lesson-link.culture-stop .t > span {
+  font-style: italic;
+}
+
+.lesson-link.culture-stop .score {
+  font: 400 14px var(--font-ui);
+}
+
+.tag-picture {
+  background: var(--zielen);
+  color: var(--on-ink);
 }

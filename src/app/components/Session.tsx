@@ -3,6 +3,7 @@ import type { Rating } from '../../shared/fsrs';
 import { grade, type GradeResult } from '../../shared/grade';
 import { hintLimit, isGraded, type Exercise, type ExtraTag, type GradedExercise } from '../lib/exercises';
 import { pauseSpeaking } from '../lib/listen';
+import { playCorrect, playFinished, playWrong, soundEffectsOn } from '../lib/sfx';
 import { speak } from '../lib/speech';
 import { Build, Choose, Dialogue, Gap, Match, Meet, SpotlightView, TypeAnswer } from './Exercises';
 import { IconClose } from './icons';
@@ -139,6 +140,7 @@ export function Session({
   const started = useRef(Date.now());
   const finished = useRef(false);
   const continueRef = useRef<HTMLButtonElement>(null);
+  const sayLater = useRef<number | undefined>(undefined);
   const [confirming, setConfirming] = useState(false);
   // Help given on the current question: hints taken, and whether missing Polish letters were pointed out.
   const [hints, setHints] = useState(0);
@@ -156,6 +158,7 @@ export function Session({
 
   const goTo = useCallback(
     (to: number, length: number) => {
+      window.clearTimeout(sayLater.current);
       setFeedback(null);
       setAnswer(null);
       setHints(0);
@@ -165,6 +168,7 @@ export function Session({
       if (to >= length) {
         if (!finished.current) {
           finished.current = true;
+          playFinished();
           onFinish(results.current);
         }
         return;
@@ -194,6 +198,7 @@ export function Session({
     const ex = entry.ex;
     setSpokenTries((n) => n + 1);
     if (!r.pass) return;
+    playCorrect();
     results.current.spoken.tried++;
     results.current.spoken.said++;
     const [pl, en] = PRAISE[Math.floor(Math.random() * PRAISE.length)];
@@ -283,9 +288,14 @@ export function Session({
       cardId: ex.cardId,
       rating,
     });
-    if (ex.kind === 'choose' && ex.say) speak(ex.say);
-    else if (lang === 'pl' && expected) speak(expected);
-    else if (ex.kind === 'choose' && ex.promptLang === 'pl') speak(ex.prompt);
+    if (pass) playCorrect();
+    else playWrong();
+    // The Polish is read once the chime has rung, so the two don't talk over each other.
+    const say = ex.kind === 'choose' && ex.say ? ex.say : lang === 'pl' && expected ? expected : ex.kind === 'choose' && ex.promptLang === 'pl' ? ex.prompt : '';
+    if (say) {
+      if (soundEffectsOn()) sayLater.current = window.setTimeout(() => speak(say), 320);
+      else speak(say);
+    }
   };
 
   const onMatchDone = (misses: number) => {
@@ -296,6 +306,7 @@ export function Session({
       for (const id of matchMisses.current) results.current.missed.add(id);
     }
     matchMisses.current = new Set();
+    if (misses === 0) playCorrect();
     setFeedback({
       pass: misses === 0,
       title: misses === 0 ? 'Wszystko pasuje!' : 'All matched',

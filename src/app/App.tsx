@@ -59,6 +59,8 @@ export function App() {
   if (path === '/tools' || match('/tools/:id', path)) return <Tools />;
   const culture = match('/culture/:id', path);
   if (culture) return <Culture key={culture.id} id={culture.id} />;
+  const cultureBreak = match('/course/culture/:id', path);
+  if (cultureBreak) return <Culture key={`course-${cultureBreak.id}`} id={cultureBreak.id} course />;
 
   switch (path) {
     case '/':
