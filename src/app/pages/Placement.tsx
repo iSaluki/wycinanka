@@ -5,7 +5,7 @@ import { IconClose } from '../components/icons';
 import { Label } from '../components/common';
 import { navigate, useTitle } from '../lib/router';
 import { updateSettings } from '../lib/store';
-import { markWelcomed } from './Welcome';
+import { markWelcomed } from '../lib/welcome';
 
 export function Placement() {
   useTitle('Placement check');

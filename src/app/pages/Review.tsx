@@ -26,6 +26,7 @@ function cardLabel(id: string): string {
   if (src.kind === 'sentence') return src.sentence.pl;
   if (src.kind === 'drill') return src.drill.text.replace('___', src.drill.answer);
   if (src.kind === 'picture') return src.picture.pl;
+  if (src.kind === 'chunk') return src.chunk.pl;
   return src.word.pl;
 }
 
@@ -50,7 +51,7 @@ export function Review() {
     await submitReviews([...r.ratings.entries()].map(([cardId, { rating, at }]) => ({ cardId, rating, at })));
   };
 
-  if (session) return <Session exercises={session} closeTo="/review" rateable onFinish={finish} />;
+  if (session) return <Session exercises={session} what="review" onClose={() => setSession(null)} rateable onFinish={finish} />;
 
   const weakest = [...progress.cards.entries()]
     .sort((a, b) => a[1].stability - b[1].stability)

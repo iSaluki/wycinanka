@@ -98,24 +98,35 @@ export interface TimeInWords {
 
 const h12 = (h: number) => h % 12;
 
+/**
+ * Minutes agree with the feminine "minuta": dwie (not dwa), and a single minute is "minuta" itself
+ * ("minuta po ósmej", "za minutę dziewiąta"). Formal times read the digits, so 8:01 stays "zero jeden".
+ */
+const minutesFem = (n: number) => numberToWords(n).replace(/(^| )dwa$/, '$1dwie');
+
 export function timeToWords(hours: number, minutes: number): TimeInWords {
   if (!Number.isInteger(hours) || !Number.isInteger(minutes) || hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
     throw new RangeError('Use a time between 00:00 and 23:59');
   }
-  const mins = minutes === 0 ? '' : minutes < 10 ? ` zero ${numberToWords(minutes)}` : ` ${numberToWords(minutes)}`;
+  const formalMins = minutes === 1 ? 'jeden' : minutesFem(minutes);
+  const mins = minutes === 0 ? '' : minutes < 10 ? ` zero ${formalMins}` : ` ${formalMins}`;
+  const midnight = hours === 0 && minutes === 0;
   const formalHour = hours === 0 ? 'zero' : HOUR_NOM[hours];
   const atHour = hours === 0 ? 'zero' : HOUR_LOC[hours];
-  const formal = `Jest ${formalHour}${mins}.`;
-  const at = `o ${atHour}${mins}`;
+  const formal = midnight ? 'Jest północ.' : `Jest ${formalHour}${mins}.`;
+  const at = midnight ? 'o północy' : `o ${atHour}${mins}`;
 
   const cur = h12(hours);
   const next = h12(hours + 1);
   let everyday: string;
-  if (minutes === 0) everyday = `Jest ${HOUR_NOM[cur]}.`;
+  if (midnight) everyday = 'Jest północ.';
+  else if (minutes === 0) everyday = `Jest ${HOUR_NOM[cur]}.`;
+  else if (minutes === 1) everyday = `Jest minuta po ${HOUR_LOC[cur]}.`;
   else if (minutes === 15) everyday = `Jest kwadrans po ${HOUR_LOC[cur]}.`;
   else if (minutes === 30) everyday = `Jest wpół do ${HOUR_LOC[next]}.`;
   else if (minutes === 45) everyday = `Jest za kwadrans ${HOUR_NOM[next]}.`;
-  else if (minutes < 30) everyday = `Jest ${numberToWords(minutes)} po ${HOUR_LOC[cur]}.`;
-  else everyday = `Jest za ${numberToWords(60 - minutes)} ${HOUR_NOM[next]}.`;
+  else if (minutes === 59) everyday = `Jest za minutę ${HOUR_NOM[next]}.`;
+  else if (minutes < 30) everyday = `Jest ${minutesFem(minutes)} po ${HOUR_LOC[cur]}.`;
+  else everyday = `Jest za ${minutesFem(60 - minutes)} ${HOUR_NOM[next]}.`;
   return { formal, everyday, at };
 }

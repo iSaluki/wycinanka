@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ALPHABET, DIGRAPHS } from '../../content/alphabet';
 import { PHRASEBOOK } from '../../content/phrasebook';
 import { SOUND_GROUPS } from '../../content/sounds';
@@ -230,42 +230,89 @@ function Numbers() {
 
 /* ---------- Clock ---------- */
 
-function Clock() {
-  const now = new Date();
-  const [t, setT] = useState(`${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`);
-  const [h, m] = t.split(':').map(Number);
+const hhmm = (d: Date) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+
+/** The current time, updated on the minute. */
+function useNow(): Date {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    let t: ReturnType<typeof setTimeout>;
+    const tick = () => {
+      const d = new Date();
+      setNow(d);
+      t = setTimeout(tick, 60_000 - (d.getSeconds() * 1000 + d.getMilliseconds()) + 50);
+    };
+    tick();
+    return () => clearTimeout(t);
+  }, []);
+  return now;
+}
+
+function TimeReadings({ time }: { time: string }) {
+  const [h, m] = time.split(':').map(Number);
   const words = Number.isFinite(h) && Number.isFinite(m) ? timeToWords(h, m) : null;
-  const rows: Array<[string, string, string]> = words
-    ? [
-        ['na co dzień', 'in everyday speech', words.everyday],
-        ['oficjalnie', 'formally, as on timetables', words.formal],
-        ['o której?', 'at what time?', words.at],
-      ]
-    : [];
+  if (!words) return null;
+  const rows: Array<[string, string, string]> = [
+    ['na co dzień', 'in everyday speech', words.everyday],
+    ['oficjalnie', 'formally, as on timetables', words.formal],
+    ['o której?', 'at what time?', words.at],
+  ];
+  return (
+    <div className="stack" aria-live="polite">
+      {rows.map(([pl, en, text]) => (
+        <div key={pl} className="stack" style={{ gap: 4, paddingBottom: 14, borderBottom: '1px solid var(--rule)' }}>
+          <Label pl={pl} en={en} />
+          <div className="row wrap">
+            <Speak text={text} />
+            <span className="big-out" lang="pl">
+              {text}
+            </span>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function Clock() {
+  const now = useNow();
+  const current = hhmm(now);
+  const nowWords = timeToWords(now.getHours(), now.getMinutes());
+  const [picked, setPicked] = useState<string | null>(null);
+  const t = picked ?? current;
   return (
     <section className="stack" aria-labelledby="clock-title">
       <SectionHead pl="Która godzina?" en="telling the time" />
-      <p className="muted" style={{ marginTop: -4 }}>
+      <div className="clock-now" role="status" aria-label="The time now">
+        <Label pl="teraz" en="right now" />
+        <div className="clock-face" aria-hidden="true">
+          {current}
+        </div>
+        <div className="row wrap">
+          <Speak text={nowWords.everyday} label="Play the time now" />
+          <span className="big-out" lang="pl">
+            {nowWords.everyday}
+          </span>
+        </div>
+      </div>
+      <p className="muted">
         Polish tells the time with “the seventh (hour)” rather than “seven o'clock”. Timetables use the 24-hour clock; people say “half to eight” for
         7:30.
       </p>
-      <label className="sr-only" htmlFor="time">
-        Time
-      </label>
-      <input id="time" type="time" className="num-input" value={t} onChange={(e) => setT(e.target.value)} />
-      <div className="stack" aria-live="polite">
-        {rows.map(([pl, en, text]) => (
-          <div key={pl} className="stack" style={{ gap: 4, paddingBottom: 14, borderBottom: '1px solid var(--rule)' }}>
-            <Label pl={pl} en={en} />
-            <div className="row wrap">
-              <Speak text={text} />
-              <span className="big-out" lang="pl">
-                {text}
-              </span>
-            </div>
-          </div>
-        ))}
+      <div className="field">
+        <label htmlFor="time" style={{ fontWeight: 700 }}>
+          Try any time
+        </label>
+        <div className="row wrap">
+          <input id="time" type="time" className="num-input" value={t} onChange={(e) => setPicked(e.target.value || null)} />
+          {picked && picked !== current && (
+            <button type="button" className="btn small quiet" onClick={() => setPicked(null)}>
+              Back to now
+            </button>
+          )}
+        </div>
       </div>
+      <TimeReadings time={t} />
     </section>
   );
 }

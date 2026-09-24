@@ -79,6 +79,53 @@ export function warmupCards(p: ProgressState, lessonId: string, n = 3, now = Dat
   return picked;
 }
 
+/**
+ * How much a card deserves revisiting. Mistakes dominate: every lapse (a review forgotten) and every miss
+ * in a lesson (which raises difficulty) add weight, and fading memory adds a little more. A card never
+ * answered wrongly still has a small chance, so revision isn't only ever about mistakes.
+ */
+export function revisionWeight(card: Card, now = Date.now()): number {
+  const r = card.last ? retrievability((now - card.last) / DAY, card.stability) : 1;
+  return 1 + card.lapses * 4 + Math.max(0, card.difficulty - 5) * 2 + (1 - r) * 3 + (card.due <= now ? 1 : 0);
+}
+
+/**
+ * Cards from earlier lessons to revise part-way through a lesson: a weighted random sample (without
+ * replacement), so each lesson brings something different but skews heavily towards wrong answers.
+ */
+export function revisionCards(
+  p: ProgressState,
+  lessonId: string,
+  n: number,
+  exclude: Iterable<string> = [],
+  now = Date.now(),
+  rand = Math.random,
+): Array<{ id: string; reps: number }> {
+  const skip = new Set(exclude);
+  return [...p.cards.entries()]
+    .filter(([id]) => !skip.has(id) && !id.startsWith(`${lessonId}:`) && lessonOfCard(id))
+    // Efraimidis–Spirakis: key = u^(1/w); the n largest keys are a weighted sample.
+    .map(([id, c]) => ({ id, reps: c.reps, key: Math.pow(rand(), 1 / revisionWeight(c, now)) }))
+    .sort((a, b) => b.key - a.key)
+    .slice(0, n)
+    .map(({ id, reps }) => ({ id, reps }));
+}
+
+/** Spreads `extra` exercises evenly through `main`, never before `from` (the lesson's introduction). */
+export function sprinkle<T>(main: T[], extra: T[], from: number, until = main.length): T[] {
+  if (!extra.length) return main;
+  const out = main.slice(0, from);
+  const body = main.slice(from, until);
+  const gap = body.length / (extra.length + 1);
+  let k = 0;
+  body.forEach((e, i) => {
+    out.push(e);
+    while (k < extra.length && i + 1 >= Math.round(gap * (k + 1))) out.push(extra[k++]);
+  });
+  out.push(...extra.slice(k), ...main.slice(until));
+  return out;
+}
+
 /** The grammar spotlights that explain a skill, so practice starts with the rule. */
 export function skillSpotlights(skillId: string): Spotlight[] {
   const skill = getSkill(skillId);

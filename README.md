@@ -5,7 +5,8 @@
 A free Polish course for British English speakers, from complete beginner to B1. Every lesson you finish cuts a new layer into your own paper rosette. Runs entirely on Cloudflare Workers + D1, within the free plan.
 
 - **60 lessons in 19 units** (A0–B1), starting with an alphabet and phonics unit, then greetings, the seven cases, verb groups, aspect, past, future and conditional
-- **Reinforcement, not one-off teaching**: FSRS spaced review (the algorithm used in Anki) for every word, sentence and grammar drill; each lesson opens with a warm-up from earlier ones; trouble spots by skill, a "tricky words" list and unit revision target what you get wrong most
+- **Reinforcement, not one-off teaching**: FSRS spaced review (the algorithm used in Anki) for every word, sentence and grammar drill; each lesson opens with a warm-up from earlier ones; signed-in learners also get revision questions sprinkled through each lesson, picked at random but weighted heavily towards what they've got wrong; trouble spots by skill, a "tricky words" list and unit revision target what you get wrong most
+- **Lexical chunks**: 36 everyday phrases (*nie ma sprawy*, *czy mogę prosić o…*, *mam ochotę na…*) learnt as whole units, each with its word-for-word meaning to show why translating piece by piece fails. In sentence building, known phrases are a single tile, and multi-word lesson items are flagged as phrases to learn whole
 - **The 500 most frequent words**, learnt in batches of eight
 - **Picture flashcards**: 72 everyday objects in nine themed decks. Meet each picture with its Polish and English name, then name it from four Polish words; learnt pictures come back on the spaced-review schedule. Images are [Twemoji](https://github.com/jdecked/twemoji) (CC BY 4.0), self-hosted in `public/pictures`
 - **Sounds**: an alphabet chart, English-style respellings on every word (*VRO-tswaf*) and a minimal-pair listening game (*wieś / wiesz*)

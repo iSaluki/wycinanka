@@ -1,4 +1,4 @@
-import { IconCulture, IconDiscover, IconGrammar, IconPictures, IconPractise, IconSounds, IconTools, IconWords } from '../components/icons';
+import { IconCulture, IconDiscover, IconPhrases, IconGrammar, IconPictures, IconPractise, IconSounds, IconTools, IconWords } from '../components/icons';
 
 /**
  * The app's sections outside the course, grouped so the phone tab bar stays at four tabs:
@@ -26,9 +26,10 @@ export const PRACTISE: SectionGroup = {
   pl: 'Ćwiczenia',
   en: 'Practise',
   icon: IconPractise,
-  lead: 'Extra practice outside the lessons: words, pictures and sounds.',
+  lead: 'Extra practice outside the lessons: words, phrases, pictures and sounds.',
   sections: [
     { to: '/words', pl: 'Słowa', en: 'Words', icon: IconWords, blurb: 'The 500 most frequent words, learnt in batches of eight.' },
+    { to: '/phrases', pl: 'Zwroty', en: 'Phrases', icon: IconPhrases, blurb: 'Everyday phrases learnt whole, like "nie ma sprawy", the way fluent speakers use them.' },
     { to: '/pictures', pl: 'Obrazki', en: 'Pictures', icon: IconPictures, blurb: 'Everyday things named from a picture, with no English in between.' },
     { to: '/sounds', pl: 'Wymowa', en: 'Sounds', icon: IconSounds, blurb: 'The alphabet, how to say every letter, and a listening game.' },
   ],

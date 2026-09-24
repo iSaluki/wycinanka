@@ -138,8 +138,8 @@ test('the pronouncer explains letters and words', async ({ page }) => {
   await page.getByLabel('Number').fill('5');
   await expect(page.getByText('pięć złotych')).toBeVisible();
   await page.getByRole('tab', { name: /Clock/ }).click();
-  await page.getByLabel('Time').fill('07:30');
-  await expect(page.getByText('Jest wpół do ósmej.')).toBeVisible();
+  await page.getByLabel('Try any time').fill('07:30');
+  await expect(page.locator('.big-out', { hasText: 'Jest wpół do ósmej.' })).toBeVisible();
 });
 
 test('the second lesson opens with a warm-up from the first', async ({ page }) => {
@@ -185,4 +185,77 @@ test('picture flashcards: meet a deck, then name each picture from four Polish w
   await expect(page.getByText(`Added ${deck.pictures.length} pictures to your review deck`)).toBeVisible();
   await expect(page.getByRole('button', { name: `Practise ${deck.pictures.length}` })).toBeVisible();
   await expect(page.locator('.picture-grid li.known')).toHaveCount(deck.pictures.length);
+});
+
+test('leaving a lesson part-way asks first, and closing a review really closes it', async ({ page }) => {
+  await page.goto('/lesson/u01-l1');
+  // Nothing done yet: leave straight away.
+  await page.getByRole('button', { name: 'Leave this lesson' }).click();
+  await expect(page).toHaveURL(/\/learn$/);
+
+  await page.goto('/lesson/u01-l1');
+  await page.getByRole('button', { name: 'Next word' }).click();
+  await page.getByRole('button', { name: 'Leave this lesson' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Leave this lesson?' });
+  await expect(dialog).toContainText('progress in this lesson will be lost');
+  await dialog.getByRole('button', { name: 'Keep going' }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page).toHaveURL(/\/lesson\/u01-l1$/);
+  await page.getByRole('button', { name: 'Leave this lesson' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Leave' }).click();
+  await expect(page).toHaveURL(/\/learn$/);
+
+  // Sessions that run on their own page (review, words, pictures) used to ignore the close button.
+  await page.goto('/words');
+  await page.getByRole('button', { name: /^Learn \d+ new words?/ }).click();
+  await page.getByRole('button', { name: 'Next word' }).click();
+  await page.getByRole('button', { name: 'Leave this session' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Leave' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Słowa' })).toBeVisible();
+});
+
+test('the clock tells you the time now, in Polish', async ({ page }) => {
+  await page.clock.setFixedTime(new Date(2026, 8, 24, 8, 1));
+  await page.goto('/tools/clock');
+  const now = page.getByRole('status', { name: 'The time now' });
+  await expect(now).toContainText('08:01');
+  await expect(now).toContainText('Jest minuta po ósmej.');
+  await page.getByLabel('Try any time').fill('19:30');
+  await expect(page.locator('.big-out', { hasText: 'Jest wpół do ósmej.' })).toBeVisible();
+  await page.getByRole('button', { name: 'Back to now' }).click();
+  await expect(page.getByLabel('Try any time')).toHaveValue('08:01');
+});
+
+test('signed-in learners get revision from earlier lessons mixed into a lesson', async ({ page }) => {
+  await page.goto('/signup');
+  await page.getByLabel('Username').fill(uniqueName());
+  await page.getByLabel('Password', { exact: true }).fill(PASSWORD);
+  await page.getByRole('button', { name: 'Create account' }).click();
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  await page.goto('/lesson/u01-l1');
+  await solveLesson(page, 'u01-l1');
+  await page.goto('/lesson/u01-l2');
+  const seen: string[] = [];
+  await solveLesson(page, 'u01-l2', async (_kind, phase) => {
+    if (phase !== 'before') return;
+    const tag = page.locator('.player-body .tag-revision');
+    if (await tag.isVisible()) seen.push((await tag.textContent())!);
+  });
+  expect(seen.length).toBeGreaterThanOrEqual(2);
+  expect(seen[0]).toBe('powtórka');
+  await expect(page.getByText(/You also revised \d+ things? from earlier lessons/)).toBeVisible();
+});
+
+test('phrases are learnt whole: meet them, complete them, build sentences from them', async ({ page }) => {
+  await page.goto('/phrases');
+  await expect(page.getByRole('heading', { level: 1, name: 'Zwroty' })).toBeVisible();
+  await expect(page.locator('.phrase-chunks')).toContainText('word for word');
+  await page.getByRole('button', { name: /^Learn 6 new phrases/ }).click();
+  await expect(page.locator('.chunk-badge')).toBeVisible();
+  let chunkTiles = 0;
+  await solveLesson(page, 'phrases', async (kind, phase) => {
+    if (phase === 'before' && kind === 'Build this in Polish') chunkTiles += await page.locator('.bank .tile.chunk').count();
+  });
+  expect(chunkTiles).toBeGreaterThan(0);
+  await expect(page.getByText('Added 6 phrases to your review deck')).toBeVisible();
 });

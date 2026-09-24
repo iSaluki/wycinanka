@@ -52,7 +52,7 @@ export function Pictures() {
     await submitReviews([...r.ratings.entries()].map(([cardId, { rating, at }]) => ({ cardId, rating, at })));
   };
 
-  if (session) return <Session exercises={session.exercises} closeTo="/pictures" rateable={session.mode.kind === 'review'} onFinish={finish} />;
+  if (session) return <Session exercises={session.exercises} onClose={() => setSession(null)} rateable={session.mode.kind === 'review'} onFinish={finish} />;
 
   return (
     <Shell>

@@ -6,7 +6,7 @@ import { Session, type SessionResult } from '../components/Session';
 import { Shell } from '../components/Shell';
 import { practiceExercises, type Exercise } from '../lib/exercises';
 import { skillSpotlights, trickyCards, unitCardIds, weakest } from '../lib/reinforce';
-import { Link, useTitle } from '../lib/router';
+import { Link, navigate, useTitle } from '../lib/router';
 import { getState, submitReviews } from '../lib/store';
 import { NotFound } from './NotFound';
 
@@ -53,7 +53,7 @@ export function Practice({ kind, id }: { kind: string; id: string }) {
   };
 
   if (!summary && plan.exercises.some((e) => 'cardId' in e)) {
-    return <Session key={run} exercises={plan.exercises} closeTo="/" rateable onFinish={finish} />;
+    return <Session key={run} exercises={plan.exercises} what="practice session" onClose={() => navigate('/')} rateable onFinish={finish} />;
   }
 
   return (

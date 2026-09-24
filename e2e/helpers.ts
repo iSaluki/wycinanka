@@ -1,6 +1,7 @@
 import { expect, type Page } from '@playwright/test';
 import { LESSONS } from '../src/content/course';
-import { tokenise } from '../src/app/lib/exercises';
+import { mergeChunks, tokenise } from '../src/app/lib/exercises';
+import { chunkCore, CHUNKS } from '../src/content/chunks';
 import { respell } from '../src/shared/phonetics';
 
 // A course-wide answer key: warm-ups can ask about any earlier lesson.
@@ -14,6 +15,9 @@ const sentences = LESSONS.flatMap((l) => l.sentences);
 const sentByEn = new Map(sentences.map((s) => [s.en, s]));
 const sentByPl = new Map(sentences.map((s) => [s.pl, s]));
 const drills = LESSONS.flatMap((l) => l.drills);
+const chunkByPl = new Map(CHUNKS.map((c) => [c.pl, c]));
+const chunkByEn = new Map(CHUNKS.map((c) => [c.en, c]));
+const chunkByExample = new Map(CHUNKS.flatMap((c) => (c.ex ? [[c.ex[1], c] as const] : [])));
 
 /** Answer every exercise in a lesson or session correctly, using the course content as the answer key. */
 export async function solveLesson(page: Page, _lessonId: string, onStep?: (kind: string, phase: 'before' | 'after') => Promise<void>) {
@@ -32,11 +36,13 @@ export async function solveLesson(page: Page, _lessonId: string, onStep?: (kind:
 
   for (let step = 0; step < 120; step++) {
     if (await page.locator('.finish h1').isVisible()) return;
+    // Sessions outside lessons (words, pictures, phrases) end by returning to their page.
+    if (step > 0 && !(await page.locator('.player').count())) return;
     if (await page.locator('.sheet').isVisible()) {
       await page.getByRole('button', { name: 'Continue' }).click();
       continue;
     }
-    for (const name of ['Next word', 'Start practising', 'Got it', 'Finish']) {
+    for (const name of ['Next word', 'Next phrase', 'Start practising', 'Got it', 'Finish']) {
       const b = page.getByRole('button', { name, exact: true });
       if (await b.isVisible()) {
         await b.click();
@@ -45,7 +51,7 @@ export async function solveLesson(page: Page, _lessonId: string, onStep?: (kind:
     }
     const instruction = page.locator('.player-body .instruction').first();
     if (!(await instruction.isVisible())) continue;
-    const kind = (await instruction.textContent())!.replace(/^rozgrzewka/, '').trim();
+    const kind = (await instruction.textContent())!.replace(/^(rozgrzewka|powtórka)/, '').trim();
     await onStep?.(kind, 'before');
 
     if (kind === 'How does it sound?') {
@@ -58,16 +64,22 @@ export async function solveLesson(page: Page, _lessonId: string, onStep?: (kind:
       await clickOption(await spokenPrompt());
     } else if (kind === 'What does this mean?' || kind === 'Listen. What does it mean?') {
       await clickOption(byPl.get(await spokenPrompt())!.en);
+    } else if (kind === 'What does this phrase mean?') {
+      await clickOption(chunkByPl.get(await text('.prompt-pl'))!.en);
     } else if (kind === 'Choose the Polish') {
       await clickOption(byEn.get(await text('.prompt-en'))!.pl);
     } else if (kind === 'Write this in Polish') {
-      await page.getByLabel('Your answer in Polish').fill(byEn.get(await text('.prompt-en'))!.pl);
+      const en = await text('.prompt-en');
+      await page.getByLabel('Your answer in Polish').fill(byEn.get(en)?.pl ?? chunkCore(chunkByEn.get(en)!));
     } else if (kind === 'Write this in English') {
       await page.getByLabel('Your answer in English').fill(sentByPl.get(await text('.prompt-pl'))!.en);
     } else if (kind === 'Build this in Polish' || kind === 'Build what you hear') {
-      const prompt = kind === 'Build what you hear' ? sentByPl.get(await spokenPrompt()) : sentByEn.get(await text('.prompt-en'));
-      const s = prompt!;
-      for (const t of tokenise(s.pl)) await page.locator('.bank .tile:not(.used)', { hasText: new RegExp(`^${t}$`) }).first().click();
+      const en = kind === 'Build what you hear' ? '' : await text('.prompt-en');
+      const chunk = chunkByExample.get(en);
+      const tiles = chunk
+        ? mergeChunks(tokenise(chunk.ex![0]), [{ core: tokenise(chunkCore(chunk)).map((w) => w.toLocaleLowerCase('pl')) }])
+        : mergeChunks(tokenise((kind === 'Build what you hear' ? sentByPl.get(await spokenPrompt()) : sentByEn.get(en))!.pl));
+      for (const t of tiles) await page.locator('.bank .tile:not(.used)', { hasText: new RegExp(`^${t}$`) }).first().click();
     } else if (kind === 'Match the pairs') {
       const pairs = await page.locator('.match .col').first().locator('button').allTextContents();
       const shown = new Set(await page.locator('.match .col').nth(1).locator('button').allTextContents());
@@ -83,8 +95,14 @@ export async function solveLesson(page: Page, _lessonId: string, onStep?: (kind:
       const en = await text('.player-body p.muted');
       const gapText = (await text('.gap-text')).replace(/\s+/g, ' ');
       const d = drills.find((x) => x.en === en && x.text.replace('___', '').replace(/\s+/g, ' ').trim() === gapText.replace(/ /g, '').trim()) ??
-        drills.find((x) => x.en === en)!;
-      await clickOption(d.answer);
+        drills.find((x) => x.en === en);
+      if (d) await clickOption(d.answer);
+      else {
+        // A phrase with one word missing: the answer is the phrase's word the gapped text lacks.
+        const missing = tokenise(chunkCore(chunkByEn.get(en)!));
+        for (const w of tokenise(gapText)) if (missing.includes(w)) missing.splice(missing.indexOf(w), 1);
+        await clickOption(missing[0]);
+      }
     } else {
       continue;
     }

@@ -6,7 +6,7 @@ import { Shell } from '../components/Shell';
 import { ApiError } from '../lib/api';
 import { Link, navigate, useTitle } from '../lib/router';
 import { login, register, useApp } from '../lib/store';
-import { markWelcomed } from './Welcome';
+import { markWelcomed } from '../lib/welcome';
 
 export function PasswordInput({
   id,

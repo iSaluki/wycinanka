@@ -50,4 +50,20 @@ describe('clock', () => {
     expect(timeToWords(21, 5).formal).toBe('Jest dwudziesta pierwsza zero pięć.');
     expect(timeToWords(11, 30).everyday).toBe('Jest wpół do dwunastej.');
   });
+
+  it('makes minutes agree with the feminine "minuta"', () => {
+    expect(timeToWords(8, 1).everyday).toBe('Jest minuta po ósmej.');
+    expect(timeToWords(8, 2).everyday).toBe('Jest dwie po ósmej.');
+    expect(timeToWords(8, 22).everyday).toBe('Jest dwadzieścia dwie po ósmej.');
+    expect(timeToWords(8, 58).everyday).toBe('Jest za dwie dziewiąta.');
+    expect(timeToWords(8, 59).everyday).toBe('Jest za minutę dziewiąta.');
+    expect(timeToWords(8, 12).everyday).toBe('Jest dwanaście po ósmej.');
+    expect(timeToWords(8, 1).formal).toBe('Jest ósma zero jeden.');
+    expect(timeToWords(8, 32).formal).toBe('Jest ósma trzydzieści dwie.');
+  });
+
+  it('says midnight', () => {
+    expect(timeToWords(0, 0)).toEqual({ formal: 'Jest północ.', everyday: 'Jest północ.', at: 'o północy' });
+    expect(timeToWords(0, 15).formal).toBe('Jest zero piętnaście.');
+  });
 });

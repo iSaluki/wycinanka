@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import type { DialogueLine, Item, Spotlight } from '../../content/types';
 import { POLISH_LETTERS } from '../../shared/grade';
-import { shuffle, type Exercise } from '../lib/exercises';
+import { shuffle, type Exercise, type ExtraTag } from '../lib/exercises';
 import { speak } from '../lib/speech';
 import { respell } from '../../shared/phonetics';
+import { chunkFor } from '../../content/chunks';
 import { GENDER_LABEL, Rich, Speak, usePolishVoice } from './common';
 
 type Of<K extends Exercise['kind']> = Extract<Exercise, { kind: K }>;
@@ -89,12 +90,17 @@ export function Choose({ ex, locked, onAnswer, checked }: AnswerProps<Of<'choose
   );
 }
 
-function Instruction({ tag, children }: { tag?: 'warmup'; children: ReactNode }) {
+const TAGS: Record<ExtraTag, { pl: string; title: string }> = {
+  warmup: { pl: 'rozgrzewka', title: 'Warm-up: a quick one from an earlier lesson' },
+  revision: { pl: 'powtórka', title: "Revision: picked for you from earlier lessons, most often from what you've got wrong" },
+};
+
+function Instruction({ tag, children }: { tag?: ExtraTag; children: ReactNode }) {
   return (
     <div className="instruction">
-      {tag === 'warmup' && (
-        <span className="tag-warmup" lang="pl" title="Warm-up: a quick one from an earlier lesson">
-          rozgrzewka
+      {tag && (
+        <span className={`tag-warmup ${tag === 'revision' ? 'tag-revision' : ''}`} lang="pl" title={TAGS[tag].title}>
+          {TAGS[tag].pl}
         </span>
       )}
       {children}
@@ -194,7 +200,7 @@ export function Build({ ex, locked, onAnswer }: AnswerProps<Of<'build'>>) {
           <button
             key={`${i}-${pos}`}
             type="button"
-            className="tile placed"
+            className={`tile placed ${ex.tiles[i].includes(' ') ? 'chunk' : ''}`}
             lang="pl"
             disabled={locked}
             onClick={() => update(chosen.filter((_, p) => p !== pos))}
@@ -209,7 +215,7 @@ export function Build({ ex, locked, onAnswer }: AnswerProps<Of<'build'>>) {
           <button
             key={i}
             type="button"
-            className={`tile ${chosen.includes(i) ? 'used' : ''}`}
+            className={`tile ${chosen.includes(i) ? 'used' : ''} ${t.includes(' ') ? 'chunk' : ''}`}
             lang="pl"
             disabled={locked || chosen.includes(i)}
             aria-hidden={chosen.includes(i)}
@@ -341,6 +347,9 @@ export function Meet({ items, onDone }: { items: Item[]; onDone: () => void }) {
   const [i, setI] = useState(0);
   const item = items[i];
   const last = i === items.length - 1;
+  // Multi-word items are lexical chunks; show the literal meaning when we know it.
+  const isPhrase = !item.ex && !item.img && (item.chunk || /\s/.test(item.pl.trim()));
+  const literal = isPhrase ? chunkFor(item.pl)?.lit : undefined;
   const onKey = (e: KeyboardEvent) => {
     if (e.key === 'ArrowRight' && !last) setI(i + 1);
     if (e.key === 'ArrowLeft' && i > 0) setI(i - 1);
@@ -352,7 +361,7 @@ export function Meet({ items, onDone }: { items: Item[]; onDone: () => void }) {
           <span lang="pl" className="pl" style={{ fontStyle: 'italic', color: 'var(--czerwien)' }}>
             nowe
           </span>{' '}
-          {items[0]?.ex ? 'New sounds' : items[0]?.img ? 'New pictures' : 'New words'} · {i + 1} of {items.length}
+          {items[0]?.ex ? 'New sounds' : items[0]?.img ? 'New pictures' : items[0]?.chunk ? 'New phrases' : 'New words'} · {i + 1} of {items.length}
         </div>
         <div className="dots" aria-hidden="true">
           {items.map((_, k) => (
@@ -363,6 +372,11 @@ export function Meet({ items, onDone }: { items: Item[]; onDone: () => void }) {
       <article className={`meet-card ${item.img ? 'with-picture' : ''}`} key={item.id}>
         {item.img && <img className="meet-picture" src={item.img} alt="" width={200} height={200} draggable={false} />}
         {item.g && <span className="gender">{GENDER_LABEL[item.g]}</span>}
+        {isPhrase && (
+          <span className="chunk-badge" title="A set phrase: learn it as one piece, the way Polish speakers use it">
+            <span lang="pl">zwrot</span> · learn it as one phrase
+          </span>
+        )}
         <span className="word" lang="pl">
           {item.pl}
         </span>
@@ -393,10 +407,12 @@ export function Meet({ items, onDone }: { items: Item[]; onDone: () => void }) {
             <div className="en">{item.en}</div>
           </>
         )}
-        {item.hint && (
+        {item.hint ? (
           <p className="hint">
             <Rich text={item.hint} />
           </p>
+        ) : (
+          literal && <p className="hint">Word for word: "{literal}"</p>
         )}
       </article>
       <div className="row between">
@@ -404,7 +420,7 @@ export function Meet({ items, onDone }: { items: Item[]; onDone: () => void }) {
           Back
         </button>
         <button type="button" className="btn" onClick={() => (last ? onDone() : setI(i + 1))}>
-          {last ? 'Start practising' : 'Next word'}
+          {last ? 'Start practising' : items[0]?.chunk ? 'Next phrase' : 'Next word'}
         </button>
       </div>
     </div>

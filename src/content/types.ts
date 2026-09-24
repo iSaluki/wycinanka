@@ -16,6 +16,8 @@ export interface Item {
   ex?: string[];
   /** Picture of the thing (picture flashcards). */
   img?: string;
+  /** A lexical chunk: a phrase to learn whole rather than word by word. */
+  chunk?: boolean;
 }
 
 /** A full sentence: used for building, translating and listening. */

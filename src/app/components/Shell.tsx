@@ -5,6 +5,7 @@ import { dismissSyncError, useApp } from '../lib/store';
 import { GoalRing, Label } from './common';
 import { IconLearn, IconProfile, IconReview } from './icons';
 import { DISCOVER, inGroup, PRACTISE } from '../lib/sections';
+import { markWelcomed } from '../lib/welcome';
 import { Rosette } from './Rosette';
 
 /** Navigation is labelled in Polish first: learners read these words every visit. */
@@ -48,7 +49,8 @@ function NavLinks({ rail }: { rail: boolean }) {
       {items.map(({ to, pl, en, icon: Icon, match }) => {
         const active = match ? match(path) : path === to || path.startsWith(`${to}/`);
         return (
-          <Link key={to} to={to} className="tab" aria-current={active ? 'page' : undefined}>
+          // Leaving the welcome screen through the navigation counts as having seen it.
+          <Link key={to} to={to} className="tab" aria-current={active ? 'page' : undefined} onClick={markWelcomed}>
             <Icon />
             <span className="pl" lang="pl">
               {pl}
@@ -89,7 +91,7 @@ export function Aside() {
   );
 }
 
-export function Shell({ children, aside = true }: { children: ReactNode; aside?: boolean }) {
+export function Shell({ children, aside = true, wide = false }: { children: ReactNode; aside?: boolean; wide?: boolean }) {
   const syncError = useApp((s) => s.syncError);
   const user = useApp((s) => s.user);
   const { streak } = useStats();
@@ -124,7 +126,7 @@ export function Shell({ children, aside = true }: { children: ReactNode; aside?:
             </Link>
           </div>
         </header>
-        <main className="main" id="main">
+        <main className={`main ${wide ? 'wide' : ''}`} id="main">
           {syncError && (
             <div className="banner error" role="alert" style={{ marginBottom: 20 }}>
               <p>{syncError}</p>
