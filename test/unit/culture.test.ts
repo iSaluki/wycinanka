@@ -36,4 +36,20 @@ describe('culture notes', () => {
       }
     }
   });
+
+  it('have a few videos, each a real YouTube id with a title, channel and caption', () => {
+    const videos = CULTURE.flatMap((c) => (c.video ? [c.video] : []));
+    // A few, well chosen: not one on every note.
+    expect(videos.length).toBeGreaterThanOrEqual(3);
+    expect(videos.length).toBeLessThanOrEqual(CULTURE.length / 2);
+    expect(new Set(videos.map((v) => v.youtube)).size).toBe(videos.length);
+    for (const v of videos) {
+      expect(v.youtube).toMatch(/^[\w-]{11}$/);
+      expect(v.title.length, v.youtube).toBeGreaterThan(0);
+      expect(v.channel.length, v.youtube).toBeGreaterThan(0);
+      expect((v.caption.match(/\{/g) ?? []).length, v.caption).toBe((v.caption.match(/\}/g) ?? []).length);
+    }
+    // Sto lat, as sung by real people, goes with name days.
+    expect(CULTURE.find((c) => c.id === 'imieniny')?.video).toBeTruthy();
+  });
 });

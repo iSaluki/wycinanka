@@ -128,6 +128,28 @@ test('pages are served with a strict Content Security Policy', async ({ request 
   expect(res.headers()['x-frame-options']).toBe('DENY');
 });
 
+test('culture videos load nothing from YouTube until played, then play from youtube-nocookie.com', async ({ page, request }) => {
+  const csp = (await request.get('/culture/imieniny')).headers()['content-security-policy'];
+  expect(csp).toContain('frame-src https://www.youtube-nocookie.com');
+  const outside: string[] = [];
+  page.on('request', (r) => {
+    if (!r.url().startsWith('http://localhost')) outside.push(r.url());
+  });
+  // Keep the test offline: the player itself is YouTube's business.
+  await page.route(/youtube/, (route) => route.fulfill({ status: 200, contentType: 'text/html', body: '<title>player</title>' }));
+  await page.goto('/culture/imieniny');
+  const video = page.locator('.culture-video');
+  await expect(video).toContainText('Sto lat');
+  await expect(video.locator('iframe')).toHaveCount(0);
+  expect(outside).toEqual([]);
+
+  await video.getByRole('button', { name: /Play video/ }).click();
+  const frame = video.locator('iframe');
+  await expect(frame).toHaveAttribute('src', /^https:\/\/www\.youtube-nocookie\.com\/embed\/[\w-]{11}\?/);
+  await expect(frame).toHaveAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
+  await expect(video.getByRole('link', { name: 'Watch on YouTube' })).toHaveAttribute('href', /youtube\.com\/watch\?v=/);
+});
+
 test('the pronouncer explains letters and words', async ({ page }) => {
   await page.goto('/tools');
   const input = page.getByLabel('Polish text');

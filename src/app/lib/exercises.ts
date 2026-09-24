@@ -40,7 +40,17 @@ export type Exercise =
       say?: string;
       tag?: ExtraTag;
     }
-  | { kind: 'type'; cardId: string; prompt: string; accepted: string[]; lang: 'pl' | 'en'; hint?: string; tag?: ExtraTag }
+  | {
+      kind: 'type';
+      cardId: string;
+      prompt: string;
+      accepted: string[];
+      lang: 'pl' | 'en';
+      hint?: string;
+      tag?: ExtraTag;
+      /** Other course words that also mean the prompt ("hello": cześć as well as dzień dobry). Accepted, and named as such. */
+      also?: string[];
+    }
   | {
       kind: 'build';
       cardId: string;
@@ -140,18 +150,44 @@ function nearbyLessons(lesson: Lesson): Lesson[] {
 const accEn = (x: { en: string; altEn?: string[] }) => [x.en, ...(x.altEn ?? [])];
 const accPl = (x: { pl: string; altPl?: string[] }) => [x.pl, ...(x.altPl ?? [])];
 
+let meaningIndex: Map<string, Item[]> | undefined;
+
+/**
+ * The Polish of other course words that can mean this English. Many English prompts have more than one right
+ * answer ("hello": dzień dobry or cześć; "I read": czytam or czytałam), and a right answer must never be marked
+ * wrong just because the lesson had a different word in mind.
+ */
+export function sameMeaning(en: string, pl: string): string[] {
+  if (!meaningIndex) {
+    meaningIndex = new Map();
+    for (const l of LESSONS)
+      if (!l.phonics)
+        for (const i of l.items)
+          for (const e of new Set(accEn(i).map(normalise))) meaningIndex.set(e, [...(meaningIndex.get(e) ?? []), i]);
+  }
+  const own = normalise(pl);
+  const out = (meaningIndex.get(normalise(en)) ?? []).filter((i) => normalise(i.pl) !== own).flatMap(accPl);
+  return [...new Set(out)];
+}
+
+const sameText = (a: string) => (b: string) => normalise(a) === normalise(b);
+
 function chooseMeaning(item: Item, pool: string[], audio = false): Exercise {
-  const opts = shuffle([item.en, ...distractors(item.en, pool, 3)]);
+  // Never offer another right meaning as a wrong option.
+  const right = accEn(item);
+  const opts = shuffle([item.en, ...distractors(item.en, pool.filter((e) => !right.some(sameText(e))), 3)]);
   return { kind: 'choose', cardId: item.id, prompt: item.pl, promptLang: 'pl', options: opts, answer: item.en, audio, hint: item.hint };
 }
 
 function choosePolish(item: Item, pool: string[]): Exercise {
-  const opts = shuffle([item.pl, ...distractors(item.pl, pool, 3)]);
+  const right = sameMeaning(item.en, item.pl);
+  const opts = shuffle([item.pl, ...distractors(item.pl, pool.filter((p) => !right.some(sameText(p))), 3)]);
   return { kind: 'choose', cardId: item.id, prompt: item.en, promptLang: 'en', options: opts, answer: item.pl };
 }
 
 function typePolish(item: Item): Exercise {
-  return { kind: 'type', cardId: item.id, prompt: item.en, accepted: accPl(item), lang: 'pl', hint: item.hint };
+  const also = sameMeaning(item.en, item.pl).filter((p) => !accPl(item).some(sameText(p)));
+  return { kind: 'type', cardId: item.id, prompt: item.en, accepted: [...accPl(item), ...also], lang: 'pl', hint: item.hint, ...(also.length ? { also } : {}) };
 }
 
 /**
@@ -350,7 +386,10 @@ export function pictureChoice(p: Picture, pool: string[]): Exercise {
 
 let wordPoolCache: string[] | undefined;
 function wordExercise(w: FrequencyWord, reps: number, cardId: string): Exercise {
-  if (reps >= 2) return { kind: 'type', cardId, prompt: w.en, accepted: [w.pl], lang: 'pl', hint: w.pos };
+  if (reps >= 2) {
+    const also = sameMeaning(w.en, w.pl);
+    return { kind: 'type', cardId, prompt: w.en, accepted: [w.pl, ...also], lang: 'pl', hint: w.pos, ...(also.length ? { also } : {}) };
+  }
   wordPoolCache ??= LESSONS.flatMap((l) => l.items.map((i) => i.en));
   const opts = shuffle([w.en, ...distractors(w.en, wordPoolCache, 3)]);
   return { kind: 'choose', cardId, prompt: w.pl, promptLang: 'pl', options: opts, answer: w.en, audio: false };

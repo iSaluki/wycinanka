@@ -6,6 +6,7 @@ A free Polish course for British English speakers, from complete beginner to B1.
 
 - **60 lessons in 19 units** (A0–B1), starting with an alphabet and phonics unit, then greetings, the seven cases, verb groups, aspect, past, future and conditional
 - **Small steps**: lessons introduce new words three at a time and practise each group straight away before the next, with matching rounds that mix new words with ones met earlier; the grammar spotlight follows once its words are familiar
+- **More than one right answer**: typing any course word that means the English prompt is accepted (*cześć* as well as *dzień dobry* for "hello"), with a note naming the word the card was teaching and how they differ; multiple-choice questions never offer a second right answer as a wrong option
 - **Help when stuck, honest about accents**: a hint button rules out wrong options or reveals the start of the answer, step by step; an answer typed without its Polish letters (*dziekuje* for *dziękuję*) isn't accepted until they're added. Answers that needed either come back sooner in review, and the finish screen lists them to look over
 - **Reinforcement, not one-off teaching**: FSRS spaced review (the algorithm used in Anki) for every word, sentence and grammar drill; each lesson opens with a warm-up from earlier ones; signed-in learners also get revision questions sprinkled through each lesson, picked at random but weighted heavily towards what they've got wrong; trouble spots by skill, a "tricky words" list and unit revision target what you get wrong most
 - **Lexical chunks**: 36 everyday phrases (*nie ma sprawy*, *czy mogę prosić o…*, *mam ochotę na…*) learnt as whole units, each with its word-for-word meaning to show why translating piece by piece fails. In sentence building, known phrases are a single tile, and multi-word lesson items are flagged as phrases to learn whole
@@ -13,7 +14,7 @@ A free Polish course for British English speakers, from complete beginner to B1.
 - **Picture flashcards**: 72 everyday objects in nine themed decks. Meet each picture with its Polish and English name, then name it from four Polish words; learnt pictures come back on the spaced-review schedule. Images are [Twemoji](https://github.com/jdecked/twemoji) (CC BY 4.0), self-hosted in `public/pictures`
 - **Sounds**: an alphabet chart, English-style respellings on every word (*VRO-tswaf*) and a minimal-pair listening game (*wieś / wiesz*)
 - **Tools** outside the course: a pronouncer (type *cz* or any word and see how to say it and why), Polish numbers and prices, telling the time, and a phrasebook
-- **Culture notes**: short English articles on Polish traditions (Wigilia, Easter, name days, All Saints', Fat Thursday, paper cutting and more), each with Polish words to hear and take away
+- **Culture notes**: short English articles on Polish traditions (Wigilia, Easter, name days, All Saints', Fat Thursday, paper cutting and more), each with Polish words to hear and take away. Five carry one hand-picked video from the performer's or institution's own channel (fans and players singing *Sto lat*, a stadium singing the anthem, Chopin from the Chopin Institute, a Łowicz paper-cutter, Wigilia's twelve dishes). Nothing loads from YouTube until the learner presses play, and then only from youtube-nocookie.com, the one third-party origin the CSP allows (as a frame)
 - **Installable app (PWA)**: mobile learners are invited to add Wycinanka to their home screen (the browser's own install prompt on Android, Share → Add to Home Screen instructions on iPhone)
 - **Daily reminders**: signed-in learners can switch on a push notification at a time they choose, sent only on days they haven't practised yet
 - **Grammar reference**: the seven cases, a declension explorer and every lesson's grammar notes
@@ -107,7 +108,7 @@ Designed against the OWASP Top 10 and ASVS level 1, with selected level 2 contro
 - CSRF: same-origin `Origin` check and JSON-only bodies on every state-changing request
 - Throttling and lockout on sign-in, registration and password-confirmed actions
 - Strict validation (unknown fields rejected), prepared statements only, body size limits
-- Strict CSP with no inline scripts or third-party origins, plus HSTS, `X-Frame-Options`, `nosniff` and more
+- Strict CSP with no inline scripts or third-party origins (the one exception: culture videos may be framed from youtube-nocookie.com, and only load when played), plus HSTS, `X-Frame-Options`, `nosniff` and more
 - Privacy: username only, no email or tracking; users can export or delete all their data
 
 ## Content

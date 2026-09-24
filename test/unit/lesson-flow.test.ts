@@ -88,3 +88,32 @@ describe('hints', () => {
     expect(hintLimit({ kind: 'build', cardId: 'x', prompt: '', tiles: [], accepted: ['To jest kot.'], lang: 'pl' })).toBe(2);
   });
 });
+
+describe('more than one right answer', () => {
+  it('accepts every course word that means the prompt, and never offers one as a wrong option', async () => {
+    const { sameMeaning, reviewExercise } = await import('../../src/app/lib/exercises');
+    const { getCard } = await import('../../src/content/course');
+    const { grade } = await import('../../src/shared/grade');
+    expect(sameMeaning('hello', 'dzień dobry')).toContain('cześć');
+    const hello = LESSONS.flatMap((l) => l.items).find((i) => i.pl === 'dzień dobry')!;
+    const typed = reviewExercise(getCard(hello.id)!, 2, hello.id);
+    expect(typed.kind).toBe('type');
+    if (typed.kind !== 'type') return;
+    expect(typed.accepted[0]).toBe('dzień dobry');
+    expect(typed.also).toContain('cześć');
+    expect(grade('cześć', typed.accepted, 'pl').verdict).toBe('correct');
+    // A grammatical form with a different meaning is not a synonym: "mum" is mama, not mamie ("to Mum").
+    expect(sameMeaning('mum', 'mama')).not.toContain('mamie');
+
+    for (const l of LESSONS.filter((x) => !x.phonics))
+      for (let run = 0; run < 3; run++)
+        for (const e of lessonPlan(l).exercises) {
+          if (e.kind !== 'choose') continue;
+          const wrong = e.options.filter((o) => o !== e.answer);
+          if (e.promptLang === 'en') {
+            const right = new Set([e.answer, ...sameMeaning(e.prompt, e.answer)]);
+            for (const o of wrong) expect(right.has(o), `${l.id}: "${e.prompt}" offers ${o} as wrong`).toBe(false);
+          }
+        }
+  });
+});
