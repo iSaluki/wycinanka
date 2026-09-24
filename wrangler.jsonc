@@ -24,6 +24,10 @@
       "migrations_dir": "migrations"
     }
   ],
+  // Workers AI: transcribes spoken answers (Whisper) for browsers without their own speech recognition
+  // (src/worker/routes/speech.ts). Runs within the free plan's daily allowance; beyond it, speaking
+  // practice falls back to listening back and marking yourself.
+  "ai": { "binding": "AI" },
   // Worker Previews (pull request builds) need this block and do not inherit anything else here.
   // It is left empty on purpose: Previews get no database, so they can never touch production data,
   // and the app runs in guest mode there (the API reports accounts as unavailable).

@@ -18,8 +18,9 @@ export default defineConfig({
   ],
   webServer: {
     // Fresh, empty local D1 for every run: the Worker migrates it itself, as it does in production.
-    // `wrangler dev` runs the build first (see build.command in wrangler.jsonc).
-    command: `rm -rf .wrangler/e2e && npx wrangler dev --port ${PORT} --ip 127.0.0.1 --persist-to .wrangler/e2e`,
+    // `wrangler dev` runs the build first (see build.command in wrangler.jsonc). `--local` leaves out Workers AI,
+    // which needs a Cloudflare account: speech checking then falls back as it would without it.
+    command: `rm -rf .wrangler/e2e && npx wrangler dev --local --port ${PORT} --ip 127.0.0.1 --persist-to .wrangler/e2e`,
     url: `http://localhost:${PORT}`,
     timeout: 180_000,
     reuseExistingServer: false,

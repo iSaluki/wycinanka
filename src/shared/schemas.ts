@@ -36,6 +36,8 @@ export const settingsSchema = z
     speaker: z.enum(['m', 'f']).optional(),
     /** Read Polish with the device's own voice instead of the recorded one. */
     deviceVoice: z.boolean().optional(),
+    /** Speaking exercises in lessons. On unless switched off. */
+    speaking: z.boolean().optional(),
     /** Daily practice reminder by push notification, at `reminderHour` o'clock in `timeZone`. */
     reminders: z.boolean().optional(),
     reminderHour: z.number().int().min(0).max(23).optional(),
@@ -85,6 +87,20 @@ export const pushSubscriptionSchema = z
   .strict();
 
 export const pushEndpointSchema = z.object({ endpoint: z.string().url().max(1024) }).strict();
+
+/**
+ * A spoken answer to transcribe: a WAV recording (16 kHz, 16-bit mono, at most about 10 seconds), base64-encoded
+ * so the request stays JSON like every other state-changing request.
+ */
+export const TRANSCRIBE_MAX_CHARS = 440_000;
+export const transcribeSchema = z
+  .object({
+    audio: z
+      .string()
+      .max(TRANSCRIBE_MAX_CHARS)
+      .regex(/^UklGR[A-Za-z0-9+/]+={0,2}$/, 'Expected a WAV recording'),
+  })
+  .strict();
 
 /** A guest's session, replayed server-side once when they create an account. */
 export const importSchema = z

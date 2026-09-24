@@ -174,3 +174,11 @@ export const IconPhrases = (p: P) => (
     <path d="M8 9.5h8" />
   </svg>
 );
+
+/** A microphone: speaking practice. */
+export const IconMic = (p: P) => (
+  <svg {...base} {...p}>
+    <rect x="9" y="3" width="6" height="11" rx="3" />
+    <path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7" />
+  </svg>
+);

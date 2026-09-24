@@ -102,9 +102,32 @@ the first unit of that band. Nothing is ever locked: every unit can be opened fr
    - *Build the sentence* (word tiles, including distractor tiles)
    - *Match pairs* (5 pairs, tap to connect)
    - *Fill the gap* (choose the correct ending/form — used for cases and conjugation)
+   - *Speak* (see 2.3): say two new words after the voice, a sentence already built, and one word from its
+     English; phonics lessons read example words aloud before hearing them
 4. **Dialogue** — a short real-world exchange to read and listen to.
 5. **Finish** — accuracy, XP, the new petal is cut into the learner's wycinanka, and the lesson's items
    enter the review deck.
+
+### 2.3 Speaking
+
+Speaking is checked by speech recognition, in whichever way the device allows (`src/app/lib/listen.ts`):
+
+1. **The browser's recogniser** (Web Speech API, `pl-PL`; Chrome, Edge, Safari), with up to five guesses per attempt.
+2. **Whisper on Workers AI** where there is none (Firefox, most in-app browsers): the page records a clip,
+   stops after a short silence, re-encodes it as 16 kHz mono WAV and posts it to `/api/speech/transcribe`, which
+   runs `@cf/openai/whisper-large-v3-turbo` in Polish. Nothing is stored. Open to guests; throttled per IP.
+3. **Listening back** when neither works (no allowance left, a preview, offline): the learner hears their clip
+   next to the recorded voice and marks it themselves.
+
+A method that fails for good (no service, unsupported language, 503) is skipped for the rest of the visit.
+Scoring (`src/shared/speaking.ts`) lines up expected and heard words in order, forgives a lost accent or one
+letter in longer words as a near miss, ignores extra words and reads digits as numbers; three quarters of the
+words must be heard (a single word must be that word). Recognisers turn an accent into the nearest real word,
+so speaking **never counts** towards a lesson's score or the review schedule: a mishearing can't hold anyone back.
+*Can't speak now* leaves speaking out for 15 minutes; a setting turns it off in lessons.
+
+The **Speaking** section (`/speaking`) practises on its own: repeat after me, say it in Polish, everyday phrases,
+reading tricky sounds aloud, tongue twisters, and role-playing lesson dialogues line by line.
 
 Mistakes come back once, three questions later (retrieval until correct, while it's still fresh), not punished.
 
@@ -326,8 +349,8 @@ top status bar, single column, bottom tab bar. Lessons are full-screen focus mod
 
 ## 9. Later
 
-Passkeys (WebAuthn) as a passwordless option; Turnstile on sign-up if bots appear; speech-recognition
-pronunciation scoring (Chrome only today); B1/B2 units; reading texts with tap-to-translate; offline PWA.
+Passkeys (WebAuthn) as a passwordless option; Turnstile on sign-up if bots appear; phoneme-level pronunciation
+scoring (speaking is checked word by word today); B1/B2 units; reading texts with tap-to-translate; offline PWA.
 
 ---
 
@@ -363,3 +386,10 @@ Deviations from the plan:
   headings, Poltawski Nowy and Signika (both by Polish type designers).
 - **Deployment**: the Worker migrates D1 itself and the pepper is optional (hashes record whether they were
   peppered), so connecting the repository in the Cloudflare dashboard deploys with no manual steps. See the README.
+
+### 10.2 Speaking
+
+- Speaking exercises in every lesson and a Speaking section with five kinds of round and dialogue role-play (2.3).
+- Recognition by the browser, then Whisper on Workers AI (the `AI` binding in `wrangler.jsonc`), then listening back.
+- Local development and the end-to-end tests run `wrangler dev --local`, without Workers AI (it needs a Cloudflare
+  account); speaking then falls back to listening back, as it does in Worker Previews.

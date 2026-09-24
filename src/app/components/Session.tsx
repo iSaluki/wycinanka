@@ -2,9 +2,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Rating } from '../../shared/fsrs';
 import { grade, type GradeResult } from '../../shared/grade';
 import { hintLimit, isGraded, type Exercise, type ExtraTag, type GradedExercise } from '../lib/exercises';
+import { pauseSpeaking } from '../lib/listen';
 import { speak } from '../lib/speech';
 import { Build, Choose, Dialogue, Gap, Match, Meet, SpotlightView, TypeAnswer } from './Exercises';
 import { IconClose } from './icons';
+import { SayIt, type SpokenResult } from './Speaking';
 import { Label } from './common';
 
 /**
@@ -23,6 +25,8 @@ export interface SessionResult {
   ratings: Map<string, { rating: Rating; at: number }>;
   /** Every first attempt, so callers can separate warm-ups from the lesson itself. */
   attempts: Array<{ cardId: string; pass: boolean; tag?: ExtraTag; helped?: boolean }>;
+  /** Speaking: things said aloud, and how many of them were heard right (or marked right). Never scored. */
+  spoken: { tried: number; said: number };
 }
 
 interface Feedback {
@@ -113,6 +117,7 @@ export function Session({
   onClose,
   what = 'session',
   rateable = false,
+  pausableSpeaking = true,
   onFinish,
 }: {
   exercises: Exercise[];
@@ -121,13 +126,15 @@ export function Session({
   /** What to call this in the leave prompt: "lesson", "review"… */
   what?: string;
   rateable?: boolean;
+  /** Offer "Can't speak now", which leaves speaking out for a while (lessons; not the speaking section itself). */
+  pausableSpeaking?: boolean;
   onFinish: (r: SessionResult) => void;
 }) {
   const [queue, setQueue] = useState<Entry[]>(() => exercises.map((ex, i) => ({ ex, retry: false, key: i })));
   const [pos, setPos] = useState(0);
   const [answer, setAnswer] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
-  const results = useRef<SessionResult>({ correct: 0, total: 0, missed: new Set(), ratings: new Map(), attempts: [] });
+  const results = useRef<SessionResult>({ correct: 0, total: 0, missed: new Set(), ratings: new Map(), attempts: [], spoken: { tried: 0, said: 0 } });
   const matchMisses = useRef(new Set<string>());
   const started = useRef(Date.now());
   const finished = useRef(false);
@@ -136,6 +143,8 @@ export function Session({
   // Help given on the current question: hints taken, and whether missing Polish letters were pointed out.
   const [hints, setHints] = useState(0);
   const [accentNudge, setAccentNudge] = useState<Array<[string, string]> | null>(null);
+  // Attempts at the current speaking exercise.
+  const [spokenTries, setSpokenTries] = useState(0);
   // Before the learner has touched anything there is nothing to lose, so leaving needs no prompt.
   const [touched, setTouched] = useState(false);
   const begun = touched || pos > 0 || answer !== null || feedback !== null;
@@ -145,21 +154,61 @@ export function Session({
   const graded = entry && isGraded(entry.ex);
   const gradedCount = useMemo(() => exercises.filter(isGraded).length, [exercises]);
 
-  const next = useCallback(() => {
-    setFeedback(null);
-    setAnswer(null);
-    setHints(0);
-    setAccentNudge(null);
-    started.current = Date.now();
-    if (pos + 1 >= queue.length) {
-      if (!finished.current) {
-        finished.current = true;
-        onFinish(results.current);
+  const goTo = useCallback(
+    (to: number, length: number) => {
+      setFeedback(null);
+      setAnswer(null);
+      setHints(0);
+      setAccentNudge(null);
+      setSpokenTries(0);
+      started.current = Date.now();
+      if (to >= length) {
+        if (!finished.current) {
+          finished.current = true;
+          onFinish(results.current);
+        }
+        return;
       }
-      return;
-    }
-    setPos(pos + 1);
-  }, [pos, queue.length, onFinish]);
+      setPos(to);
+    },
+    [onFinish],
+  );
+  const next = useCallback(() => goTo(pos + 1, queue.length), [goTo, pos, queue.length]);
+
+  /** Leave a speaking exercise: counted once, however many tries it took. */
+  const leaveSpoken = () => {
+    if (entry?.ex.kind === 'speak' && spokenTries > 0 && !feedback) results.current.spoken.tried++;
+    next();
+  };
+
+  /** "Can't speak now": no more speaking in this session, nor in lessons for the next few minutes. */
+  const skipSpeaking = () => {
+    pauseSpeaking();
+    const rest = queue.filter((q, i) => i < pos || q.ex.kind !== 'speak');
+    setQueue(rest);
+    goTo(pos, rest.length);
+  };
+
+  const onSpoken = (r: SpokenResult) => {
+    if (entry?.ex.kind !== 'speak' || feedback) return;
+    const ex = entry.ex;
+    setSpokenTries((n) => n + 1);
+    if (!r.pass) return;
+    results.current.spoken.tried++;
+    results.current.spoken.said++;
+    const [pl, en] = PRAISE[Math.floor(Math.random() * PRAISE.length)];
+    setFeedback({
+      pass: true,
+      title: pl,
+      subtitle: r.self ? en : spokenTries > 0 ? `${en} Got it that time.` : en,
+      answer: ex.pl,
+      answerLang: 'pl',
+      meaning: ex.en,
+      note: r.heard && r.heard.trim() && !r.self ? `Heard: “${r.heard}”` : undefined,
+      cardId: ex.cardId,
+      rating: 3,
+    });
+  };
 
   const record = (cardId: string, pass: boolean, rating: Rating, retry: boolean, tag?: ExtraTag, helped?: boolean) => {
     if (retry) return;
@@ -325,6 +374,7 @@ export function Session({
           </>
         )}
         {ex.kind === 'dialogue' && <Dialogue lines={ex.lines} />}
+        {ex.kind === 'speak' && <SayIt ex={ex} locked={!!feedback} onResult={onSpoken} />}
         {ex.kind === 'choose' && (
           <Choose ex={ex} locked={!!feedback} hints={hints} onAnswer={setAnswer} checked={feedback ? { pass: feedback.pass, answer } : undefined} />
         )}
@@ -398,6 +448,17 @@ export function Session({
           <button type="button" className="btn block" onClick={next}>
             Got it
           </button>
+        ) : ex.kind === 'speak' ? (
+          <div className="dock-row">
+            {pausableSpeaking && (
+              <button type="button" className="btn quiet" onClick={skipSpeaking} title="Leaves out speaking for the next 15 minutes">
+                Can't speak now
+              </button>
+            )}
+            <button type="button" className={`btn block ${spokenTries ? '' : 'quiet'}`} onClick={leaveSpoken}>
+              {spokenTries ? 'Continue' : 'Skip'}
+            </button>
+          </div>
         ) : ex.kind === 'dialogue' ? (
           <button type="button" className="btn block" onClick={next}>
             Finish

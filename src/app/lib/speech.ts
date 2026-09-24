@@ -137,7 +137,8 @@ const speedOf = (slow?: boolean) => (slow ? Math.max(0.5, rate * 0.65) : rate);
 
 let playing: HTMLAudioElement | null = null;
 
-function stop() {
+/** Stop whatever is being read aloud. */
+export function stopSpeaking() {
   if (playing) {
     playing.onended = playing.onerror = null;
     playing.pause();
@@ -156,7 +157,7 @@ export function speak(text: string, opts: { slow?: boolean; onEnd?: () => void }
     opts.onEnd?.();
     return;
   }
-  stop();
+  stopSpeaking();
   const src = recordingOf(text);
   if (src && typeof Audio !== 'undefined') {
     const audio = new Audio(src);

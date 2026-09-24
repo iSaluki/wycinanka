@@ -19,6 +19,9 @@ const chunkByPl = new Map(CHUNKS.map((c) => [c.pl, c]));
 const chunkByEn = new Map(CHUNKS.map((c) => [c.en, c]));
 const chunkByExample = new Map(CHUNKS.flatMap((c) => (c.ex ? [[c.ex[1], c] as const] : [])));
 
+/** Instructions of speaking exercises. */
+export const SPEAKING = ['Say it after me', 'Say it in Polish', 'Read it aloud', 'Your turn: say your line'];
+
 /** Answer every exercise in a lesson or session correctly, using the course content as the answer key. */
 export async function solveLesson(page: Page, _lessonId: string, onStep?: (kind: string, phase: 'before' | 'after') => Promise<void>) {
   const clickOption = async (text: string) => {
@@ -90,6 +93,10 @@ export async function solveLesson(page: Page, _lessonId: string, onStep?: (kind:
         await page.locator('.match .col').nth(1).getByRole('button', { name: en, exact: true }).click();
       }
       await expect(page.locator('.sheet')).toBeVisible();
+      continue;
+    } else if (SPEAKING.includes(kind)) {
+      // Headless browsers have no microphone: speaking has its own tests (speaking.spec.ts).
+      await page.getByRole('button', { name: 'Skip', exact: true }).click();
       continue;
     } else if (kind === 'Fill the gap') {
       const en = await text('.player-body p.muted');

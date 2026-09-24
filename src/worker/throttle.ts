@@ -15,6 +15,8 @@ export const POLICIES = {
   registerIp: { limit: 6, windowMs: 60 * 60_000, lockMs: 60 * 60_000 },
   sensitiveUser: { limit: 6, windowMs: 15 * 60_000, lockMs: 15 * 60_000 },
   pushTest: { limit: 5, windowMs: 15 * 60_000, lockMs: 15 * 60_000 },
+  /** Spoken answers sent for transcription: about one every 20 seconds for an hour is plenty for practice. */
+  speechIp: { limit: 180, windowMs: 60 * 60_000, lockMs: 30 * 60_000 },
 } satisfies Record<string, Policy>;
 
 /** Milliseconds until the key unlocks, or 0 if it is not locked. */

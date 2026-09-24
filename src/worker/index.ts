@@ -6,6 +6,7 @@ import { account } from './routes/account';
 import { auth } from './routes/auth';
 import { progress } from './routes/progress';
 import { push } from './routes/push';
+import { speech, SPEECH_BODY_LIMIT, TRANSCRIBE_PATH } from './routes/speech';
 import { sendReminders } from './reminders';
 
 const IMPORT_PATH = '/api/progress/import';
@@ -25,12 +26,16 @@ app.use('/api/*', async (c, next) => {
   await next();
 });
 app.use('/api/*', sameOriginOnly);
-app.use('/api/*', async (c, next) => (c.req.path === IMPORT_PATH ? next() : bodyLimit(16 * 1024)(c, next)));
+app.use('/api/*', async (c, next) => {
+  if (c.req.path === IMPORT_PATH) return next();
+  return bodyLimit(c.req.path === TRANSCRIBE_PATH ? SPEECH_BODY_LIMIT : 16 * 1024)(c, next);
+});
 
 app.route('/api/auth', auth);
 app.route('/api/account', account);
 app.route('/api/progress', progress);
 app.route('/api/push', push);
+app.route('/api/speech', speech);
 
 app.all('/api/*', () => {
   throw new HttpError(404, 'Not found.');
