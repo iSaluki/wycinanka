@@ -92,6 +92,8 @@ test('reference pages render', async ({ page }) => {
     ['/grammar', 'Gramatyka'],
     ['/learn', 'Nauka'],
     ['/tools', 'Narzędzia'],
+    ['/culture', 'Kultura'],
+    ['/culture/wigilia', 'Wigilia'],
   ]) {
     await page.goto(path);
     await expect(page.getByRole('heading', { level: 1, name: heading, exact: true })).toBeVisible();
@@ -99,6 +101,24 @@ test('reference pages render', async ({ page }) => {
   await page.goto('/grammar');
   await page.getByRole('button', { name: 'okno' }).click();
   await expect(page.locator('table.plain').first()).toContainText('okien');
+});
+
+test('culture notes open from the list and link on to the next one', async ({ page }) => {
+  await page.goto('/culture');
+  await page.getByRole('link', { name: /Tłusty czwartek/ }).click();
+  await expect(page).toHaveURL(/\/culture\/tlusty-czwartek$/);
+  await expect(page.locator('.culture-words li')).not.toHaveCount(0);
+  await page.getByRole('link', { name: /^Next:/ }).click();
+  await expect(page).toHaveURL(/\/culture\/marzanna$/);
+});
+
+test('the app can be installed: manifest, icons and service worker are served', async ({ request }) => {
+  const manifest = await (await request.get('/manifest.webmanifest')).json();
+  expect(manifest).toMatchObject({ display: 'standalone', start_url: '/' });
+  for (const icon of manifest.icons) expect((await request.get(icon.src)).status(), icon.src).toBe(200);
+  const sw = await request.get('/sw.js');
+  expect(sw.status()).toBe(200);
+  expect(sw.headers()['cache-control']).toBe('no-cache');
 });
 
 test('pages are served with a strict Content Security Policy', async ({ request }) => {

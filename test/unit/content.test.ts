@@ -83,6 +83,17 @@ describe('course content', () => {
       }
   });
 
+  it('never gives two different words the same English', () => {
+    // Warm-ups and reviews can ask about any earlier word, and matching pairs mix a lesson with its
+    // neighbours: two words with one meaning would make a question with two right answers.
+    const items = LESSONS.filter((l) => !l.phonics).flatMap((l) => l.items);
+    for (const item of items) {
+      const accepted = [item.pl, ...(item.altPl ?? [])].map(normalise);
+      const clash = items.filter((o) => o.id !== item.id && normalise(o.en) === normalise(item.en) && !accepted.includes(normalise(o.pl)));
+      expect(clash.map((o) => o.id), `${item.id} "${item.en}"`).toEqual([]);
+    }
+  });
+
   it('has all 32 letters of the alphabet', () => {
     expect(ALPHABET).toHaveLength(32);
   });

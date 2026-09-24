@@ -14,6 +14,7 @@ export const POLICIES = {
   loginUser: { limit: 8, windowMs: 15 * 60_000, lockMs: 15 * 60_000 },
   registerIp: { limit: 6, windowMs: 60 * 60_000, lockMs: 60 * 60_000 },
   sensitiveUser: { limit: 6, windowMs: 15 * 60_000, lockMs: 15 * 60_000 },
+  pushTest: { limit: 5, windowMs: 15 * 60_000, lockMs: 15 * 60_000 },
 } satisfies Record<string, Policy>;
 
 /** Milliseconds until the key unlocks, or 0 if it is not locked. */

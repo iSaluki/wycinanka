@@ -5,6 +5,8 @@ import { ensureSchema } from './migrate';
 import { account } from './routes/account';
 import { auth } from './routes/auth';
 import { progress } from './routes/progress';
+import { push } from './routes/push';
+import { sendReminders } from './reminders';
 
 const IMPORT_PATH = '/api/progress/import';
 
@@ -28,6 +30,7 @@ app.use('/api/*', async (c, next) => (c.req.path === IMPORT_PATH ? next() : body
 app.route('/api/auth', auth);
 app.route('/api/account', account);
 app.route('/api/progress', progress);
+app.route('/api/push', push);
 
 app.all('/api/*', () => {
   throw new HttpError(404, 'Not found.');
@@ -50,8 +53,8 @@ export async function cleanUp(env: Env, now = Date.now()): Promise<void> {
   ]);
 }
 
-// The free plan allows only five Cron Triggers per account, so clean-up piggybacks on API traffic instead:
-// at most once an hour per isolate, after the response has been sent.
+// Clean-up also piggybacks on API traffic (at most once an hour per isolate, after the response has been
+// sent), so it keeps happening even if the hourly Cron Trigger is removed.
 const CLEAN_UP_EVERY = 3_600_000;
 let lastCleanUp = 0;
 function maybeCleanUp(env: Env, ctx: { waitUntil(promise: Promise<unknown>): void }): void {
@@ -63,9 +66,11 @@ function maybeCleanUp(env: Env, ctx: { waitUntil(promise: Promise<unknown>): voi
 
 export default {
   fetch: app.fetch,
-  /** Also runs the clean-up if a Cron Trigger is added (for example on a paid plan). */
-  async scheduled(_event: ScheduledController, env: Env): Promise<void> {
+  /** Hourly Cron Trigger (wrangler.jsonc): daily practice reminders, then housekeeping. */
+  async scheduled(event: ScheduledController, env: Env): Promise<void> {
+    if (!env.DB) return;
     await ensureSchema(env);
+    await sendReminders(env, event.scheduledTime);
     await cleanUp(env);
   },
 } satisfies ExportedHandler<Env>;

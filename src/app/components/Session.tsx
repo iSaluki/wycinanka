@@ -29,6 +29,8 @@ interface Feedback {
   subtitle?: string;
   answer?: string;
   answerLang?: 'pl' | 'en';
+  /** English meaning of a Polish answer, so every sentence built is also understood. */
+  meaning?: string;
   note?: string;
   cardId: string;
   rating: Rating;
@@ -44,6 +46,20 @@ const PRAISE: Array<[string, string]> = [
 ];
 
 type Entry = { ex: Exercise; retry: boolean; key: number };
+
+/** The English for a Polish answer, when the exercise has one and it isn't the answer itself. */
+function meaningOf(ex: GradedExercise): string | undefined {
+  switch (ex.kind) {
+    case 'build':
+      return ex.meaning ?? (ex.audio ? undefined : ex.prompt);
+    case 'type':
+      return ex.lang === 'pl' ? ex.prompt : undefined;
+    case 'choose':
+      return ex.promptLang === 'en' && (!ex.instruction || ex.image) ? ex.prompt : undefined;
+    default:
+      return undefined;
+  }
+}
 
 function check(ex: GradedExercise, answer: string): { result: GradeResult | null; pass: boolean; expected: string; lang: 'pl' | 'en' } {
   switch (ex.kind) {
@@ -139,11 +155,13 @@ export function Session({
       subtitle: pass ? (close ? 'Nearly!' : en) : 'Not quite',
       answer: showAnswer ? expected : undefined,
       answerLang: lang,
+      meaning: showAnswer && lang === 'pl' ? meaningOf(ex) : undefined,
       note,
       cardId: ex.cardId,
       rating,
     });
-    if (lang === 'pl' && expected) speak(expected);
+    if (ex.kind === 'choose' && ex.say) speak(ex.say);
+    else if (lang === 'pl' && expected) speak(expected);
     else if (ex.kind === 'choose' && ex.promptLang === 'pl') speak(ex.prompt);
   };
 
@@ -249,6 +267,7 @@ export function Session({
                 <div className="answer" lang={feedback.answerLang}>
                   {feedback.answer}
                 </div>
+                {feedback.meaning && <div className="meaning">{feedback.meaning}</div>}
               </div>
             )}
             {feedback.note && <p className="why">{feedback.note}</p>}

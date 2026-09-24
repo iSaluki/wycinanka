@@ -129,3 +129,40 @@ export const IconPictures = (p: P) => (
     <path d="m3.5 18 5.5-5.5 4 4 2.5-2.5 5 5" />
   </svg>
 );
+
+/** The iOS Share symbol: a box with an arrow leaving it. */
+export const IconShare = (p: P) => (
+  <svg {...base} {...p}>
+    <path d="M12 3v12" />
+    <path d="m8 7 4-4 4 4" />
+    <path d="M8 11H6.5A1.5 1.5 0 0 0 5 12.5v7A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5v-7a1.5 1.5 0 0 0-1.5-1.5H16" />
+  </svg>
+);
+
+/** Culture: a four-petal paper-cut flower. */
+export const IconCulture = (p: P) => (
+  <svg {...base} {...p}>
+    <path d="M12 10c-1.8-1.6-1.8-4.6 0-7 1.8 2.4 1.8 5.4 0 7Z" />
+    <path d="M12 14c1.8 1.6 1.8 4.6 0 7-1.8-2.4-1.8-5.4 0-7Z" />
+    <path d="M10 12c-1.6 1.8-4.6 1.8-7 0 2.4-1.8 5.4-1.8 7 0Z" />
+    <path d="M14 12c1.6-1.8 4.6-1.8 7 0-2.4 1.8-5.4 1.8-7 0Z" />
+    <circle cx="12" cy="12" r="1.2" />
+  </svg>
+);
+
+/** Practise: a pencil on a line. */
+export const IconPractise = (p: P) => (
+  <svg {...base} {...p}>
+    <path d="M4 20h16" />
+    <path d="M14.5 4.5 18 8l-9 9H5.5v-3.5l9-9Z" />
+    <path d="m12.5 6.5 3.5 3.5" />
+  </svg>
+);
+
+/** Discover: a compass. */
+export const IconDiscover = (p: P) => (
+  <svg {...base} {...p}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="m15.5 8.5-2 5-5 2 2-5 5-2Z" />
+  </svg>
+);

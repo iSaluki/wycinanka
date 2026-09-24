@@ -285,7 +285,7 @@ a {
   position: fixed;
   inset: auto 0 0 0;
   z-index: 30;
-  /* Columns sized by their labels, so seven Polish words fit on a narrow phone. */
+  /* Four tabs: sections beyond Learn and Review are grouped under Practise and Discover (lib/sections.ts). */
   display: flex;
   padding: 4px 2px calc(4px + env(safe-area-inset-bottom));
   background: var(--paper);
@@ -1629,6 +1629,18 @@ table.plain .pl {
   font: 400 24px/1.3 var(--font-pl);
 }
 
+.sheet .meaning {
+  margin-top: 2px;
+  color: var(--ink-2);
+  font-size: 17px;
+}
+
+.build-meaning {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 18px;
+}
+
 .sheet .why {
   font-size: 16px;
   color: var(--ink-2);
@@ -1800,6 +1812,18 @@ table.plain .pl {
 .word-list .ex {
   font-size: 15px;
   color: var(--ink-3);
+}
+
+.word-list .ex .icon-btn {
+  width: 32px;
+  height: 32px;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+.word-list .ex .icon-btn svg {
+  width: 16px;
+  height: 16px;
 }
 
 .word-list .ex .pl {
@@ -2361,6 +2385,11 @@ details.spot > div {
   border-color: var(--zielen);
 }
 
+.switch:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .switch[aria-checked='true']::after {
   transform: translateX(22px);
   background: #fff;
@@ -2634,4 +2663,205 @@ details.spot > div {
 
 .picture-grid small {
   font-size: 13px;
+}
+
+/* ---------- Install prompt ---------- */
+
+.install {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 16px;
+  border: 1.5px solid var(--rule-strong);
+  border-radius: var(--r);
+  background: var(--paper-2);
+}
+
+.install h2 {
+  margin: 0;
+  font: 700 20px/1.2 var(--font-pl);
+}
+
+.install p {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 16px;
+}
+
+.install-mark svg {
+  display: block;
+  width: 40px;
+  height: 40px;
+}
+
+.inline-icon {
+  width: 1.1em;
+  height: 1.1em;
+  vertical-align: -0.15em;
+}
+
+/* ---------- Section hubs (phone tab bar groups) ---------- */
+
+.hub {
+  display: grid;
+  gap: 12px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.hub-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  border: 1.5px solid var(--rule-strong);
+  border-radius: var(--r);
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.hub-card:hover {
+  border-color: var(--ink);
+}
+
+.hub-icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--paper-2);
+}
+
+.hub-icon svg {
+  width: 26px;
+  height: 26px;
+}
+
+.hub-text {
+  display: grid;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.hub-title .pl {
+  font: 700 23px/1.2 var(--font-pl);
+}
+
+.hub-title small {
+  margin-left: 8px;
+  color: var(--ink-3);
+  font-size: 15px;
+}
+
+.hub-blurb {
+  color: var(--ink-2);
+  font-size: 16px;
+}
+
+.hub-arrow {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  color: var(--ink-3);
+}
+
+/* ---------- Culture ---------- */
+
+.culture-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.culture-card {
+  display: grid;
+  gap: 4px;
+  height: 100%;
+  padding: 16px;
+  border: 1.5px solid var(--rule-strong);
+  border-top: 4px solid var(--czerwien);
+  border-radius: var(--r);
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.culture-card:hover {
+  border-color: var(--ink);
+  border-top-color: var(--czerwien);
+}
+
+.culture-card .pl {
+  font: 700 23px/1.2 var(--font-pl);
+}
+
+.culture-title {
+  font-weight: 600;
+}
+
+.culture-title small {
+  color: var(--ink-3);
+  font-weight: 400;
+}
+
+.culture-summary {
+  color: var(--ink-2);
+  font-size: 16px;
+}
+
+.culture-article {
+  max-width: 44rem;
+}
+
+.culture-article p {
+  margin: 0;
+}
+
+.culture-when {
+  color: var(--czerwien);
+  font-weight: 600;
+}
+
+.culture-words {
+  display: grid;
+  gap: 0;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.culture-words li {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.culture-words li > div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 12px;
+  min-width: 0;
+}
+
+.culture-words .pl {
+  font: 700 21px/1.25 var(--font-pl);
+}
+
+.culture-words .say {
+  color: var(--ink-3);
+  font-size: 15px;
+}
+
+.culture-words .en {
+  flex-basis: 100%;
+  color: var(--ink-2);
 }

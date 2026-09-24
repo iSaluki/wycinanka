@@ -10,6 +10,9 @@ A free Polish course for British English speakers, from complete beginner to B1.
 - **Picture flashcards**: 72 everyday objects in nine themed decks. Meet each picture with its Polish and English name, then name it from four Polish words; learnt pictures come back on the spaced-review schedule. Images are [Twemoji](https://github.com/jdecked/twemoji) (CC BY 4.0), self-hosted in `public/pictures`
 - **Sounds**: an alphabet chart, English-style respellings on every word (*VRO-tswaf*) and a minimal-pair listening game (*wieś / wiesz*)
 - **Tools** outside the course: a pronouncer (type *cz* or any word and see how to say it and why), Polish numbers and prices, telling the time, and a phrasebook
+- **Culture notes**: short English articles on Polish traditions (Wigilia, Easter, name days, All Saints', Fat Thursday, paper cutting and more), each with Polish words to hear and take away
+- **Installable app (PWA)**: mobile learners are invited to add Wycinanka to their home screen (the browser's own install prompt on Android, Share → Add to Home Screen instructions on iPhone)
+- **Daily reminders**: signed-in learners can switch on a push notification at a time they choose, sent only on days they haven't practised yet
 - **Grammar reference**: the seven cases, a declension explorer and every lesson's grammar notes
 - **Placement check** so learners can start at their own level
 - **Guest mode**: learn without an account. Nothing is saved; sign up to keep progress, and that visit's work comes with you.
@@ -58,6 +61,7 @@ Live at **https://polish.saluki.cloud**. The repository is set up so that a Clou
 - `build.command` in `wrangler.jsonc` runs `npm run build`, so a plain `npx wrangler deploy` builds the front end first.
 - The Worker applies any pending migrations itself on its first request (`src/worker/migrate.ts`), using the same `d1_migrations` table as `wrangler d1 migrations apply`. No separate migration step is needed.
 - `PEPPER` is optional, so the first deploy works before any secret is set (see below).
+- An hourly Cron Trigger (`triggers` in `wrangler.jsonc`) sends daily reminders (`src/worker/reminders.ts`). The Web Push (VAPID) key pair is generated on first use and stored in D1, so there is nothing to configure; `PUSH_CONTACT` in `vars` is the contact URL push services see. On the free plan one run sends at most 40 reminders, so a deployment with more learners reminded in the same hour needs the paid plan and a higher `MAX_PUSHES_PER_RUN`.
 
 ### Connect the repository (one time)
 
@@ -89,7 +93,7 @@ Add the `.sql` file to `migrations/` **and** the same text to `src/worker/migrat
 
 The free plan limits each request to about 10 ms of CPU, so `PBKDF2_ITERATIONS` in `wrangler.jsonc` defaults to 30,000. On the paid plan, raise it to 100,000 (the Workers maximum). Existing password hashes are upgraded automatically the next time each user signs in.
 
-Expired sessions and stale sign-in throttling rows are removed at most once an hour, in the background of normal API requests. No Cron Trigger is used, because the free plan allows only five per account.
+Expired sessions and stale sign-in throttling rows are removed by the hourly Cron Trigger, and also at most once an hour in the background of normal API requests, so housekeeping continues even if the trigger is removed.
 
 ## Security
 

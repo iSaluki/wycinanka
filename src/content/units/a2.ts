@@ -15,8 +15,8 @@ export const u11 = unit(
         ['była', 'she was', { altEn: ['was'] }],
         ['było', 'it was', { altEn: ['there was'] }],
         ['byliśmy', 'we were', { altPl: ['byłyśmy'], hint: 'All-female group: byłyśmy.' }],
-        ['byli', 'they were', { altEn: ['they were (men or mixed)'], hint: 'For groups including a man.' }],
-        ['były', 'they were', { altEn: ['they were (women or things)'], hint: 'For women, children, animals and things.' }],
+        ['byli', 'they were (men or mixed)', { altEn: ['they were'], hint: 'For groups including a man.' }],
+        ['były', 'they were (women or things)', { altEn: ['they were'], hint: 'For women, children, animals and things.' }],
       ],
       sentences: [
         ['Wczoraj byłem w pracy.', 'Yesterday I was at work.', { altEn: ['I was at work yesterday.'], altPl: ['Wczoraj byłam w pracy.', 'Byłem wczoraj w pracy.', 'Byłam wczoraj w pracy.'], extra: ['jestem', 'była'] }],
@@ -93,8 +93,8 @@ export const u11 = unit(
       items: [
         ['jadłem', 'I ate', { altPl: ['jadłam'], altEn: ['i was eating'] }],
         ['piłam', 'I drank', { altPl: ['piłem'], altEn: ['i was drinking'] }],
-        ['poszedłem', 'I went', { altPl: ['poszłam'], altEn: ['i went (on foot)'], hint: 'On foot. A woman says poszłam.' }],
-        ['pojechałem', 'I went', { altPl: ['pojechałam'], altEn: ['i went (by transport)', 'i drove', 'i travelled'], hint: 'By car, train, bus…' }],
+        ['poszedłem', 'I went (on foot)', { altPl: ['poszłam'], altEn: ['i went'], hint: 'On foot. A woman says poszłam.' }],
+        ['pojechałem', 'I went (by transport)', { altPl: ['pojechałam'], altEn: ['i went', 'i drove', 'i travelled'], hint: 'By car, train, bus…' }],
         ['miałam', 'I had', { altPl: ['miałem'] }],
         ['chciałem', 'I wanted', { altPl: ['chciałam'] }],
         ['mogłam', 'I could', { altPl: ['mogłem'], altEn: ['i was able to'] }],
@@ -376,10 +376,10 @@ export const u14 = unit(
     }),
     lesson('u14-l2', 'I am a teacher', 'Say what job someone does.', {
       items: [
-        ['nauczyciel', 'teacher', { altEn: ['male teacher'], g: 'm' }],
-        ['nauczycielka', 'teacher', { altEn: ['female teacher'], g: 'f' }],
-        ['lekarz', 'doctor', { g: 'm' }],
-        ['lekarka', 'doctor', { altEn: ['female doctor'], g: 'f' }],
+        ['nauczyciel', 'teacher (a man)', { altEn: ['teacher', 'male teacher'], g: 'm' }],
+        ['nauczycielka', 'teacher (a woman)', { altEn: ['teacher', 'female teacher'], g: 'f' }],
+        ['lekarz', 'doctor (a man)', { altEn: ['doctor', 'male doctor'], g: 'm' }],
+        ['lekarka', 'doctor (a woman)', { altEn: ['doctor', 'female doctor'], g: 'f' }],
         ['pielęgniarka', 'nurse', { g: 'f' }],
         ['student', 'student', { altEn: ['male student'], g: 'm' }],
         ['kierowca', 'driver', { g: 'm', hint: 'Masculine, despite the -a.' }],
@@ -440,12 +440,12 @@ export const u15 = unit(
   [
     lesson('u15-l1', 'Going on foot, going by car', 'Choose between iść, chodzić, jechać and jeździć.', {
       items: [
-        ['idę', "I'm going", { altEn: ["i'm walking", 'i go', "i'm going (on foot)"], hint: 'On foot, now.' }],
-        ['idziesz', "you're going", { altEn: ['are you going', 'you are going'] }],
-        ['jadę', "I'm going", { altEn: ["i'm driving", "i'm travelling", "i'm going (by transport)"], hint: 'By vehicle, now.' }],
-        ['jedziesz', "you're going", { altEn: ['are you going', "you're driving"] }],
-        ['chodzę', 'I go', { altEn: ['i walk', 'i go (regularly)'], hint: 'On foot, regularly.' }],
-        ['jeżdżę', 'I go', { altEn: ['i drive', 'i travel', 'i go (regularly, by transport)'], hint: 'By vehicle, regularly.' }],
+        ['idę', "I'm going (on foot)", { altEn: ["i'm going", "i'm walking", 'i go'], hint: 'On foot, now.' }],
+        ['idziesz', "you're going (on foot)", { altEn: ["you're going", 'are you going', 'you are going'] }],
+        ['jadę', "I'm going (by transport)", { altEn: ["i'm going", "i'm driving", "i'm travelling"], hint: 'By vehicle, now.' }],
+        ['jedziesz', "you're going (by transport)", { altEn: ["you're going", 'are you going', "you're driving"] }],
+        ['chodzę', 'I go (on foot, regularly)', { altEn: ['i go', 'i walk', 'i go (regularly)'], hint: 'On foot, regularly.' }],
+        ['jeżdżę', 'I go (by transport, regularly)', { altEn: ['i go', 'i drive', 'i travel', 'i go (regularly, by transport)'], hint: 'By vehicle, regularly.' }],
         ['dokąd?', 'where to?', { altEn: ['where?'] }],
       ],
       sentences: [
@@ -602,7 +602,7 @@ export const u16 = unit(
         ['mamie', 'to Mum', { altEn: ['mum', 'for mum', 'to my mum'] }],
         ['bratu', 'to my brother', { altEn: ['brother', 'to brother', 'for my brother'] }],
         ['pomagam', 'I help', { altEn: ["i'm helping"] }],
-        ['dziękuję ci', 'thank you', { altEn: ['thanks', 'thank you (to you)'] }],
+        ['dziękuję ci', 'thank you (to a friend)', { altEn: ['thank you', 'thanks', 'thank you (to you)'] }],
         ['wszystkiego najlepszego', 'all the best', { altEn: ['happy birthday', 'best wishes'] }],
       ],
       sentences: [

@@ -9,11 +9,11 @@ export const u17 = unit(
   [
     lesson('u17-l1', "I'd like, could you", 'Make polite requests with the conditional.', {
       items: [
-        ['chciałbym', "I'd like", { altPl: ['chciałabym'], altEn: ['i would like'], hint: 'A woman says chciałabym.' }],
+        ['chciałbym', 'I would like', { altPl: ['chciałabym'], altEn: ["i'd like"], hint: 'A woman says chciałabym.' }],
         ['chciałbyś', 'would you like', { altPl: ['chciałabyś'], altEn: ["would you like to"] }],
-        ['mógłbyś', 'could you', { altPl: ['mogłabyś'], altEn: ['would you be able to'] }],
-        ['czy mógłby pan', 'could you', { altEn: ['could you (sir)', 'could you, sir'], hint: 'Formal, to a man.' }],
-        ['czy mogłaby pani', 'could you', { altEn: ['could you (madam)', 'could you, madam'], hint: 'Formal, to a woman.' }],
+        ['mógłbyś', 'could you (to a friend)', { altPl: ['mogłabyś'], altEn: ['could you', 'would you be able to'] }],
+        ['czy mógłby pan', 'could you (to a man, formal)', { altEn: ['could you', 'could you (sir)', 'could you, sir'], hint: 'Formal, to a man.' }],
+        ['czy mogłaby pani', 'could you (to a woman, formal)', { altEn: ['could you', 'could you (madam)', 'could you, madam'], hint: 'Formal, to a woman.' }],
         ['wolałbym', "I'd prefer", { altPl: ['wolałabym'], altEn: ['i would prefer', "i'd rather", 'i would rather'] }],
         ['byłoby miło', 'it would be nice', { altEn: ["that'd be nice", 'that would be nice', 'it would be lovely'] }],
       ],
@@ -52,7 +52,7 @@ export const u17 = unit(
         ['gdybym', 'if I', { altEn: ['if i were', 'if i had'] }],
         ['gdybym miał czas', 'if I had time', { altPl: ['gdybym miała czas'], altEn: ['if i had the time'] }],
         ['gdybym był tobą', 'if I were you', { altPl: ['gdybym była tobą'] }],
-        ['na twoim miejscu', 'if I were you', { altEn: ['in your place', 'in your shoes'] }],
+        ['na twoim miejscu', 'in your place (if I were you)', { altEn: ['if I were you', 'in your place', 'in your shoes'] }],
         ['pojechałbym', "I'd go", { altPl: ['pojechałabym'], altEn: ['i would go', "i'd travel"] }],
         ['zrobiłbym', "I'd do", { altPl: ['zrobiłabym'], altEn: ['i would do'] }],
         ['kupiłbym', "I'd buy", { altPl: ['kupiłabym'], altEn: ['i would buy'] }],
@@ -115,7 +115,7 @@ export const u18 = unit(
   [
     lesson('u18-l1', 'Two cats, five cats', 'Use nouns correctly after numbers.', {
       items: [
-        ['dwie', 'two', { altEn: ['two (feminine)'], hint: 'Two with feminine nouns: dwie kawy.' }],
+        ['dwie', 'two (feminine)', { altEn: ['two'], hint: 'Two with feminine nouns: dwie kawy.' }],
         ['dwoje dzieci', 'two children', { hint: 'Children use a special "collective" number.' }],
         ['dwa koty', 'two cats'],
         ['pięć kotów', 'five cats'],

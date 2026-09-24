@@ -5,6 +5,8 @@ export interface Env {
   /** Worker secret used to pepper password hashes. At least 32 characters. Optional: see crypto.ts. */
   PEPPER?: string;
   PBKDF2_ITERATIONS?: string;
+  /** Contact URL or mailto: sent to push services with every reminder (VAPID "sub"). */
+  PUSH_CONTACT?: string;
 }
 
 export interface SessionUser {

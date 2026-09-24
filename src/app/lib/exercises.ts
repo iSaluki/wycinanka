@@ -28,6 +28,8 @@ export type Exercise =
       fallback?: string;
       /** Show this picture in place of the prompt text (picture flashcards). */
       image?: string;
+      /** What to read aloud, when the Polish on screen is a spelling rather than a word (phonics). */
+      say?: string;
       tag?: 'warmup';
     }
   | { kind: 'type'; cardId: string; prompt: string; accepted: string[]; lang: 'pl' | 'en'; hint?: string; tag?: 'warmup' }
@@ -43,7 +45,7 @@ export type Exercise =
       meaning?: string;
       tag?: 'warmup';
     }
-  | { kind: 'match'; pairs: Array<{ cardId: string; pl: string; en: string }> }
+  | { kind: 'match'; pairs: Array<{ cardId: string; pl: string; en: string; say?: string }> }
   | { kind: 'gap'; cardId: string; text: string; en: string; options: string[]; answer: string; why?: string; tag?: 'warmup' };
 
 export type GradedExercise = Exclude<Exercise, { kind: 'meet' } | { kind: 'spotlight' } | { kind: 'dialogue' }>;
@@ -272,6 +274,9 @@ export function soundAlikes(word: string): string[] {
 }
 
 const firstExample = (item: Item) => item.ex?.[0] ?? item.pl;
+/** Phonics items are spellings ("ch / h", "b → p at the end"): read their example words aloud instead. */
+const sayExamples = (item: Item) => (item.ex?.length ? item.ex.join(', ') : undefined);
+const phonicsPair = (i: Item) => ({ cardId: i.id, pl: i.pl, en: i.en, say: sayExamples(i) });
 
 /** "How does it sound?" — spelling to sound. */
 function soundOf(item: Item, pool: Item[]): Exercise {
@@ -284,6 +289,7 @@ function soundOf(item: Item, pool: Item[]): Exercise {
     options: opts,
     answer: item.en,
     instruction: 'How does it sound?',
+    say: sayExamples(item),
     hint: item.hint,
   };
 }
@@ -299,6 +305,7 @@ function spellingOf(item: Item, pool: Item[]): Exercise {
     options: opts,
     answer: item.pl,
     instruction: 'Which spelling makes this sound?',
+    say: sayExamples(item),
     hint: item.hint,
   };
 }
@@ -351,7 +358,7 @@ export function phonicsExercises(lesson: Lesson): Exercise[] {
     { kind: 'meet', items: lesson.items },
     ...(lesson.spotlight ? [{ kind: 'spotlight', spotlight: lesson.spotlight } as Exercise] : []),
     ...items.map((i) => soundOf(i, pool)),
-    { kind: 'match', pairs: shuffle(lesson.items).slice(0, 5).map((i) => ({ cardId: i.id, pl: i.pl, en: i.en })) },
+    { kind: 'match', pairs: shuffle(lesson.items).slice(0, 5).map(phonicsPair) },
     ...shuffle(items).slice(0, 3).map((i) => spellingOf(i, pool)),
     ...lesson.drills.map(gapFor),
     ...items.map((i) => readWord(i, pool)),

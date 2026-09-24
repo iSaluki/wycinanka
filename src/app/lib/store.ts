@@ -74,11 +74,19 @@ export function useApp<T>(select: (s: AppState) => T): T {
 
 export const getState = () => state;
 
+/** The --paper colour of each theme (styles.css). */
+const THEME_COLOR = { light: '#ffffff', dark: '#141210' } as const;
+
 function applySettingsToDocument(s: Settings) {
   const root = document.documentElement;
   const theme = s.theme ?? 'system';
   if (theme === 'system') root.removeAttribute('data-theme');
   else root.setAttribute('data-theme', theme);
+  // Browser chrome follows a theme chosen in settings, not only the device's scheme.
+  document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]').forEach((m) => {
+    const scheme = m.media.includes('dark') ? 'dark' : 'light';
+    m.content = THEME_COLOR[theme === 'system' ? scheme : theme];
+  });
   if (s.reduceMotion) root.setAttribute('data-motion', 'reduce');
   else root.removeAttribute('data-motion');
   setSpeechRate(s.speechRate ?? DEFAULT_SETTINGS.speechRate);

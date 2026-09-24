@@ -44,7 +44,17 @@ account.post('/password', async (c) => {
 account.get('/export', async (c) => {
   const user = c.get('user');
   const snap = await snapshot(c.env.DB, user);
-  const body = JSON.stringify({ exportedAt: new Date().toISOString(), ...snap }, null, 2);
+  const { results: devices } = await c.env.DB.prepare(
+    'SELECT endpoint, created_at, last_sent_day FROM push_subscriptions WHERE user_id = ?1 ORDER BY created_at',
+  )
+    .bind(user.id)
+    .all<{ endpoint: string; created_at: number; last_sent_day: string | null }>();
+  const reminderDevices = devices.map((d) => ({
+    service: new URL(d.endpoint).hostname,
+    subscribedAt: new Date(d.created_at).toISOString(),
+    lastReminder: d.last_sent_day,
+  }));
+  const body = JSON.stringify({ exportedAt: new Date().toISOString(), ...snap, reminderDevices }, null, 2);
   return c.body(body, 200, {
     'Content-Type': 'application/json; charset=utf-8',
     'Content-Disposition': 'attachment; filename="wycinanka-data.json"',
@@ -61,6 +71,7 @@ account.delete('/', async (c) => {
     db.prepare('DELETE FROM lesson_progress WHERE user_id = ?1').bind(user.id),
     db.prepare('DELETE FROM activity WHERE user_id = ?1').bind(user.id),
     db.prepare('DELETE FROM sessions WHERE user_id = ?1').bind(user.id),
+    db.prepare('DELETE FROM push_subscriptions WHERE user_id = ?1').bind(user.id),
     db.prepare('DELETE FROM auth_throttle WHERE key = ?1').bind(`sensitive:user:${user.id}`),
     db.prepare('DELETE FROM users WHERE id = ?1').bind(user.id),
   ]);

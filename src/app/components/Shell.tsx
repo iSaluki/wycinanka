@@ -3,20 +3,19 @@ import { Link, usePath } from '../lib/router';
 import { useStats } from '../lib/derived';
 import { dismissSyncError, useApp } from '../lib/store';
 import { GoalRing, Label } from './common';
-import { IconGrammar, IconLearn, IconPictures, IconProfile, IconReview, IconSounds, IconTools, IconWords } from './icons';
+import { IconLearn, IconProfile, IconReview } from './icons';
+import { DISCOVER, inGroup, PRACTISE } from '../lib/sections';
 import { Rosette } from './Rosette';
 
 /** Navigation is labelled in Polish first: learners read these words every visit. */
-const NAV = [
-  { to: '/', pl: 'Nauka', en: 'Learn', icon: IconLearn, match: (p: string) => p === '/' || p.startsWith('/learn') || p.startsWith('/practice') },
-  { to: '/review', pl: 'Powtórka', en: 'Review', icon: IconReview },
-  { to: '/words', pl: 'Słowa', en: 'Words', icon: IconWords },
-  { to: '/pictures', pl: 'Obrazki', en: 'Pictures', icon: IconPictures },
-  { to: '/sounds', pl: 'Wymowa', en: 'Sounds', icon: IconSounds },
-  { to: '/grammar', pl: 'Gramatyka', en: 'Grammar', icon: IconGrammar },
-  { to: '/tools', pl: 'Narzędzia', en: 'Tools', icon: IconTools },
-  { to: '/profile', pl: 'Profil', en: 'Profile', icon: IconProfile, railOnly: true },
-];
+const LEARN = { to: '/', pl: 'Nauka', en: 'Learn', icon: IconLearn, match: (p: string) => p === '/' || p.startsWith('/learn') || p.startsWith('/practice') };
+const REVIEW = { to: '/review', pl: 'Powtórka', en: 'Review', icon: IconReview };
+const PROFILE = { to: '/profile', pl: 'Profil', en: 'Profile', icon: IconProfile };
+
+/** Desktop rail: every section. */
+const RAIL = [LEARN, REVIEW, ...PRACTISE.sections, ...DISCOVER.sections, PROFILE];
+/** Phone tab bar: four tabs, with the extra sections grouped under Practise and Discover. */
+const TABS = [LEARN, REVIEW, { ...PRACTISE, match: (p: string) => inGroup(PRACTISE, p) }, { ...DISCOVER, match: (p: string) => inGroup(DISCOVER, p) }];
 
 /** The brand mark: an eight-petal wycinanka flower in black and red. */
 export function Mark() {
@@ -38,13 +37,16 @@ export function Mark() {
   );
 }
 
+type NavItem = { to: string; pl: string; en: string; icon: typeof IconLearn; match?: (p: string) => boolean };
+
 function NavLinks({ rail }: { rail: boolean }) {
   const path = usePath();
   const due = useStats().due;
+  const items: NavItem[] = rail ? RAIL : TABS;
   return (
     <>
-      {NAV.filter((n) => rail || !n.railOnly).map(({ to, pl, en, icon: Icon, match }) => {
-        const active = match ? match(path) : path.startsWith(to);
+      {items.map(({ to, pl, en, icon: Icon, match }) => {
+        const active = match ? match(path) : path === to || path.startsWith(`${to}/`);
         return (
           <Link key={to} to={to} className="tab" aria-current={active ? 'page' : undefined}>
             <Icon />
