@@ -45,7 +45,7 @@ jobs:
       # A throwaway pepper for the local Worker the tests start; production uses its own secret.
       - run: echo "PEPPER=ci-only-pepper-$(openssl rand -hex 24)" > .dev.vars
       - run: npm run test:e2e
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: playwright-traces
