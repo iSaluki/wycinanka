@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { grade, levenshtein, normalise, stripDiacritics } from '../../src/shared/grade';
+import { grade, levenshtein, normalise, passes, stripDiacritics } from '../../src/shared/grade';
 
 describe('grade (Polish)', () => {
   it('accepts exact answers ignoring case, punctuation and extra spaces', () => {
@@ -65,5 +65,46 @@ describe('speaker-gendered forms', () => {
   it('leaves words without gendered forms alone', () => {
     const item = { pl: 'dziś', altPl: ['dzisiaj'] };
     expect(preferForm(item, 'f')).toBe(item);
+  });
+});
+
+import { isKnownForm } from '../../src/content/lexicon';
+
+describe('grade: endings are grammar, not typos', () => {
+  const pl = (typed: string, answer: string) => grade(typed, [answer], 'pl', isKnownForm);
+
+  it('never forgives a wrong case ending as a slip', () => {
+    for (const [t, a] of [
+      ['Poproszę kawa', 'Poproszę kawę'],
+      ['Mam koty', 'Mam kota'],
+      ['Idę do pracę', 'Idę do pracy'],
+      ['Mamy psy i kota', 'Mamy psa i kota'],
+    ]) {
+      const r = pl(t, a);
+      expect(r.verdict, t).toBe('form');
+      expect(passes(r.verdict)).toBe(false);
+    }
+    expect(pl('Poproszę kawa', 'Poproszę kawę').endings).toEqual([['kawa', 'kawę']]);
+  });
+
+  it('tells a real form without Polish letters from a missing accent', () => {
+    expect(pl('Rozmawiałam z mama', 'Rozmawiałam z mamą').verdict).toBe('form');
+    expect(pl('pracuje', 'pracuję').verdict).toBe('form');
+    expect(pl('dziekuje', 'dziękuję').verdict).toBe('accent');
+    expect(pl('Poproszę kawe', 'Poproszę kawę').verdict).toBe('accent');
+  });
+
+  it('still forgives a typo at the end of a word that is not a real form', () => {
+    expect(pl('Mieszkm w Londynie', 'Mieszkam w Londynie').verdict).toBe('typo');
+    expect(pl('przeprasam', 'przepraszam').verdict).toBe('typo');
+  });
+
+  it('without a word list, a changed ending is still a grammar mistake', () => {
+    expect(grade('Poproszę kawa', ['Poproszę kawę'], 'pl').verdict).toBe('form');
+    expect(grade('Mam koty', ['Mam kota'], 'pl').verdict).toBe('form');
+  });
+
+  it('accepts another right answer rather than calling it a wrong form', () => {
+    expect(grade('Jestem nauczycielką', ['Jestem nauczycielem', 'Jestem nauczycielką'], 'pl', isKnownForm).verdict).toBe('correct');
   });
 });

@@ -45,10 +45,16 @@ export const u01 = unit(
           ],
         },
       },
+      dialogue: [
+        ['Ola', 'To jest kot?', 'Is this a cat?'],
+        ['Tom', 'Tak, to kot. A to jest dom.', 'Yes, it\'s a cat. And this is a house.'],
+        ['Ola', 'A to? Woda?', 'And this? Water?'],
+        ['Tom', 'Nie, to nie woda. To ser!', 'No, it\'s not water. It\'s cheese!'],
+      ],
     }),
     lesson('u01-l2', 'Ł, ch and the digraphs', 'Say ł, ch, sz, cz and rz.', {
       items: [
-        ['mały', 'small', { altEn: ['little'], hint: 'ł sounds like English w: "MA-wy".' }],
+        ['mały', 'small', { altEn: ['little'], hint: 'ł sounds like English w: "MA-wi".' }],
         ['chleb', 'bread', { g: 'm', hint: 'ch as in Scottish "loch"; final b sounds like p: "khlep".' }],
         ['herbata', 'tea', { g: 'f', hint: 'h sounds the same as ch.' }],
         ['szkoła', 'school', { g: 'f', hint: 'sz = "sh": "SHKO-wa".' }],
@@ -71,7 +77,7 @@ export const u01 = unit(
         title: 'Two letters, one sound',
         body: [
           'Polish writes several single sounds with two letters. Learn these five and most words open up.',
-          'At the end of a word, voiced consonants lose their voice: {chleb} sounds like "khlep", {żabka} like "zhapka".',
+          'At the end of a word, voiced consonants lose their voice: {chleb} sounds like "khlep". They do the same before p, t, k, s or sz: {żabka} sounds like "ZHAP-ka", {wódka} like "VOOT-ka".',
         ],
         table: {
           head: ['Spelling', 'Sounds like', 'Example'],
@@ -84,6 +90,12 @@ export const u01 = unit(
           ],
         },
       },
+      dialogue: [
+        ['Ania', 'Herbata?', 'Tea?'],
+        ['Jack', 'Tak, i chleb.', 'Yes, and bread.'],
+        ['Ania', 'Chleb i ser?', 'Bread and cheese?'],
+        ['Jack', 'Tak, poproszę!', 'Yes, please!'],
+      ],
     }),
     lesson('u01-l3', 'Soft sounds and nasal vowels', 'Hear the difference between sz and ś, and say ą and ę.', {
       items: [
@@ -92,12 +104,12 @@ export const u01 = unit(
         ['siedem', 'seven', { hint: 'si = soft "sh": "SHE-dem".' }],
         ['koń', 'horse', { g: 'm', hint: 'ń is like the "ny" in "canyon".' }],
         ['źle', 'badly', { altEn: ['bad', 'wrong'], hint: 'ź is a soft "zh".' }],
-        ['ręka', 'hand', { altEn: ['arm'], g: 'f', hint: 'ę before k sounds like "en": "REN-ka".' }],
+        ['ręka', 'hand', { altEn: ['arm'], g: 'f', hint: 'ę before k sounds like "eng": "RENG-ka".' }],
         ['mięso', 'meat', { g: 'n', hint: 'ę before s is nasal: "MYEN-so".' }],
-        ['są', 'they are', { altEn: ['are'], hint: 'ą at the end sounds like French "on": "sown".' }],
+        ['są', 'they are', { altEn: ['are'], hint: 'ą at the end is a nasal o, as in French "bon", never the "oh" of "sown".' }],
       ],
       sentences: [
-        ['Cześć, Kasia!', 'Hi, Kasia!', { altEn: ['Hello, Kasia!', 'Hi Kasia!'], extra: ['Kasza', 'nie'] }],
+        ['Cześć, Kasiu!', 'Hi, Kasia!', { altEn: ['Hello, Kasia!', 'Hi Kasia!'], altPl: ['Cześć, Kasia!'], extra: ['Kasza', 'nie'], key: 's1' }],
         ['To jest ciocia.', 'This is my aunt.', { altEn: ['This is auntie.', 'This is an aunt.', "It's my aunt.", 'This is aunt.'], extra: ['koń', 'mięso'] }],
         ['To jest koń.', 'This is a horse.', { altEn: ['It is a horse.', "It's a horse.", 'That is a horse.'], extra: ['kot', 'ręka'] }],
       ],
@@ -125,6 +137,12 @@ export const u01 = unit(
           ],
         },
       },
+      dialogue: [
+        ['Kasia', 'Cześć, Tom!', 'Hi, Tom!'],
+        ['Tom', 'Cześć, Kasiu! To jest ciocia?', 'Hi, Kasia! Is this your aunt?'],
+        ['Kasia', 'Tak, to ciocia Ewa.', 'Yes, this is Aunt Ewa.'],
+        ['Tom', 'Dzień dobry!', 'Hello!'],
+      ],
     }),
   ],
 );
@@ -151,6 +169,23 @@ export const u02 = unit(
         ['Na razie, do zobaczenia!', 'Bye, see you soon!', { altEn: ['See you, see you soon!', 'Bye, see you later!', 'See you later!'], extra: ['dobranoc', 'widzenia'] }],
         ['Dobranoc, mamo.', 'Good night, Mum.', { altEn: ['Good night, mum.', 'Goodnight, Mum.'], extra: ['dzień', 'mama'] }],
       ],
+      spotlight: {
+        title: 'Calling someone by name',
+        body: [
+          'When you speak **to** someone, Polish changes the ending of their name (the vocative case). You will hear it in every greeting: {Cześć, Kasiu!}, {Dobranoc, mamo!}',
+          'With a stranger, use {pan} or {pani} with their first name, also in the vocative: {pani Anno}, {panie Marku}. In casual speech people often keep the plain name ({Cześć, Kasia!}), and nobody minds.',
+        ],
+        table: {
+          head: ['Name', 'Talking to them'],
+          rows: [
+            ['Kasia', 'Kasiu'],
+            ['Anna / Ania', 'Anno / Aniu'],
+            ['Tomek', 'Tomku'],
+            ['Marek', 'Marku'],
+            ['mama', 'mamo'],
+          ],
+        },
+      },
       dialogue: [
         ['Ola', 'Hej, Tom!', 'Hey, Tom!'],
         ['Tom', 'Cześć, Ola! Na razie!', 'Hi, Ola! See you!'],
@@ -160,7 +195,7 @@ export const u02 = unit(
     lesson('u02-l2', 'Please, thank you, sorry', 'Be polite: please, thanks, sorry and "no problem".', {
       items: [
         ['proszę', 'please', { altEn: ['here you are', "you're welcome"], hint: 'The Swiss army knife of Polish politeness.' }],
-        ['dziękuję', 'thank you', { altEn: ['thanks'], hint: '"jen-KOO-yeh".' }],
+        ['dziękuję', 'thank you', { altEn: ['thanks'], hint: '"jeng-KOO-ye".' }],
         ['dzięki', 'thanks', { altEn: ['cheers'] }],
         ['przepraszam', 'sorry', { altEn: ['excuse me', "i'm sorry"], hint: '"pshe-PRA-sham".' }],
         ['nie ma za co', "you're welcome", { altEn: ["don't mention it", 'no problem', 'not at all'] }],
@@ -170,7 +205,7 @@ export const u02 = unit(
       ],
       sentences: [
         ['Dziękuję bardzo!', 'Thank you very much!', { altEn: ['Thanks a lot!', 'Thank you so much!'], extra: ['proszę', 'dzięki'] }],
-        ['Przepraszam, proszę.', 'Excuse me, please.', { altEn: ['Sorry, please.'], extra: ['dobrze', 'tak'] }],
+        ['Przepraszam, czy mogę?', 'Excuse me, may I?', { altEn: ['Sorry, may I?', 'Excuse me, can I?'], altPl: ['Przepraszam, mogę?'], extra: ['proszę', 'tak'], key: 's2' }],
         ['Nie ma za co.', "You're welcome.", { altEn: ["Don't mention it.", 'No problem.', 'Not at all.'], extra: ['jest', 'to'] }],
         ['Tak, w porządku.', "Yes, that's all right.", { altEn: ['Yes, all right.', "Yes, it's fine.", 'Yes, OK.', "Yes, it's all right.", 'Yes, alright.'], extra: ['nie', 'dobrze'] }],
       ],
@@ -185,6 +220,14 @@ export const u02 = unit(
           ['Proszę?', 'Pardon?'],
         ],
       },
+      dialogue: [
+        ['Kelner', 'Proszę.', 'Here you are.'],
+        ['Emma', 'Dziękuję bardzo!', 'Thank you very much!'],
+        ['Kelner', 'Nie ma za co.', 'You\'re welcome.'],
+        ['Emma', 'Przepraszam! To nie moja kawa.', 'Excuse me! This isn\'t my coffee.'],
+        ['Kelner', 'Och, przepraszam!', 'Oh, sorry!'],
+        ['Emma', 'W porządku.', 'That\'s all right.'],
+      ],
     }),
     lesson('u02-l3', 'How are you? Pan and pani', 'Ask how someone is, formally and informally.', {
       items: [
@@ -277,6 +320,13 @@ export const u03 = unit(
           ],
         },
       },
+      dialogue: [
+        ['Anna', 'Jesteś Tom?', 'Are you Tom?'],
+        ['Tom', 'Tak, jestem Tom. A ty?', 'Yes, I\'m Tom. And you?'],
+        ['Anna', 'Jestem Anna. A to jest Marek.', 'I\'m Anna. And this is Marek.'],
+        ['Tom', 'Cześć! Jesteście razem?', 'Hi! Are you together?'],
+        ['Anna', 'Tak, jesteśmy razem.', 'Yes, we\'re together.'],
+      ],
     }),
     lesson('u03-l2', 'My name is…', 'Give your name and introduce a friend.', {
       items: [
@@ -286,8 +336,8 @@ export const u03 = unit(
         ['miło mi', 'nice to meet you', { altEn: ['pleased to meet you', 'pleasure'] }],
         ['bardzo mi miło', 'very nice to meet you', { altEn: ['lovely to meet you', 'very pleased to meet you'] }],
         ['to jest', 'this is', { altEn: ['it is', 'that is'] }],
-        ['mój przyjaciel', 'my friend (a man)', { altEn: ['my friend', 'my friend (man)'], hint: 'A male friend.' }],
-        ['moja przyjaciółka', 'my friend (a woman)', { altEn: ['my friend', 'my friend (woman)', 'my girlfriend'], hint: 'A female friend.' }],
+        ['mój przyjaciel', 'my friend (a man)', { altEn: ['my friend', 'my friend (man)'], hint: 'A close male friend. Someone you know less well is {kolega}; a boyfriend is {chłopak}.' }],
+        ['moja przyjaciółka', 'my friend (a woman)', { altEn: ['my friend', 'my friend (woman)'], hint: 'A close female friend, not a girlfriend ({dziewczyna}). Someone you know less well is {koleżanka}.' }],
       ],
       sentences: [
         ['Nazywam się Emma Smith.', 'My name is Emma Smith.', { altEn: ["I'm Emma Smith.", 'I am called Emma Smith.'], extra: ['mam', 'jest'] }],
@@ -334,6 +384,12 @@ export const u03 = unit(
           '"From" is {z} + a special form of the country (the genitive case). Learn them as phrases for now: {z Anglii}, {z Polski}, {z Irlandii}.',
         ],
       },
+      dialogue: [
+        ['Kasia', 'Skąd jesteś?', 'Where are you from?'],
+        ['Jack', 'Jestem z Anglii, z Londynu. A ty?', 'I\'m from England, from London. And you?'],
+        ['Kasia', 'Jestem z Polski, ale mieszkam w Londynie.', 'I\'m from Poland, but I live in London.'],
+        ['Jack', 'Naprawdę? Ja też!', 'Really? Me too!'],
+      ],
     }),
   ],
 );
@@ -367,12 +423,14 @@ export const u04 = unit(
         ['___ książka', 'this book', ['ta', 'ten', 'to'], 'ta', 'Ends in -a → feminine.'],
         ['___ okno', 'this window', ['to', 'ten', 'ta'], 'to', 'Ends in -o → neuter.'],
         ['___ mieszkanie', 'this flat', ['to', 'ta', 'ten'], 'to', 'Ends in -e → neuter.'],
+        ['___ noc', 'this night', ['ta', 'ten', 'to'], 'ta', 'noc is one of the feminine nouns that end in a consonant, like every noun in -ść.'],
       ],
       spotlight: {
         title: 'Gender from the ending',
         body: [
           'Look at the last letter. It is right about 95% of the time.',
           'Words for men that end in -a (like {tata}, dad) are still masculine — meaning beats spelling.',
+          'The big exception: some nouns ending in a consonant are **feminine**, including every noun in **-ść** ({miłość}, love; {wiadomość}, message) and a few everyday words to learn as you go: {noc} (night), {rzecz} (thing), {twarz} (face). So it is {ta noc}.',
         ],
         table: {
           head: ['Ending', 'Gender', '"this"', 'Example'],
@@ -383,6 +441,12 @@ export const u04 = unit(
           ],
         },
       },
+      dialogue: [
+        ['Mama', 'Gdzie jest mój telefon?', 'Where\'s my phone?'],
+        ['Tom', 'Tutaj, na stole.', 'Here, on the table.'],
+        ['Mama', 'A moja torba?', 'And my bag?'],
+        ['Tom', 'Nie wiem. Może w samochodzie?', 'I don\'t know. Maybe in the car?'],
+      ],
     }),
     lesson('u04-l2', 'Big, small, new, old', 'Make adjectives agree with nouns.', {
       items: [
@@ -419,6 +483,12 @@ export const u04 = unit(
           ],
         },
       },
+      dialogue: [
+        ['Ola', 'To jest twój nowy samochód?', 'Is this your new car?'],
+        ['Adam', 'Tak! Ładny, prawda?', 'Yes! Nice, isn\'t it?'],
+        ['Ola', 'Bardzo ładny. Drogi?', 'Very nice. Expensive?'],
+        ['Adam', 'Nie, tani. Jest stary!', 'No, cheap. It\'s old!'],
+      ],
     }),
     lesson('u04-l3', 'What is it? Where is it?', 'Ask simple questions.', {
       items: [
@@ -448,6 +518,14 @@ export const u04 = unit(
           ['Czy to jest kawa?', 'Is this coffee?'],
         ],
       },
+      dialogue: [
+        ['Ewa', 'Co to jest?', 'What\'s this?'],
+        ['Tom', 'To jest herbata z Anglii.', 'It\'s tea from England.'],
+        ['Ewa', 'A kto to jest?', 'And who is this?'],
+        ['Tom', 'To jest moja mama.', 'That\'s my mum.'],
+        ['Ewa', 'Gdzie ona jest? Tutaj?', 'Where is she? Here?'],
+        ['Tom', 'Nie, tam, w Londynie.', 'No, there, in London.'],
+      ],
     }),
   ],
 );
@@ -481,6 +559,12 @@ export const u05 = unit(
         ['cztery + cztery = ___', '4 + 4', ['osiem', 'siedem', 'dziewięć'], 'osiem'],
         ['jeden + dwa = ___', '1 + 2', ['trzy', 'dwa', 'cztery'], 'trzy'],
         ['pięć + pięć = ___', '5 + 5', ['dziesięć', 'dziewięć', 'sześć'], 'dziesięć'],
+      ],
+      dialogue: [
+        ['Nauczycielka', 'Ile to jest dwa i trzy?', 'What is two and three?'],
+        ['Tomek', 'Pięć!', 'Five!'],
+        ['Nauczycielka', 'Dobrze! A cztery i cztery?', 'Good! And four and four?'],
+        ['Tomek', 'Osiem!', 'Eight!'],
       ],
     }),
     lesson('u05-l2', 'Eleven to a hundred', 'Build any number up to 100.', {
@@ -522,6 +606,12 @@ export const u05 = unit(
           ],
         },
       },
+      dialogue: [
+        ['Marek', 'Ile masz lat?', 'How old are you?'],
+        ['Emma', 'Mam dwadzieścia pięć lat. A ty?', 'I\'m twenty-five. And you?'],
+        ['Marek', 'Trzydzieści.', 'Thirty.'],
+        ['Emma', 'Naprawdę? Nie wyglądasz!', 'Really? You don\'t look it!'],
+      ],
     }),
     lesson('u05-l3', 'How much is it?', 'Ask prices and pay.', {
       items: [

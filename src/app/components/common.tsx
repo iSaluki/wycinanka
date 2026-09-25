@@ -151,10 +151,10 @@ export function PageHead({ pl, en, children }: { pl: string; en: string; childre
   );
 }
 
-export function SectionHead({ pl, en, children }: { pl: string; en: string; children?: ReactNode }) {
+export function SectionHead({ pl, en, id, children }: { pl: string; en: string; id?: string; children?: ReactNode }) {
   return (
     <div className="section-head">
-      <h2>
+      <h2 id={id}>
         <span lang="pl">{pl}</span>
         <small>{en}</small>
       </h2>

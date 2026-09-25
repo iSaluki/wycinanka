@@ -1013,6 +1013,23 @@ a.mini-card:hover h3 {
   font-size: 16px;
 }
 
+/* A unit's lessons fold away when the unit is finished or far ahead. */
+.unit-lessons > summary {
+  cursor: pointer;
+  width: fit-content;
+  padding: 4px 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+.unit-lessons[open] > summary .show {
+  display: none;
+}
+.lesson-meta {
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+
 .lesson-list {
   display: grid;
   padding: 0;
@@ -1084,6 +1101,43 @@ a.mini-card:hover h3 {
   padding: 10px 18px 0;
 }
 
+/* A note under the progress bar, e.g. whose gendered forms a lesson shows. */
+.player-banner {
+  margin-top: -6px;
+}
+.player-banner p {
+  margin: 0;
+  font-size: 14px;
+}
+
+/* Typing Polish letters on a physical keyboard: only worth saying where there is one. */
+.keys-tip {
+  margin: 4px 0 0;
+  font-size: 14px;
+  color: var(--ink-3);
+}
+@media (hover: none), (max-width: 640px) {
+  .keys-tip {
+    display: none;
+  }
+}
+
+/* Words of a Polish answer, each tappable to hear it on its own. */
+.tap-words {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0 0.3em;
+}
+.tap-words button {
+  all: unset;
+  cursor: pointer;
+  border-bottom: 1.5px dotted currentColor;
+}
+.tap-words button:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
 .player-top {
   display: flex;
   align-items: center;
@@ -1096,6 +1150,11 @@ a.mini-card:hover h3 {
   display: flex;
   gap: 2px;
   height: 12px;
+}
+
+/* Long lessons: thinner gaps, so the stripes still read as one band on a phone. */
+.stripes.many {
+  gap: 1px;
 }
 
 .stripes span {
@@ -1559,6 +1618,28 @@ table.plain .pl {
   gap: 12px;
 }
 
+/* Listening at natural speed: who is talking, without the words. */
+.listen-who {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.listen-who li {
+  padding: 6px 12px;
+  border: 1.5px solid var(--rule-strong);
+  border-radius: 999px;
+  font-weight: 600;
+  color: var(--ink-3);
+  transition: background 0.2s var(--ease), color 0.2s var(--ease);
+}
+.listen-who li.talking {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--on-ink);
+}
 .bubble {
   display: grid;
   gap: 4px;
@@ -3441,4 +3522,152 @@ dialog.confirm p {
 .tag-picture {
   background: var(--zielen);
   color: var(--on-ink);
+}
+
+/* ---------- Badges ---------- */
+
+.medal {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+}
+.medal svg {
+  position: absolute;
+  inset: 0;
+}
+.medal .petal {
+  fill: var(--medal);
+}
+.medal .disc {
+  fill: var(--paper);
+  stroke: var(--medal);
+  stroke-width: 3;
+}
+.medal .mark {
+  position: relative;
+  font: 700 15px var(--font-ui);
+  color: var(--ink);
+}
+.medal.locked {
+  --medal: var(--rule-strong);
+}
+.medal.locked .mark {
+  color: var(--ink-3);
+}
+.medal.tone-czerwien {
+  --medal: var(--czerwien);
+}
+.medal.tone-zielen {
+  --medal: var(--zielen);
+}
+.medal.tone-zolc {
+  --medal: var(--zolc);
+}
+.medal.tone-blekit {
+  --medal: var(--blekit);
+}
+.medal.tone-pomarancz {
+  --medal: var(--pomarancz);
+}
+.medal.tone-amarant {
+  --medal: var(--amarant);
+}
+
+.badge-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.badge-card {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 14px;
+  border: 1.5px solid var(--rule);
+  border-radius: var(--r);
+}
+.badge-card.earned {
+  border-color: var(--ink);
+}
+.badge-text {
+  flex: 1;
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.badge-text b {
+  font: 700 19px var(--font-pl);
+}
+.badge-en {
+  font-weight: 600;
+}
+.badge-how,
+.badge-when,
+.badge-progress {
+  font-size: 14px;
+  color: var(--ink-2);
+}
+.badge-progress {
+  display: grid;
+  gap: 4px;
+  margin-top: 4px;
+}
+.badge-progress .bar {
+  display: block;
+  height: 6px;
+  background: var(--paper-3);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.badge-progress .bar span {
+  display: block;
+  height: 100%;
+  background: var(--ink-2);
+}
+
+/* "New badge!": top of the screen, clear of the lesson dock and the tab bar. */
+.badge-toast {
+  position: fixed;
+  z-index: 60;
+  top: 14px;
+  left: 0;
+  right: 0;
+  margin: 0 auto;
+  width: min(440px, calc(100vw - 32px));
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  padding: 14px 16px;
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  border-radius: var(--r);
+  box-shadow: 0 10px 30px rgb(0 0 0 / 0.18);
+  animation: rise 300ms var(--ease);
+}
+.badge-toast-text {
+  display: grid;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+.badge-toast-text .label {
+  font-size: 14px;
+  color: var(--ink-3);
+}
+.badge-toast-text .label [lang='pl'] {
+  font: italic 400 15px var(--font-pl);
+  color: var(--czerwien);
+}
+.badge-toast-text a {
+  font-size: 14px;
+  width: fit-content;
+}
+.badge-toast .icon-btn {
+  width: 36px;
+  height: 36px;
+  font-size: 20px;
 }

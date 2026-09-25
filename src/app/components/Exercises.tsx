@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNod
 import type { DialogueLine, Item, Spotlight } from '../../content/types';
 import { POLISH_LETTERS } from '../../shared/grade';
 import { maskAnswer, ruledOut, sentenceStart, shuffle, type Exercise, type ExtraTag } from '../lib/exercises';
-import { speak } from '../lib/speech';
+import { speak, stopSpeaking } from '../lib/speech';
 import { respell } from '../../shared/phonetics';
 import { chunkFor } from '../../content/chunks';
 import { GENDER_LABEL, Rich, Speak, usePolishVoice } from './common';
@@ -147,6 +147,14 @@ export function TypeAnswer({ ex, locked, onAnswer, hints = 0 }: AnswerProps<Of<'
     });
   };
   const toPolish = ex.lang === 'pl';
+  // Alt (Option on a Mac) + a letter types its Polish partner, as on a Polish keyboard: Alt+a → ą, Alt+x → ź.
+  const onKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (!toPolish || !e.altKey || e.ctrlKey || e.metaKey) return;
+    const base = ALT_LETTERS[e.code];
+    if (!base) return;
+    e.preventDefault();
+    insert(e.shiftKey ? base.toLocaleUpperCase('pl') : base);
+  };
   return (
     <>
       <Instruction tag={ex.tag}>{toPolish ? 'Write this in Polish' : 'Write this in English'}</Instruction>
@@ -165,6 +173,7 @@ export function TypeAnswer({ ex, locked, onAnswer, hints = 0 }: AnswerProps<Of<'
           onAnswer(e.target.value.trim() ? e.target.value : null);
         }}
         readOnly={locked}
+        onKeyDown={onKeyDown}
         lang={toPolish ? 'pl' : 'en'}
         aria-label={toPolish ? 'Your answer in Polish' : 'Your answer in English'}
         autoComplete="off"
@@ -176,17 +185,33 @@ export function TypeAnswer({ ex, locked, onAnswer, hints = 0 }: AnswerProps<Of<'
       />
       {hints > 0 && !locked && <HintLine label="It starts:" text={maskAnswer(ex.accepted[0], hints)} lang={ex.lang} />}
       {toPolish && (
-        <div className="diacritics" aria-label="Polish letters">
-          {POLISH_LETTERS.map((l) => (
-            <button key={l} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => insert(l)} aria-label={`Insert ${l}`} lang="pl">
-              {l}
-            </button>
-          ))}
-        </div>
+        <>
+          <div className="diacritics" aria-label="Polish letters">
+            {POLISH_LETTERS.map((l) => (
+              <button key={l} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => insert(l)} aria-label={`Insert ${l}`} lang="pl">
+                {l}
+              </button>
+            ))}
+          </div>
+          <p className="keys-tip">On a keyboard: hold Alt (Option on a Mac) and press a, c, e, l, n, o, s or z; x gives ź.</p>
+        </>
       )}
     </>
   );
 }
+
+/** Alt + key → Polish letter, following the Polish programmer's keyboard layout (by physical key). */
+const ALT_LETTERS: Record<string, string> = {
+  KeyA: 'ą',
+  KeyC: 'ć',
+  KeyE: 'ę',
+  KeyL: 'ł',
+  KeyN: 'ń',
+  KeyO: 'ó',
+  KeyS: 'ś',
+  KeyZ: 'ż',
+  KeyX: 'ź',
+};
 
 /* ---------- Build ---------- */
 
@@ -508,6 +533,78 @@ export function SpotlightView({ s }: { s: Spotlight }) {
           ))}
         </div>
       )}
+    </section>
+  );
+}
+
+/* ---------- Listening ---------- */
+
+/**
+ * The lesson's conversation at natural speed, with no text: the way Polish is heard in real life. The speakers'
+ * names light up as they talk; the transcript is there for anyone who needs it.
+ */
+export function Listen({ lines }: { lines: DialogueLine[] }) {
+  const [playing, setPlaying] = useState<number | null>(null);
+  const [plays, setPlays] = useState(0);
+  const [transcript, setTranscript] = useState(false);
+  const hasVoice = usePolishVoice(lines[0]?.pl ?? '');
+  const speakers = [...new Set(lines.map((l) => l.who))];
+  const stop = useRef(false);
+  const play = (from = 0) => {
+    stop.current = false;
+    const step = (i: number) => {
+      if (stop.current || i >= lines.length) {
+        setPlaying(null);
+        return;
+      }
+      setPlaying(i);
+      speak(lines[i].pl, { natural: true, onEnd: () => window.setTimeout(() => step(i + 1), 350) });
+    };
+    setPlays((n) => n + 1);
+    step(from);
+  };
+  useEffect(() => {
+    if (hasVoice) play();
+    return () => {
+      stop.current = true;
+      stopSpeaking();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lines, hasVoice]);
+  return (
+    <section className="dialogue listen">
+      <div className="instruction">Listen to the conversation</div>
+      <p className="muted">
+        {hasVoice
+          ? 'At natural speed, with no text. Catch what you can: a question or two follows, then you read along.'
+          : "Your device can't play Polish here, so read the conversation instead."}
+      </p>
+      <ul className="listen-who" aria-label="Speakers">
+        {speakers.map((w) => (
+          <li key={w} className={playing !== null && lines[playing].who === w ? 'talking' : ''}>
+            {w}
+          </li>
+        ))}
+      </ul>
+      <div className="row wrap">
+        {hasVoice && (
+          <button type="button" className="btn quiet" onClick={() => (stopSpeaking(), play())} disabled={playing !== null}>
+            {plays > 0 ? 'Play again' : 'Play'}
+          </button>
+        )}
+        <button type="button" className="link-btn" onClick={() => setTranscript(!transcript)} aria-pressed={transcript}>
+          {transcript || !hasVoice ? 'Hide the text' : 'Show the text'}
+        </button>
+      </div>
+      {(transcript || !hasVoice) &&
+        lines.map((l, i) => (
+          <div key={i} className={`bubble ${speakers.indexOf(l.who) === 1 ? 'me' : ''}`}>
+            <span className="who">{l.who}</span>
+            <span className="pl" lang="pl">
+              {l.pl}
+            </span>
+          </div>
+        ))}
     </section>
   );
 }

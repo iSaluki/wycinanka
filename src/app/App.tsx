@@ -24,8 +24,18 @@ import { Hub } from './pages/Hub';
 import { Speaking } from './pages/Speaking';
 import { DISCOVER, PRACTISE } from './lib/sections';
 import { Mark } from './components/Shell';
+import { BadgeToast } from './components/Badges';
 
 export function App() {
+  return (
+    <>
+      <Routes />
+      <BadgeToast />
+    </>
+  );
+}
+
+function Routes() {
   const path = usePath();
   const status = useApp((s) => s.status);
   const user = useApp((s) => s.user);

@@ -93,9 +93,12 @@ describe('speaking practice', () => {
   });
 
   it('offers finished dialogues to role-play, or the next one before any', () => {
-    expect(conversationLessons(new Set())).toEqual({ lessons: [LESSONS.find((l) => l.id === 'u02-l1')], preview: true });
-    expect(conversationLessons(new Set(), 4).lessons[0].id).toBe('u05-l3');
-    expect(conversationLessons(new Set(['u02-l1', 'u03-l2', 'u03-l1'])).lessons.map((l) => l.id)).toEqual(['u02-l1', 'u03-l2']);
+    // Every lesson after the alphabet has a dialogue now.
+    expect(conversationLessons(new Set())).toEqual({ lessons: [LESSONS.find((l) => l.id === 'u01-l1')], preview: true });
+    expect(conversationLessons(new Set(), 4).lessons[0].id).toBe('u04-l1');
+    // A starting unit is stored by its id's number, wherever the unit now sits in the course.
+    expect(conversationLessons(new Set(), 19).lessons[0].id).toBe('u19-l1');
+    expect(conversationLessons(new Set(['u02-l1', 'u03-l2', 'u03-l1'])).lessons.map((l) => l.id)).toEqual(['u02-l1', 'u03-l1', 'u03-l2']);
   });
 
   it('makes a round of every kind that can be passed by saying the answer', () => {

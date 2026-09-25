@@ -3,14 +3,33 @@ import { u01, u02, u03, u04, u05 } from './units/a1-part1';
 import { u06, u07, u08, u09, u10 } from './units/a1-part2';
 import { u11, u12, u13, u14, u15, u16 } from './units/a2';
 import { u17, u18 } from './units/b1';
+import { u19, u20, u21, u22, u23, u24 } from './units/everyday';
+import { u25, u26, u27, u28, u29, u30 } from './units/grammar-plus';
 import { FREQUENCY } from './frequency';
 import { PICTURE_DECKS, type Picture, type PictureDeck } from './pictures';
 import { CHUNK_DECKS, type Chunk, type ChunkDeck } from './chunks';
 import type { Drill, FrequencyWord, Item, Lesson, Sentence, Unit } from './types';
 
-export const UNITS: Unit[] = [u00, u01, u02, u03, u04, u05, u06, u07, u08, u09, u10, u11, u12, u13, u14, u15, u16, u17, u18];
+/**
+ * The course in order. A unit's id never changes (lesson and card ids start with it), but where it sits here
+ * decides its "Unit n", so new units go wherever they fit best.
+ */
+export const UNITS: Unit[] = [
+  u00, u01, u02, u03, u19, u04, u05, u06, u07, u08, u20, u09, u10, u21,
+  u11, u12, u13, u14, u22, u15, u23, u16, u24, u25, u26,
+  u17, u18, u27, u28, u30, u29,
+];
+
+// "Unit n" is a unit's place in the course, whatever its id.
+UNITS.forEach((u, i) => (u.n = i));
 
 export const LESSONS: Lesson[] = UNITS.flatMap((u) => u.lessons);
+
+/** A unit by the number in its id: what settings.startUnit stores. */
+export const unitByKey = (key: number) => UNITS.find((u) => u.key === key);
+
+/** Where a stored starting unit sits in the course now (its "Unit n"). */
+export const startPosition = (startUnit: number | undefined) => (startUnit === undefined ? 0 : (unitByKey(startUnit)?.n ?? startUnit));
 
 export type CardSource =
   | { kind: 'item'; item: Item; lesson: Lesson }

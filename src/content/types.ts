@@ -69,7 +69,14 @@ export interface Lesson {
 }
 
 export interface Unit {
+  /** Stable id (u06): lesson and card ids start with it. */
   id: string;
+  /**
+   * The number in the id. Settings store the starting unit by this number, so it keeps meaning the same
+   * unit when new units are added in between.
+   */
+  key: number;
+  /** Position in the course, shown as "Unit n". Set by course.ts from the order of UNITS. */
   n: number;
   title: string;
   titlePl: string;

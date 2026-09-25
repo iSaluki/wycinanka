@@ -11,12 +11,22 @@ export interface Policy {
 
 export const POLICIES = {
   loginIp: { limit: 30, windowMs: 15 * 60_000, lockMs: 15 * 60_000 },
+  /** Wrong passwords for one account from one network. Locks only that network out, so nobody else can lock you out. */
   loginUser: { limit: 8, windowMs: 15 * 60_000, lockMs: 15 * 60_000 },
+  /**
+   * Wrong passwords for one account from anywhere: a slow, distributed guessing attack. High enough that locking
+   * someone out this way takes hundreds of attempts from dozens of networks.
+   */
+  loginUserAll: { limit: 200, windowMs: 60 * 60_000, lockMs: 60 * 60_000 },
   registerIp: { limit: 6, windowMs: 60 * 60_000, lockMs: 60 * 60_000 },
+  /** Sign-up attempts, taken or not: enough to try a few names, not to list who has an account. */
+  registerCheck: { limit: 30, windowMs: 60 * 60_000, lockMs: 60 * 60_000 },
   sensitiveUser: { limit: 6, windowMs: 15 * 60_000, lockMs: 15 * 60_000 },
   pushTest: { limit: 5, windowMs: 15 * 60_000, lockMs: 15 * 60_000 },
   /** Spoken answers sent for transcription: about one every 20 seconds for an hour is plenty for practice. */
   speechIp: { limit: 180, windowMs: 60 * 60_000, lockMs: 30 * 60_000 },
+  /** The same, per signed-in learner, so learners sharing a network (a school, a family) don't share one limit. */
+  speechUser: { limit: 180, windowMs: 60 * 60_000, lockMs: 30 * 60_000 },
 } satisfies Record<string, Policy>;
 
 /** Milliseconds until the key unlocks, or 0 if it is not locked. */

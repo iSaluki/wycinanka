@@ -89,7 +89,6 @@ test('a lesson asks the learner to say words aloud and checks them', async ({ pa
 test('speaking can be switched off for lessons', async ({ page }) => {
   await page.goto('/profile');
   await page.getByRole('radiogroup', { name: 'Speaking in lessons' }).getByRole('radio', { name: 'Off' }).click();
-  // Guest settings live in memory, so move within the app rather than reloading.
   await page.evaluate(() => {
     history.pushState(null, '', '/lesson/u01-l1');
     dispatchEvent(new PopStateEvent('popstate'));

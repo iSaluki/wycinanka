@@ -18,6 +18,8 @@ export type Exercise =
   | { kind: 'meet'; items: Item[]; from?: number; total?: number }
   | { kind: 'spotlight'; spotlight: Spotlight }
   | { kind: 'dialogue'; lines: DialogueLine[] }
+  /** The lesson's conversation heard at natural speed, without the text: listening before reading. */
+  | { kind: 'listen'; lines: DialogueLine[] }
   | {
       kind: 'choose';
       cardId: string;
@@ -91,9 +93,9 @@ export interface SpeakExercise {
 
 export type MatchPair = { cardId: string; pl: string; en: string; say?: string };
 
-export type GradedExercise = Exclude<Exercise, { kind: 'meet' } | { kind: 'spotlight' } | { kind: 'dialogue' } | SpeakExercise>;
+export type GradedExercise = Exclude<Exercise, { kind: 'meet' } | { kind: 'spotlight' } | { kind: 'dialogue' } | { kind: 'listen' } | SpeakExercise>;
 
-export const isGraded = (e: Exercise): e is GradedExercise => !['meet', 'spotlight', 'dialogue', 'speak'].includes(e.kind);
+export const isGraded = (e: Exercise): e is GradedExercise => !['meet', 'spotlight', 'dialogue', 'listen', 'speak'].includes(e.kind);
 
 /* ---------- Hints ---------- */
 
@@ -381,6 +383,55 @@ export interface LessonPlan {
   exercises: Exercise[];
   /** Index of the first exercise after the new material has been introduced and first practised. */
   introEnd: number;
+  /** Index where the closing conversation begins: nothing else (retries, revision) belongs after it. */
+  outroStart: number;
+}
+
+/** Every dialogue line in the course, for wrong replies in "what do you reply?". */
+let allLines: DialogueLine[] | undefined;
+
+/**
+ * The lesson's conversation, three ways: heard at natural speed with no text, a question or two on what was
+ * said (answered from the sound alone), then read along; finally the learner picks their own replies.
+ */
+export function conversation(lesson: Lesson, rand = Math.random): Exercise[] {
+  const d = lesson.dialogue;
+  if (!d || d.length < 2) return [];
+  const speakers = [...new Set(d.map((l) => l.who))];
+  const heard = shuffle(d.map((l, i) => ({ l, i })), rand)
+    .filter(({ l }, k, xs) => xs.findIndex((x) => x.l.en === l.en) === k)
+    .slice(0, 2)
+    .sort((a, b) => a.i - b.i);
+  const questions: Exercise[] = heard.map(({ l, i }) => ({
+    kind: 'choose',
+    cardId: `${lesson.id}:heard-${i}`,
+    prompt: l.pl,
+    promptLang: 'pl',
+    options: shuffle([l.en, ...shuffle(d.filter((x) => x.en !== l.en).map((x) => x.en), rand).slice(0, 2)], rand),
+    answer: l.en,
+    audio: true,
+    instruction: 'From the conversation: what does this mean?',
+  }));
+  allLines ??= LESSONS.flatMap((x) => x.dialogue ?? []);
+  // Wrong replies come from other conversations, leaving out short all-purpose lines ("Tak.", "Dziękuję!") that
+  // could fit anywhere.
+  const others = allLines.filter((x) => !d.some((y) => y.pl === x.pl) && x.pl.split(/\s+/).length >= 3);
+  const mine = d.map((l, i) => ({ l, i })).filter(({ l, i }) => i > 0 && l.who === speakers[1] && d[i - 1].who !== l.who);
+  const replies: Exercise[] = shuffle(mine, rand)
+    .slice(0, 2)
+    .sort((a, b) => a.i - b.i)
+    .map(({ l, i }) => ({
+      kind: 'choose',
+      cardId: `${lesson.id}:reply-${i}`,
+      prompt: d[i - 1].pl,
+      promptLang: 'pl',
+      options: shuffle([l.pl, ...shuffle(others, rand).slice(0, 2).map((x) => x.pl)], rand),
+      answer: l.pl,
+      optionStyle: 'pl',
+      instruction: `Your turn as ${l.who}: what do you reply?`,
+      hint: `${d[i - 1].who} said: "${d[i - 1].en}"`,
+    }));
+  return [{ kind: 'listen', lines: d }, ...questions, { kind: 'dialogue', lines: d }, ...replies];
 }
 
 /**
@@ -427,9 +478,8 @@ export function lessonPlan(lesson: Lesson, { speaking = true }: PlanOptions = {}
     if (b.length) middle.push(b.shift()!);
   }
 
-  return {
-    introEnd: intro.length,
-    exercises: [
+  const outro = conversation(lesson);
+  const body: Exercise[] = [
       ...intro,
       ...(lesson.spotlight ? [{ kind: 'spotlight', spotlight: lesson.spotlight } as Exercise] : []),
       ...listen,
@@ -440,9 +490,8 @@ export function lessonPlan(lesson: Lesson, { speaking = true }: PlanOptions = {}
       ...produce,
       ...recall,
       ...finale,
-      ...(lesson.dialogue ? [{ kind: 'dialogue', lines: lesson.dialogue } as Exercise] : []),
-    ],
-  };
+  ];
+  return { introEnd: intro.length, outroStart: body.length, exercises: [...body, ...outro] };
 }
 
 export const lessonExercises = (lesson: Lesson): Exercise[] => lessonPlan(lesson).exercises;
@@ -669,19 +718,17 @@ function phonicsPlan(lesson: Lesson, speaking = true): LessonPlan {
   const items = shuffle(lesson.items);
   const hearable = items.filter((i) => (i.ex?.[1] ? soundAlikes(i.ex[1]).length : 0) > 0);
   const intro = stepwise(lesson.items, (i) => soundOf(i, pool), phonicsPair);
-  return {
-    introEnd: intro.length,
-    exercises: [
-      ...intro,
-      ...(lesson.spotlight ? [{ kind: 'spotlight', spotlight: lesson.spotlight } as Exercise] : []),
-      ...shuffle(items).slice(0, 3).map((i) => spellingOf(i, pool)),
-      ...lesson.drills.map(gapFor),
-      ...items.map((i) => readWord(i, pool)),
-      // Now say them: read two of the example words aloud before hearing them.
-      ...(speaking ? items.slice(0, 2).map((i) => readAloud(i.id, i.ex?.[2] ?? firstExample(i))) : []),
-      ...hearable.slice(0, 3).map((i) => hearWord(i)),
-    ],
-  };
+  const exercises: Exercise[] = [
+    ...intro,
+    ...(lesson.spotlight ? [{ kind: 'spotlight', spotlight: lesson.spotlight } as Exercise] : []),
+    ...shuffle(items).slice(0, 3).map((i) => spellingOf(i, pool)),
+    ...lesson.drills.map(gapFor),
+    ...items.map((i) => readWord(i, pool)),
+    // Now say them: read two of the example words aloud before hearing them.
+    ...(speaking ? items.slice(0, 2).map((i) => readAloud(i.id, i.ex?.[2] ?? firstExample(i))) : []),
+    ...hearable.slice(0, 3).map((i) => hearWord(i)),
+  ];
+  return { introEnd: intro.length, outroStart: exercises.length, exercises };
 }
 
 /* ---------- Reinforcement ---------- */

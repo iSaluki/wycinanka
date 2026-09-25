@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { TOTAL_LESSONS } from '../../content/course';
 import { addDays, localDay } from '../../shared/progress';
 import { passwordProblem, PASSWORD_MESSAGES } from '../../shared/password';
@@ -7,6 +7,8 @@ import { PageHead, SectionHead, Speak, usePolishVoice } from '../components/comm
 import { Shell } from '../components/Shell';
 import { ApiError } from '../lib/api';
 import { useStats } from '../lib/derived';
+import { BadgeCard } from '../components/Badges';
+import { badgeStates } from '../../shared/badges';
 import { Link, navigate, useTitle } from '../lib/router';
 import { hasDeviceVoice } from '../lib/speech';
 import { DEFAULT_REMINDER_HOUR } from '../../shared/reminders';
@@ -363,6 +365,42 @@ function AccountCard() {
   );
 }
 
+/** Badges: signed-in learners only, because they are kept with the account. */
+function BadgesSection() {
+  const user = useApp((s) => s.user);
+  const progress = useApp((s) => s.progress);
+  const seen = useApp((s) => s.settings.badges);
+  const states = useMemo(() => badgeStates(progress), [progress]);
+  useEffect(() => {
+    if (location.hash === '#badges') document.getElementById('badges')?.scrollIntoView({ block: 'start' });
+  }, []);
+  if (!user) {
+    return (
+      <section className="stack" id="badges" aria-labelledby="badges-h">
+        <SectionHead pl="Odznaki" en="badges" id="badges-h" />
+        <p className="muted">
+          Learners with an account collect badges for milestones: their first lesson, a week-long streak, a whole level finished.{' '}
+          <Link to="/signup">Create a free account</Link> to start collecting — what you've already done counts.
+        </p>
+      </section>
+    );
+  }
+  const earned = states.filter((s) => s.earned);
+  // Earned first, then the ones closest to being earned.
+  const next = states.filter((s) => !s.earned).sort((a, b) => b.value / b.badge.target - a.value / a.badge.target);
+  return (
+    <section className="stack" id="badges" aria-labelledby="badges-h">
+      <SectionHead pl="Odznaki" en={`badges · ${earned.length} of ${states.length}`} id="badges-h" />
+      {earned.length === 0 && <p className="muted">Finish your first lesson to earn your first badge.</p>}
+      <ul className="badge-grid">
+        {[...earned, ...next].map((s) => (
+          <BadgeCard key={s.badge.id} state={s} at={seen?.[s.badge.id]} />
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 export function Profile() {
   useTitle('Profile');
   const user = useApp((s) => s.user);
@@ -373,7 +411,7 @@ export function Profile() {
         <PageHead pl={user ? user.username : 'Gość'} en={user ? 'Your profile' : 'Learning as a guest'}>
           {user
             ? `Learning since ${new Date(user.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}.`
-            : "Your progress is kept only until you close this tab. Create a free account to save it — everything from this visit comes with you."}
+            : "Your progress is saved on this device only. Create a free account to keep it safe and use it on other devices — everything you've done comes with you."}
         </PageHead>
         {!user && (
           <div className="row wrap">
@@ -405,6 +443,7 @@ export function Profile() {
             <span>cards in review</span>
           </div>
         </div>
+        <BadgesSection />
         <section className="stack" aria-labelledby="act">
           <SectionHead pl="Aktywność" en="the last 15 weeks" />
           <Heatmap />

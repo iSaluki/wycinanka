@@ -53,7 +53,20 @@ export function Practice({ kind, id }: { kind: string; id: string }) {
   };
 
   if (!summary && plan.exercises.some((e) => 'cardId' in e)) {
-    return <Session key={run} exercises={plan.exercises} what="practice session" onClose={() => navigate('/')} rateable onFinish={finish} />;
+    return (
+      <Session
+        key={run}
+        exercises={plan.exercises}
+        what="practice session"
+        onClose={(r) => {
+          navigate('/');
+          void submitReviews([...r.ratings.entries()].map(([cardId, v]) => ({ cardId, ...v })));
+        }}
+        leaveNote="The cards you've answered so far are saved."
+        rateable
+        onFinish={finish}
+      />
+    );
   }
 
   return (

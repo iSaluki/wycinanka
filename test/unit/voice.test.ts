@@ -18,6 +18,7 @@ function spokenBy(e: Exercise): string[] {
     case 'meet':
       return e.items.flatMap((i) => (i.ex ? [...i.ex, i.ex.join(', ')] : [i.pl]));
     case 'dialogue':
+    case 'listen':
       return e.lines.map((l) => l.pl);
     case 'spotlight':
       return (e.spotlight.examples ?? []).map(([pl]) => pl);

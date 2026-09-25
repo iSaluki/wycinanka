@@ -51,7 +51,23 @@ export function Review() {
     await submitReviews([...r.ratings.entries()].map(([cardId, { rating, at }]) => ({ cardId, rating, at })));
   };
 
-  if (session) return <Session exercises={session} what="review" onClose={() => setSession(null)} rateable onFinish={finish} />;
+  // Leaving early still saves the cards already answered: those reviews happened.
+  const leave = (r: SessionResult) => {
+    setSession(null);
+    void submitReviews([...r.ratings.entries()].map(([cardId, { rating, at }]) => ({ cardId, rating, at })));
+  };
+
+  if (session)
+    return (
+      <Session
+        exercises={session}
+        what="review"
+        onClose={leave}
+        leaveNote="The cards you've answered so far are saved. The rest will wait for next time."
+        rateable
+        onFinish={finish}
+      />
+    );
 
   const weakest = [...progress.cards.entries()]
     .sort((a, b) => a[1].stability - b[1].stability)

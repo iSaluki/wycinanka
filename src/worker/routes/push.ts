@@ -21,6 +21,15 @@ push.post('/subscribe', async (c) => {
   const { endpoint, keys } = await readJson(c, pushSubscriptionSchema);
   if (!isPushEndpoint(endpoint)) throw new HttpError(400, "This browser's notification service isn't supported.");
   const db = c.env.DB;
+  // A browser's subscription moves to whoever signs in on it (same endpoint, same keys). Knowing someone
+  // else's endpoint isn't enough to take their reminders over.
+  const current = await db
+    .prepare('SELECT user_id, p256dh, auth FROM push_subscriptions WHERE endpoint = ?1')
+    .bind(endpoint)
+    .first<{ user_id: string; p256dh: string; auth: string }>();
+  if (current && current.user_id !== user.id && (current.p256dh !== keys.p256dh || current.auth !== keys.auth)) {
+    throw new HttpError(409, 'This device is already set up for reminders. Switch reminders off and on again.');
+  }
   await db.batch([
     db
       .prepare(

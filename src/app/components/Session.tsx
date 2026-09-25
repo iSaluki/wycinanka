@@ -1,11 +1,13 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { Rating } from '../../shared/fsrs';
-import { grade, type GradeResult } from '../../shared/grade';
+import { lessonOfCard, LESSONS } from '../../content/course';
+import { isKnownForm } from '../../content/lexicon';
+import { grade, passes, type GradeResult } from '../../shared/grade';
 import { hintLimit, isGraded, type Exercise, type ExtraTag, type GradedExercise } from '../lib/exercises';
 import { pauseSpeaking } from '../lib/listen';
 import { playCorrect, playFinished, playWrong, soundEffectsOn } from '../lib/sfx';
 import { speak } from '../lib/speech';
-import { Build, Choose, Dialogue, Gap, Match, Meet, SpotlightView, TypeAnswer } from './Exercises';
+import { Build, Choose, Dialogue, Gap, Listen, Match, Meet, SpotlightView, TypeAnswer } from './Exercises';
 import { IconClose } from './icons';
 import { SayIt, type SpokenResult } from './Speaking';
 import { Label } from './common';
@@ -68,6 +70,20 @@ function meaningOf(ex: GradedExercise): string | undefined {
   }
 }
 
+/**
+ * The grammar rule behind an expected form, from a drill that practises it: the card's own lesson first, then
+ * any earlier one. "Feminine -a becomes -ę after poproszę" says more than "check the spelling".
+ */
+function ruleFor(cardId: string, forms: string[]): string | undefined {
+  const own = lessonOfCard(cardId);
+  const lessons = own ? [own, ...LESSONS.slice(0, LESSONS.indexOf(own)).reverse()] : LESSONS;
+  for (const l of lessons) {
+    const d = l.drills.find((d) => d.why && forms.some((f) => d.answer.toLocaleLowerCase('pl') === f));
+    if (d) return d.why;
+  }
+  return undefined;
+}
+
 function check(ex: GradedExercise, answer: string): { result: GradeResult | null; pass: boolean; expected: string; lang: 'pl' | 'en' } {
   switch (ex.kind) {
     case 'choose':
@@ -76,19 +92,32 @@ function check(ex: GradedExercise, answer: string): { result: GradeResult | null
       return { result: null, pass: answer === ex.answer, expected: ex.text.replace('___', ex.answer), lang: 'pl' };
     case 'type':
     case 'build': {
-      const r = grade(answer, ex.accepted, ex.lang);
-      return { result: r, pass: r.verdict !== 'wrong', expected: r.expected, lang: ex.lang };
+      const r = grade(answer, ex.accepted, ex.lang, ex.lang === 'pl' ? isKnownForm : undefined);
+      return { result: r, pass: passes(r.verdict), expected: r.expected, lang: ex.lang };
     }
     case 'match':
       return { result: null, pass: true, expected: '', lang: 'pl' };
   }
 }
 
+/** A Polish sentence whose words can each be tapped to hear them on their own. */
+function TapWords({ text }: { text: string }) {
+  return (
+    <span className="tap-words">
+      {text.split(/\s+/).map((w, i) => (
+        <button key={i} type="button" onClick={() => speak(w.replace(/[.,!?…:;„”"]/g, ''))} aria-label={`Hear “${w}”`}>
+          {w}
+        </button>
+      ))}
+    </span>
+  );
+}
+
 /**
  * Asks before leaving a session part-way through. A native <dialog> gives focus trapping, Escape to cancel
  * and a backdrop for free.
  */
-function ConfirmLeave({ what, onStay, onLeave }: { what: string; onStay: () => void; onLeave: () => void }) {
+function ConfirmLeave({ what, note, onStay, onLeave }: { what: string; note?: string; onStay: () => void; onLeave: () => void }) {
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const d = ref.current;
@@ -100,7 +129,7 @@ function ConfirmLeave({ what, onStay, onLeave }: { what: string; onStay: () => v
   return (
     <dialog ref={ref} className="confirm" aria-labelledby="leave-title" aria-describedby="leave-body" onCancel={(e) => (e.preventDefault(), onStay())}>
       <h2 id="leave-title">Leave this {what}?</h2>
-      <p id="leave-body">Are you sure? Your progress in this {what} will be lost if you leave now.</p>
+      <p id="leave-body">{note ?? `Are you sure? Your progress in this ${what} will be lost if you leave now.`}</p>
       <div className="row wrap">
         <button type="button" className="btn" onClick={onStay} autoFocus>
           Keep going
@@ -120,10 +149,16 @@ export function Session({
   rateable = false,
   pausableSpeaking = true,
   onFinish,
+  leaveNote,
+  banner,
 }: {
   exercises: Exercise[];
-  /** Called when the learner leaves early, after confirming if they had started. */
-  onClose: () => void;
+  /** Called when the learner leaves early, after confirming if they had started, with what was answered so far. */
+  onClose: (partial: SessionResult) => void;
+  /** What the leave prompt says is kept, when the caller saves partial results. */
+  leaveNote?: string;
+  /** A line under the progress bar, such as which gendered forms are shown. */
+  banner?: ReactNode;
   /** What to call this in the leave prompt: "lesson", "review"… */
   what?: string;
   rateable?: boolean;
@@ -150,7 +185,7 @@ export function Session({
   // Before the learner has touched anything there is nothing to lose, so leaving needs no prompt.
   const [touched, setTouched] = useState(false);
   const begun = touched || pos > 0 || answer !== null || feedback !== null;
-  const leave = () => (begun ? setConfirming(true) : onClose());
+  const leave = () => (begun ? setConfirming(true) : onClose(results.current));
 
   const entry = queue[pos];
   const graded = entry && isGraded(entry.ex);
@@ -243,8 +278,9 @@ export function Session({
     record(ex.cardId, pass, rating, entry.retry, ex.tag, helped);
     if (!pass && !entry.retry)
       setQueue((q) => {
-        // Back in a few questions, but never after a closing dialogue.
-        const end = q[q.length - 1]?.ex.kind === 'dialogue' ? q.length - 1 : q.length;
+        // Back in a few questions, but never inside the closing conversation (which starts with listening).
+        const outro = q.findIndex((e, i) => i > pos && (e.ex.kind === 'listen' || e.ex.kind === 'dialogue'));
+        const end = outro >= 0 ? outro : q.length;
         const at = Math.max(pos + 1, Math.min(pos + 1 + RETRY_GAP, end));
         return [...q.slice(0, at), { ex, retry: true, key: q.length }, ...q.slice(at)];
       });
@@ -253,6 +289,11 @@ export function Session({
     let note: string | undefined;
     if (result?.verdict === 'accent') {
       note = `The Polish letters matter: ${result.accents.map(([p, b]) => `${p} (not ${b})`).join(', ')}. A missing accent can make a different word.`;
+    } else if (result?.verdict === 'form') {
+      const ends = result.endings.map(([t, e]) => `${t} → ${e}`).join(', ');
+      const rule = ruleFor(ex.cardId, result.endings.map(([, e]) => e));
+      const why = rule ? ` ${rule}` : 'hint' in ex && ex.hint ? ` Tip: ${ex.hint.replace(/[{}]/g, '')}` : '';
+      note = `Right word, wrong ending: ${ends}. The ending shows its job in the sentence (case, person or gender).${why}`;
     } else if (result?.verdict === 'typo') {
       note = 'Nearly — check the spelling.';
     } else if (pass && ex.kind === 'type' && ex.also?.includes(expected)) {
@@ -280,7 +321,9 @@ export function Session({
               : en
         : result?.verdict === 'accent'
           ? 'Polish letters missing'
-          : 'Not quite',
+          : result?.verdict === 'form'
+            ? 'Check the ending'
+            : 'Not quite',
       answer: showAnswer ? expected : undefined,
       answerLang: lang,
       meaning: showAnswer && lang === 'pl' ? meaningOf(ex) : undefined,
@@ -363,7 +406,7 @@ export function Session({
           <IconClose />
         </button>
         <div
-          className="stripes"
+          className={`stripes ${queue.length > 30 ? 'many' : ''}`}
           role="progressbar"
           aria-label="Progress"
           aria-valuemin={0}
@@ -377,6 +420,7 @@ export function Session({
         <span className="sr-only">{doneSteps} done</span>
       </div>
 
+      {banner && <div className="player-banner">{banner}</div>}
       <div className="player-body" key={entry.key} onPointerDownCapture={() => setTouched(true)} onKeyDownCapture={() => setTouched(true)}>
         {ex.kind === 'meet' && <Meet items={ex.items} from={ex.from} total={ex.total} onDone={next} />}
         {ex.kind === 'spotlight' && (
@@ -385,6 +429,7 @@ export function Session({
           </>
         )}
         {ex.kind === 'dialogue' && <Dialogue lines={ex.lines} />}
+        {ex.kind === 'listen' && <Listen lines={ex.lines} />}
         {ex.kind === 'speak' && <SayIt ex={ex} locked={!!feedback} onResult={onSpoken} />}
         {ex.kind === 'choose' && (
           <Choose ex={ex} locked={!!feedback} hints={hints} onAnswer={setAnswer} checked={feedback ? { pass: feedback.pass, answer } : undefined} />
@@ -416,7 +461,7 @@ export function Session({
         {entry.retry && !feedback && <p className="muted">One more try at this one.</p>}
       </div>
 
-      {confirming && <ConfirmLeave what={what} onStay={() => setConfirming(false)} onLeave={onClose} />}
+      {confirming && <ConfirmLeave what={what} note={leaveNote} onStay={() => setConfirming(false)} onLeave={() => onClose(results.current)} />}
       <div className="dock">
         {feedback ? (
           <div className={`sheet ${feedback.pass ? 'good' : 'bad'}`} role="status" aria-live="polite">
@@ -428,7 +473,7 @@ export function Session({
               <div>
                 <Label pl={feedback.pass ? 'odpowiedź' : 'poprawnie'} en={feedback.pass ? 'answer' : 'correct answer'} />
                 <div className="answer" lang={feedback.answerLang}>
-                  {feedback.answer}
+                  {feedback.answerLang === 'pl' && /\s/.test(feedback.answer) ? <TapWords text={feedback.answer} /> : feedback.answer}
                 </div>
                 {feedback.meaning && <div className="meaning">{feedback.meaning}</div>}
               </div>
@@ -470,9 +515,9 @@ export function Session({
               {spokenTries ? 'Continue' : 'Skip'}
             </button>
           </div>
-        ) : ex.kind === 'dialogue' ? (
+        ) : ex.kind === 'dialogue' || ex.kind === 'listen' ? (
           <button type="button" className="btn block" onClick={next}>
-            Finish
+            {pos === queue.length - 1 ? 'Finish' : 'Continue'}
           </button>
         ) : graded && ex.kind !== 'match' ? (
           <div className={limit > 0 ? 'dock-row' : undefined}>

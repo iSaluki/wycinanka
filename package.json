@@ -15,7 +15,8 @@
     "test:worker": "vitest run --project worker",
     "test:e2e": "playwright test",
     "cf-typegen": "wrangler types",
-    "voice": "python3 scripts/voice.py"
+    "voice": "python3 scripts/voice.py",
+    "ids": "tsx scripts/card-ids.ts"
   },
   "dependencies": {
     "@fontsource/poltawski-nowy": "^5.3.0",

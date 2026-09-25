@@ -180,7 +180,7 @@ export const u00 = unit(
         items: [
           ['szcz', 'shch, as in "fresh cheese"', { key: 'szcz', ex: ['szczęście', 'deszcz', 'szczur'] }],
           ['prz', 'psh', { key: 'prz', ex: ['przepraszam', 'przez', 'przed'], hint: 'rz after p, t, k or ch is said as "sh".' }],
-          ['trz', 'tsh', { key: 'trz', ex: ['trzy', 'patrzeć', 'wiatr'] }],
+          ['trz', 'tsh', { key: 'trz', ex: ['trzy', 'patrzeć', 'trzeba'] }],
           ['chrz', 'khsh', { key: 'chrz', ex: ['chrząszcz', 'chrzan'], hint: 'The famous beetle: {chrząszcz}. Take it slowly.' }],
           ['b → p at the end', 'final consonants lose their voice', { key: 'devoicing', ex: ['chleb', 'ząb', 'Kraków'], hint: 'b, d, g, w, z, ż at the end of a word sound like p, t, k, f, s, sz.' }],
           ['WO-da', 'stress the second-to-last syllable', { key: 'stress', ex: ['woda', 'dziękuję', 'telewizor'], hint: 'Almost every Polish word is stressed on its second-to-last syllable.' }],

@@ -12,6 +12,7 @@ import { lessonPictures, revisionCards, sprinkle, warmupCards } from '../lib/rei
 import { Link, navigate, useTitle } from '../lib/router';
 import { completeLesson, getState, submitReviews, useApp } from '../lib/store';
 import { NotFound } from './NotFound';
+import type { Lesson } from '../../content/types';
 
 interface Outcome {
   score: number;
@@ -40,7 +41,7 @@ export function LessonPage({ id }: { id: string }) {
     // Each lesson opens with three quick questions from earlier lessons: spaced retrieval of old material.
     const warmCards = warmupCards(progress, lesson.id);
     const warm = practiceExercises(warmCards, speaker, 'warmup');
-    const { exercises: main, introEnd } = lessonPlan(lessonForSpeaker(lesson, speaker), { speaking: speakingOn && !speakingPaused() });
+    const { exercises: main, introEnd, outroStart } = lessonPlan(lessonForSpeaker(lesson, speaker), { speaking: speakingOn && !speakingPaused() });
     // A couple of picture flashcards, a new one met and named or known ones named again (not in the sound lessons).
     const { fresh, known } = lesson.phonics ? { fresh: [], known: [] } : lessonPictures(progress);
     const pictures = pictureRound(fresh, known);
@@ -51,7 +52,8 @@ export function LessonPage({ id }: { id: string }) {
       : [];
     // Never while new words are still being introduced: old material there would crowd out the new.
     const from = introEnd;
-    const until = main[main.length - 1]?.kind === 'dialogue' ? main.length - 1 : main.length;
+    // Nor in the closing conversation.
+    const until = outroStart;
     // Groups stay together, so a new picture is named straight after it is met.
     const extra = shuffle([...revision, ...pictures]);
     const groups = sprinkle(main.map((e) => [e]), extra, from, until);
@@ -81,7 +83,39 @@ export function LessonPage({ id }: { id: string }) {
   };
 
   if (outcome) return <Finish lessonId={lesson.id} outcome={outcome} onRetry={() => (setOutcome(null), setRun(run + 1))} />;
-  return <Session key={run} exercises={exercises} what="lesson" onClose={() => navigate('/learn')} onFinish={finish} />;
+  // Leaving part-way: the lesson starts again next time, but warm-up and revision answers were real reviews.
+  const leave = (r: SessionResult) => {
+    navigate('/learn');
+    const extra = r.attempts.filter((a) => a.tag && r.ratings.get(a.cardId));
+    if (extra.length) void submitReviews(extra.map((a) => ({ cardId: a.cardId, ...r.ratings.get(a.cardId)! })));
+  };
+
+  return (
+    <Session
+      key={run}
+      exercises={exercises}
+      what="lesson"
+      onClose={leave}
+      leaveNote="The lesson will start again next time, but your answers to review questions are saved."
+      banner={<SpeakerNote lesson={lesson} speaker={speaker} />}
+      onFinish={finish}
+    />
+  );
+}
+
+/**
+ * Polish past-tense and "I would" forms differ for men and women. When a lesson has them, say whose forms are
+ * shown, and where to change it, so "byłam" or "byłem" isn't a mystery.
+ */
+function SpeakerNote({ lesson, speaker }: { lesson: Lesson; speaker?: 'm' | 'f' }) {
+  const gendered = [...lesson.items, ...lesson.sentences].some((x) => x.altPl?.some((a) => /(łam|łem|łabym|łbym)\b/.test(a)));
+  if (!gendered) return null;
+  return (
+    <p className="muted small">
+      {speaker === 'f' ? 'Showing the forms a woman uses (byłam).' : speaker === 'm' ? 'Showing the forms a man uses (byłem).' : 'Showing the forms a man uses (byłem); both are accepted.'}{' '}
+      <Link to="/profile">{speaker ? 'Change' : 'Are you a woman? Set it in your profile'}</Link>
+    </p>
+  );
 }
 
 function Finish({ lessonId, outcome, onRetry }: { lessonId: string; outcome: Outcome; onRetry: () => void }) {

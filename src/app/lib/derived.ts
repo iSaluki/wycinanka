@@ -1,10 +1,10 @@
-import { LESSONS, getUnitOfLesson, UNITS } from '../../content/course';
+import { LESSONS, getUnitOfLesson, startPosition, UNITS } from '../../content/course';
 import type { Lesson } from '../../content/types';
 import { localDay, streak } from '../../shared/progress';
 import { DEFAULT_SETTINGS, dueCards, totalXp, useApp, type AppState } from './store';
 
 export function nextLesson(s: AppState): Lesson | undefined {
-  const start = s.settings.startUnit ?? 1;
+  const start = startPosition(s.settings.startUnit ?? 1);
   const done = s.progress.lessons;
   return (
     LESSONS.find((l) => !done.has(l.id) && (getUnitOfLesson(l.id)?.n ?? 0) >= start) ?? LESSONS.find((l) => !done.has(l.id))

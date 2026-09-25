@@ -186,14 +186,37 @@ describe('registration and sign-in', () => {
     expect(wrong.json.error).toBe(unknown.json.error);
   });
 
-  it('locks an account after repeated failed sign-ins', async () => {
+  it('locks an account after repeated failed sign-ins from one network', async () => {
     const { username } = await signedUp();
+    const attacker = client();
     const statuses: number[] = [];
-    for (let i = 0; i < 9; i++) statuses.push((await client().call('POST', '/api/auth/login', { username, password: `wrong password ${i}` })).status);
+    for (let i = 0; i < 9; i++) statuses.push((await attacker.call('POST', '/api/auth/login', { username, password: `wrong password ${i}` })).status);
     expect(statuses.slice(0, 7).every((s) => s === 401)).toBe(true);
     expect(statuses[7]).toBe(429);
-    // Even the right password is refused while locked.
-    expect((await client().call('POST', '/api/auth/login', { username, password: PASSWORD })).status).toBe(429);
+    // Even the right password is refused from that network while locked…
+    expect((await attacker.call('POST', '/api/auth/login', { username, password: PASSWORD })).status).toBe(429);
+    // …but the learner, on their own network, can still sign in: nobody can lock someone else out.
+    expect((await client().call('POST', '/api/auth/login', { username, password: PASSWORD })).status).toBe(200);
+  });
+
+  it('treats a whole IPv6 /64 as one network, so rotating addresses does not dodge the limit', async () => {
+    const { username } = await signedUp();
+    const statuses: number[] = [];
+    for (let i = 0; i < 9; i++) {
+      const c = client(`2001:db8:${ipCounter % 9999}:1::${(i + 1).toString(16)}`);
+      statuses.push((await c.call('POST', '/api/auth/login', { username, password: `wrong password ${i}` })).status);
+    }
+    expect(statuses[7]).toBe(429);
+    ipCounter++;
+  });
+
+  it('limits how many usernames one network can check by trying to register', async () => {
+    const c = client();
+    const { username } = await signedUp();
+    const statuses: number[] = [];
+    for (let i = 0; i < 30; i++) statuses.push((await c.call('POST', '/api/auth/register', { username, password: PASSWORD })).status);
+    expect(statuses.slice(0, 29)).toEqual(Array(29).fill(409));
+    expect(statuses[29]).toBe(429);
   });
 
   it('limits registrations per IP', async () => {
@@ -312,6 +335,56 @@ describe('progress', () => {
     expect((await c.call('PUT', '/api/progress/settings', { dailyGoal: 30, theme: 'dark' })).json.settings).toEqual({ dailyGoal: 30, theme: 'dark' });
     expect((await c.call('PUT', '/api/progress/settings', { dailyGoal: 999 })).status).toBe(400);
     expect((await c.call('PUT', '/api/progress/settings', { isAdmin: true })).status).toBe(400);
+    // Badges the learner has been told about, with when.
+    const badges = { 'first-lesson': Date.now() };
+    expect((await c.call('PUT', '/api/progress/settings', { badges })).json.settings.badges).toEqual(badges);
+    expect((await c.call('PUT', '/api/progress/settings', { badges: { 'Not A Badge!': 1 } })).status).toBe(400);
+    const many = Object.fromEntries(Array.from({ length: 101 }, (_, i) => [`b-${i}`, 1]));
+    expect((await c.call('PUT', '/api/progress/settings', { badges: many })).status).toBe(400);
+  });
+
+  it('counts a lesson sent twice with the same key only once', async () => {
+    const { c } = await signedUp();
+    const body = { lessonId: lesson.id, correct: 10, total: 10, day: today, key: 'retry-key-0001' };
+    const first = await c.call('POST', '/api/progress/lesson', body);
+    expect(first.json.xp).toBe(20);
+    const again = await c.call('POST', '/api/progress/lesson', body);
+    expect(again.status).toBe(200);
+    expect(again.json).toMatchObject({ duplicate: true, xp: 0 });
+    const snap = await c.call('GET', '/api/progress');
+    expect(snap.json.lessons[lesson.id].completions).toBe(1);
+    expect(snap.json.activity[0].xp).toBe(20);
+  });
+
+  it('accepts a lesson finished offline a few days ago, on the day it was done', async () => {
+    const { c } = await signedUp();
+    const at = Date.now() - 3 * 86_400_000;
+    const day = localDay(new Date(at));
+    const r = await c.call('POST', '/api/progress/lesson', { lessonId: lesson.id, correct: 10, total: 10, day, at });
+    expect(r.status).toBe(200);
+    expect(r.json.day.day).toBe(day);
+    const tooOld = Date.now() - 10 * 86_400_000;
+    expect((await c.call('POST', '/api/progress/lesson', { lessonId: lesson.id, correct: 1, total: 1, day: localDay(new Date(tooOld)), at: tooOld })).status).toBe(400);
+    // The day has to match when it was done, so a streak can't be back-filled.
+    expect((await c.call('POST', '/api/progress/lesson', { lessonId: lesson.id, correct: 1, total: 1, day: today, at })).status).toBe(400);
+  });
+
+  it('imports guest progress kept on the device for weeks, but not with made-up days', async () => {
+    const { c } = await signedUp();
+    const at = Date.now() - 40 * 86_400_000;
+    const day = localDay(new Date(at));
+    const ok = await c.call('POST', '/api/progress/import', {
+      lessons: [{ lessonId: lesson.id, correct: 8, total: 10, missed: [], day, at }],
+      reviews: [],
+    });
+    expect(ok.status).toBe(200);
+    expect(ok.json.activity[0].day).toBe(day);
+    const other = await signedUp();
+    const fake = await other.c.call('POST', '/api/progress/import', {
+      lessons: [{ lessonId: lesson.id, correct: 8, total: 10, missed: [], day: today, at }],
+      reviews: [],
+    });
+    expect(fake.status).toBe(400);
   });
 
   it('imports a guest session once, replaying it server-side', async () => {
@@ -356,12 +429,12 @@ describe('account', () => {
 
   it('deletes the account and every row belonging to it', async () => {
     const { c, username } = await signedUp();
-    await c.call('POST', '/api/progress/lesson', { lessonId: LESSONS[0].id, correct: 5, total: 5, day: today });
+    await c.call('POST', '/api/progress/lesson', { lessonId: LESSONS[0].id, correct: 5, total: 5, day: today, key: 'delete-me-key' });
     expect((await c.call('POST', '/api/push/subscribe', await subscription())).status).toBe(200);
     const user = await env.DB.prepare('SELECT id FROM users WHERE username = ?1').bind(username).first<{ id: string }>();
     expect((await c.call('DELETE', '/api/account', { password: 'nope nope nope' })).status).toBe(403);
     expect((await c.call('DELETE', '/api/account', { password: PASSWORD })).status).toBe(200);
-    for (const table of ['users', 'sessions', 'cards', 'lesson_progress', 'activity', 'push_subscriptions']) {
+    for (const table of ['users', 'sessions', 'cards', 'lesson_progress', 'activity', 'push_subscriptions', 'sync_keys']) {
       const col = table === 'users' ? 'id' : 'user_id';
       const n = await env.DB.prepare(`SELECT COUNT(*) AS n FROM ${table} WHERE ${col} = ?1`).bind(user!.id).first<{ n: number }>();
       expect(n!.n, table).toBe(0);
@@ -454,6 +527,17 @@ describe('daily reminders', () => {
     expect(sent).not.toContain(subs.get(lazy.username));
   });
 
+  it("can't take over another learner's device without its keys", async () => {
+    const a = await signedUp();
+    const b = await signedUp();
+    const sub = await subscription();
+    expect((await a.c.call('POST', '/api/push/subscribe', sub)).status).toBe(200);
+    const other = await subscription();
+    expect((await b.c.call('POST', '/api/push/subscribe', { endpoint: sub.endpoint, keys: other.keys })).status).toBe(409);
+    // The same browser (same keys) moves to whoever signs in on it.
+    expect((await b.c.call('POST', '/api/push/subscribe', sub)).status).toBe(200);
+  });
+
   it('sends a test reminder only to the learner\'s own subscribed device', async () => {
     const { c } = await signedUp();
     expect((await c.call('POST', '/api/push/test', { endpoint: 'https://fcm.googleapis.com/fcm/send/nobody' })).status).toBe(404);
@@ -511,6 +595,22 @@ describe('speech transcription', () => {
     expect((await post({ audio: tenSeconds }, e)).status).toBe(200);
     const tooLong = btoa('RIFF' + '\0'.repeat(16_000 * 2 * 12));
     expect([400, 413]).toContain((await post({ audio: tooLong }, e)).status);
+  });
+
+  it('stops before the daily allowance runs out, and keeps part of it for learners with an account', async () => {
+    const e = { ...withAi(() => ({ text: 'tak' })), SPEECH_DAILY_LIMIT: '4' } as unknown as typeof env;
+    await env.DB.prepare("DELETE FROM auth_throttle WHERE key LIKE 'speech:%day'").run();
+    // Guests may use half: two.
+    expect((await post({ audio: wav }, e)).status).toBe(200);
+    expect((await post({ audio: wav }, e)).status).toBe(200);
+    expect((await post({ audio: wav }, e)).status).toBe(503);
+    // A signed-in learner still gets the rest.
+    const { c } = await signedUp();
+    const cookie = c.cookie;
+    expect((await post({ audio: wav }, e, { cookie })).status).toBe(200);
+    expect((await post({ audio: wav }, e, { cookie })).status).toBe(200);
+    expect((await post({ audio: wav }, e, { cookie })).status).toBe(503);
+    await env.DB.prepare("DELETE FROM auth_throttle WHERE key LIKE 'speech:%day'").run();
   });
 
   it('says so when recognition is unavailable, so the app can fall back', async () => {

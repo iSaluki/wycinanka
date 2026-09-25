@@ -9,7 +9,7 @@ export const u06 = unit(
   [
     lesson('u06-l1', 'Something to drink', 'Order drinks politely.', {
       items: [
-        ['poproszę', "I'd like (ordering)", { altEn: ["i'd like", 'please', 'i would like', "i'll have"], hint: 'The standard way to order: "po-PRO-sheh".' }],
+        ['poproszę', "I'd like (ordering)", { altEn: ["i'd like", 'please', 'i would like', "i'll have"], hint: 'The standard way to order: "po-PRO-she".' }],
         ['kawa', 'coffee', { g: 'f' }],
         ['sok', 'juice', { g: 'm' }],
         ['piwo', 'beer', { g: 'n' }],
@@ -35,7 +35,7 @@ export const u06 = unit(
         title: 'Your first case: the accusative',
         body: [
           'Polish nouns change their endings depending on their job in the sentence. The **accusative** marks the thing you want, have or order.',
-          'The good news: only feminine nouns visibly change. **-a becomes -ę**.',
+          'The good news: for things, only feminine nouns visibly change. **-a becomes -ę**. (People and animals change too, which comes in Unit 8.)',
         ],
         table: {
           head: ['Dictionary form', 'After poproszę'],
@@ -47,6 +47,12 @@ export const u06 = unit(
           ],
         },
       },
+      dialogue: [
+        ['Barman', 'Dzień dobry! Co podać?', 'Hello! What can I get you?'],
+        ['Jack', 'Poproszę piwo.', 'A beer, please.'],
+        ['Barman', 'A dla pani?', 'And for you, madam?'],
+        ['Anna', 'Dla mnie wino. Czerwone, poproszę.', 'Wine for me. Red, please.'],
+      ],
     }),
     lesson('u06-l2', 'Something to eat', 'Order food and talk about meals.', {
       items: [
@@ -77,6 +83,12 @@ export const u06 = unit(
           '{Śniadanie} is breakfast. {Obiad} is the main hot meal, traditionally eaten between 2 and 5 pm, often soup then a main course. {Kolacja} is a lighter supper.',
         ],
       },
+      dialogue: [
+        ['Kelnerka', 'Co dla pani?', 'What would you like, madam?'],
+        ['Emma', 'Poproszę zupę i pierogi.', 'Soup and pierogi, please.'],
+        ['Kelnerka', 'A do picia?', 'And to drink?'],
+        ['Emma', 'Sok, poproszę. I lody na deser!', 'Juice, please. And ice cream for dessert!'],
+      ],
     }),
     lesson('u06-l3', 'The bill, please', 'Handle the whole café visit.', {
       items: [
@@ -155,6 +167,12 @@ export const u07 = unit(
           ],
         },
       },
+      dialogue: [
+        ['Piotr', 'Co czytasz?', 'What are you reading?'],
+        ['Emma', 'Czytam książkę po polsku.', 'I\'m reading a book in Polish.'],
+        ['Piotr', 'Rozumiesz?', 'Do you understand it?'],
+        ['Emma', 'Trochę rozumiem.', 'I understand a bit.'],
+      ],
     }),
     lesson('u07-l2', 'I want, I can, I must', 'Use the -ę, -esz group and modal verbs.', {
       items: [
@@ -196,6 +214,12 @@ export const u07 = unit(
           ],
         },
       },
+      dialogue: [
+        ['Kasia', 'Chcesz kawę?', 'Do you want a coffee?'],
+        ['Tom', 'Nie, dziękuję. Muszę iść.', 'No, thanks. I have to go.'],
+        ['Kasia', 'Już? Pracujesz dzisiaj?', 'Already? Are you working today?'],
+        ['Tom', 'Tak, pracuję do szóstej.', 'Yes, I work until six.'],
+      ],
     }),
     lesson('u07-l3', 'I speak, I like: the -isz group', 'Talk about languages and likes.', {
       items: [
@@ -292,6 +316,12 @@ export const u08 = unit(
           ],
         },
       },
+      dialogue: [
+        ['Ola', 'Kto to jest?', 'Who is this?'],
+        ['Jack', 'To jest moja siostra, Emma, i jej mąż.', 'This is my sister, Emma, and her husband.'],
+        ['Ola', 'A to? Twój brat?', 'And this? Your brother?'],
+        ['Jack', 'Nie, to mój tata!', 'No, that\'s my dad!'],
+      ],
     }),
     lesson('u08-l2', 'I have', 'Use mieć (to have).', {
       items: [
@@ -333,6 +363,12 @@ export const u08 = unit(
           ],
         },
       },
+      dialogue: [
+        ['Marta', 'Masz dzieci?', 'Do you have children?'],
+        ['Ben', 'Tak, mam syna i córkę. A ty?', 'Yes, I have a son and a daughter. And you?'],
+        ['Marta', 'Nie mam dzieci, ale mam psa!', 'I don\'t have children, but I have a dog!'],
+        ['Ben', 'My też mamy psa i kota.', 'We have a dog and a cat too.'],
+      ],
     }),
     lesson('u08-l3', "I don't have: negation", 'Say what you don\'t have using the genitive.', {
       items: [
@@ -373,6 +409,12 @@ export const u08 = unit(
           ],
         },
       },
+      dialogue: [
+        ['Emma', 'Masz czas w sobotę?', 'Do you have time on Saturday?'],
+        ['Piotr', 'Niestety nie mam czasu. Pracuję.', 'Unfortunately I don\'t have time. I\'m working.'],
+        ['Emma', 'Szkoda. Nie ma problemu.', 'Shame. No problem.'],
+        ['Piotr', 'Ale w niedzielę mam czas!', 'But on Sunday I have time!'],
+      ],
     }),
   ],
 );
@@ -400,6 +442,12 @@ export const u09 = unit(
         ['Gdzie jest apteka?', "Where's the chemist?", { altEn: ["Where is the chemist's?", 'Where is the pharmacy?', 'Where is the chemist?'], extra: ['są', 'tam'] }],
         ['Przepraszam, gdzie jest toaleta?', 'Excuse me, where is the toilet?', { altEn: ["Excuse me, where's the toilet?", 'Sorry, where is the toilet?', 'Excuse me, where are the toilets?'], extra: ['proszę', 'bank'] }],
         ['Tam jest poczta.', "There's the post office.", { altEn: ['The post office is there.', 'There is the post office.', 'The post office is over there.'], extra: ['tutaj', 'dworzec'] }],
+      ],
+      dialogue: [
+        ['Turystka', 'Przepraszam, gdzie jest bank?', 'Excuse me, where is the bank?'],
+        ['Pan', 'Tam, obok poczty.', 'There, next to the post office.'],
+        ['Turystka', 'A apteka?', 'And the chemist\'s?'],
+        ['Pan', 'Apteka jest tutaj.', 'The chemist\'s is here.'],
       ],
     }),
     lesson('u09-l2', 'In, at, on: the locative', 'Say where you are with w and na.', {
@@ -443,6 +491,12 @@ export const u09 = unit(
           ],
         },
       },
+      dialogue: [
+        ['Mama', 'Gdzie jesteś?', 'Where are you?'],
+        ['Kasia', 'Jestem w sklepie.', 'I\'m in the shop.'],
+        ['Mama', 'A tata?', 'And Dad?'],
+        ['Kasia', 'Tata jest w pracy, a Tomek w domu.', 'Dad is at work, and Tomek is at home.'],
+      ],
     }),
     lesson('u09-l3', 'Left, right, straight on', 'Ask for and follow directions.', {
       items: [
@@ -504,12 +558,17 @@ export const u10 = unit(
         ['w ___', 'on Sunday', ['niedzielę', 'niedziela', 'niedzieli'], 'niedzielę'],
         ['w ___', 'on Friday', ['piątek', 'piątku', 'piątkiem'], 'piątek'],
       ],
+      dialogue: [
+        ['Marek', 'Co robisz w sobotę?', 'What are you doing on Saturday?'],
+        ['Ola', 'W sobotę pracuję, ale w niedzielę mam czas.', 'On Saturday I\'m working, but on Sunday I\'m free.'],
+        ['Marek', 'Super. Do zobaczenia w niedzielę!', 'Great. See you on Sunday!'],
+      ],
     }),
     lesson('u10-l2', 'What time is it?', 'Tell the time on the hour.', {
       items: [
         ['która jest godzina?', 'what time is it?', { altEn: ["what's the time?", 'what is the time?'] }],
         ['o której?', 'at what time?', { altEn: ['what time?', 'when?'] }],
-        ['godzina', 'hour', { altEn: ["o'clock", 'time'], g: 'f' }],
+        ['godzina', 'hour', { g: 'f', hint: 'Also "time" in {Która jest godzina?} (What time is it?). Time in general is {czas}.' }],
         ['minuta', 'minute', { g: 'f' }],
         ['rano', 'in the morning', { altEn: ['morning', 'early'] }],
         ['po południu', 'in the afternoon', { altEn: ['afternoon', 'pm'] }],
@@ -553,6 +612,12 @@ export const u10 = unit(
           ],
         },
       },
+      dialogue: [
+        ['Tom', 'Przepraszam, która jest godzina?', 'Excuse me, what time is it?'],
+        ['Pani', 'Jest trzecia.', 'It\'s three o\'clock.'],
+        ['Tom', 'O której jest pociąg do Krakowa?', 'What time is the train to Kraków?'],
+        ['Pani', 'O czwartej.', 'At four.'],
+      ],
     }),
     lesson('u10-l3', 'My day', 'Describe your daily routine.', {
       items: [
@@ -579,6 +644,12 @@ export const u10 = unit(
           '{Się} never goes first in a sentence and likes to sit near the start: {Jak się masz?}',
         ],
       },
+      dialogue: [
+        ['Ewa', 'O której wstajesz?', 'What time do you get up?'],
+        ['Jack', 'O siódmej. Potem jem śniadanie i idę do pracy.', 'At seven. Then I have breakfast and go to work.'],
+        ['Ewa', 'A wieczorem?', 'And in the evening?'],
+        ['Jack', 'Zwykle gotuję i oglądam telewizję.', 'I usually cook and watch TV.'],
+      ],
     }),
   ],
 );

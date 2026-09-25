@@ -17,10 +17,11 @@ const everyString = (v: unknown, out: string[] = []): string[] => {
 };
 
 describe('course content', () => {
-  it('has a phonics unit and 18 units of 3 lessons across A1, A2 and B1', () => {
-    expect(UNITS).toHaveLength(19);
+  it('has a phonics unit and 30 units of 3 lessons across A1, A2 and B1', () => {
+    expect(UNITS).toHaveLength(31);
     expect(UNITS[0].lessons.every((l) => l.phonics)).toBe(true);
-    expect(LESSONS).toHaveLength(60);
+    for (const u of UNITS.slice(1)) expect(u.lessons, u.id).toHaveLength(3);
+    expect(LESSONS).toHaveLength(96);
     expect(new Set(UNITS.map((u) => u.level))).toEqual(new Set(['A1', 'A2', 'B1']));
   });
 
@@ -115,5 +116,22 @@ describe('course content', () => {
       expect(d.singular).toHaveLength(7);
       expect(d.plural).toHaveLength(7);
     }
+  });
+});
+
+import { respell } from '../../src/shared/phonetics';
+
+describe('respellings in hints', () => {
+  it('match the automatic respelling shown next to the word', () => {
+    const differ: string[] = [];
+    for (const l of LESSONS) {
+      if (l.phonics) continue;
+      for (const i of l.items) {
+        for (const m of i.hint?.matchAll(/"([A-Za-z-]*[A-Z]{2,}[A-Za-z-]*)"/g) ?? []) {
+          if (m[1].includes('-') && m[1] !== respell(i.pl)) differ.push(`${i.pl}: hint "${m[1]}", shown "${respell(i.pl)}"`);
+        }
+      }
+    }
+    expect(differ).toEqual([]);
   });
 });
