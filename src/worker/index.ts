@@ -8,6 +8,10 @@ import { progress } from './routes/progress';
 import { push } from './routes/push';
 import { speech, SPEECH_BODY_LIMIT, TRANSCRIBE_PATH } from './routes/speech';
 import { sendReminders } from './reminders';
+import { cleanUp } from './housekeeping';
+import { ReminderClock, startClock } from './clock';
+
+export { cleanUp, ReminderClock };
 
 const IMPORT_PATH = '/api/progress/import';
 
@@ -23,6 +27,7 @@ app.use('/api/*', async (c, next) => {
 app.use('/api/*', async (c, next) => {
   await ensureSchema(c.env);
   maybeCleanUp(c.env, c.executionCtx);
+  startClock(c.env, c.executionCtx);
   await next();
 });
 app.use('/api/*', sameOriginOnly);
@@ -50,18 +55,8 @@ app.onError((err, c) => {
   return c.json({ error: 'Something went wrong on our side. Try again in a moment.' }, 500);
 });
 
-/** Removes expired sessions and stale throttle counters. Housekeeping only: expiry is also checked on every read. */
-export async function cleanUp(env: Env, now = Date.now()): Promise<void> {
-  await env.DB.batch([
-    env.DB.prepare('DELETE FROM sessions WHERE expires_at <= ?1').bind(now),
-    env.DB.prepare('DELETE FROM auth_throttle WHERE locked_until <= ?1 AND window_start <= ?2').bind(now, now - 86_400_000),
-    // Results can only be re-sent for a week (see routes/progress.ts), so older keys are never needed.
-    env.DB.prepare('DELETE FROM sync_keys WHERE created_at <= ?1').bind(now - 30 * 86_400_000),
-  ]);
-}
-
 // Clean-up also piggybacks on API traffic (at most once an hour per isolate, after the response has been
-// sent), so it keeps happening even if the hourly Cron Trigger is removed.
+// sent), so it keeps happening even if the reminder clock stops.
 const CLEAN_UP_EVERY = 3_600_000;
 let lastCleanUp = 0;
 function maybeCleanUp(env: Env, ctx: { waitUntil(promise: Promise<unknown>): void }): void {
@@ -73,7 +68,10 @@ function maybeCleanUp(env: Env, ctx: { waitUntil(promise: Promise<unknown>): voi
 
 export default {
   fetch: app.fetch,
-  /** Hourly Cron Trigger (wrangler.jsonc): daily practice reminders, then housekeeping. */
+  /**
+   * Only runs if a Cron Trigger is added in wrangler.jsonc. Reminders normally come from the ReminderClock
+   * Durable Object's hourly alarm (clock.ts), which needs none; this stays so either can drive them.
+   */
   async scheduled(event: ScheduledController, env: Env): Promise<void> {
     if (!env.DB) return;
     await ensureSchema(env);

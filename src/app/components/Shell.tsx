@@ -17,6 +17,10 @@ const PROFILE = { to: '/profile', pl: 'Profil', en: 'Profile', icon: IconProfile
 const RAIL = [LEARN, REVIEW, ...PRACTISE.sections, ...DISCOVER.sections, PROFILE];
 /** Phone tab bar: four tabs, with the extra sections grouped under Practise and Discover. */
 const TABS = [LEARN, REVIEW, { ...PRACTISE, match: (p: string) => inGroup(PRACTISE, p) }, { ...DISCOVER, match: (p: string) => inGroup(DISCOVER, p) }];
+/** Tablet rail (an iPad, a narrow window): the phone's four groups and Profile, instead of eleven icons. */
+const COMPACT = [...TABS, PROFILE];
+
+const NAV: Record<'rail' | 'compact' | 'tabs', NavItem[]> = { rail: RAIL, compact: COMPACT, tabs: TABS };
 
 /** The brand mark: an eight-petal wycinanka flower in black and red. */
 export function Mark() {
@@ -40,10 +44,10 @@ export function Mark() {
 
 type NavItem = { to: string; pl: string; en: string; icon: typeof IconLearn; match?: (p: string) => boolean };
 
-function NavLinks({ rail }: { rail: boolean }) {
+function NavLinks({ kind }: { kind: keyof typeof NAV }) {
   const path = usePath();
   const due = useStats().due;
-  const items: NavItem[] = rail ? RAIL : TABS;
+  const items = NAV[kind];
   return (
     <>
       {items.map(({ to, pl, en, icon: Icon, match }) => {
@@ -102,7 +106,12 @@ export function Shell({ children, aside = true, wide = false }: { children: Reac
           <Mark />
           <span>Wycinanka</span>
         </Link>
-        <NavLinks rail />
+        <div className="rail-links rail-full">
+          <NavLinks kind="rail" />
+        </div>
+        <div className="rail-links rail-compact">
+          <NavLinks kind="compact" />
+        </div>
         <div className="spacer" />
         {!user && (
           <Link to="/signup" className="btn small quiet">
@@ -144,7 +153,7 @@ export function Shell({ children, aside = true, wide = false }: { children: Reac
         </aside>
       )}
       <nav className="tabbar" aria-label="Main">
-        <NavLinks rail={false} />
+        <NavLinks kind="tabs" />
       </nav>
     </div>
   );

@@ -155,28 +155,33 @@ export function Home() {
         )}
 
         <div className="split">
-          <Link to="/review" className="mini-card">
-            <Label pl="powtórka" en="review" />
-            <div className="big-number">{stats.due}</div>
-            <p className="muted">
-              {stats.due > 0
-                ? `card${stats.due === 1 ? '' : 's'} due. A few minutes a day is what makes words stick.`
-                : upcoming
-                  ? `Nothing due. Next review ${relative(upcoming - Date.now())}.`
-                  : 'Finish a lesson and its words join your review deck.'}
-            </p>
-          </Link>
           <div className="mini-card">
-            <Label pl="słowo dnia" en={`word of the day · #${word.rank}`} />
+            <Link to="/review" className="review-line">
+              <Label pl="powtórka" en="review" />
+              <span className="big-number">{stats.due}</span>
+              <span className="muted">
+                {stats.due > 0
+                  ? `card${stats.due === 1 ? '' : 's'} due`
+                  : upcoming
+                    ? `nothing due · next ${relative(upcoming - Date.now())}`
+                    : 'finish a lesson to start your deck'}
+              </span>
+            </Link>
+            {/* On wide screens the goal lives in the side column. */}
+            <div className="only-narrow">
+              <GoalRing value={stats.todayXp} goal={stats.goal} />
+            </div>
+          </div>
+          <div className="mini-card">
+            <Label pl="słowo dnia" en="word of the day" />
             <div className="row">
               <span className="wotd" lang="pl">
                 {word.pl}
               </span>
               <Speak text={word.pl} />
             </div>
-            <div className="say">say “{respell(word.pl)}”</div>
             <p className="muted">
-              {word.en} · <i>{word.pos}</i>
+              <span className="say">{respell(word.pl)}</span> · {word.en}
             </p>
             {word.ex && (
               <p style={{ fontSize: 16 }}>
@@ -189,10 +194,6 @@ export function Home() {
           </div>
         </div>
 
-        <div className="only-narrow">
-          <GoalRing value={stats.todayXp} goal={stats.goal} />
-        </div>
-
         {!user && !fresh && (
           <div className="banner">
             <p>
@@ -202,22 +203,18 @@ export function Home() {
           </div>
         )}
 
-        <div className="split">
-          <Link to="/sounds" className="mini-card">
-            <Label pl="wymowa" en="pronunciation" />
-            <h3>The alphabet and its sounds</h3>
-            <p className="muted">All 32 letters, the sounds English doesn't have, and an ear-training game.</p>
-          </Link>
-          <Link to="/tools" className="mini-card">
-            <Label pl="narzędzia" en="tools" />
-            <h3>How do I say this?</h3>
-            <p className="muted">Type any Polish word — or just “cz” — and see how to say it. Plus numbers, prices, the clock and a phrasebook.</p>
-          </Link>
-        </div>
-
-        <p className="muted" style={{ fontSize: 15 }}>
-          Already know some Polish? <Link to="/placement">Take the placement check</Link> — 18 quick questions.
-        </p>
+        {/* Where else to start matters on day one; after that these live under Discover. */}
+        {fresh && (
+          <ul className="start-links">
+            <li>
+              Already know some Polish? <Link to="/placement">Take the placement check</Link>, 18 quick questions.
+            </li>
+            <li>
+              Curious how it sounds? <Link to="/sounds">The alphabet and its sounds</Link>, or type any word into{' '}
+              <Link to="/tools">the pronouncer</Link>.
+            </li>
+          </ul>
+        )}
       </div>
     </Shell>
   );

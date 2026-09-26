@@ -52,21 +52,31 @@ function SayWord({ text }: { text: string }) {
         {text}
       </span>
     );
+  const play = () => {
+    setPlaying(true);
+    speak(text, { onEnd: () => setPlaying(false) });
+  };
+  // A span, not a <button>: buttons are inline blocks, so a two-word phrase couldn't wrap across lines and its
+  // underline sat below the line box. This one flows and wraps like the text around it.
   return (
-    <button
-      type="button"
+    <span
+      role="button"
+      tabIndex={0}
       className="pl say-word"
       lang="pl"
       data-playing={playing}
       aria-label={`${text}: hear it`}
       title="Tap to hear it"
-      onClick={() => {
-        setPlaying(true);
-        speak(text, { onEnd: () => setPlaying(false) });
+      onClick={play}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          play();
+        }
       }}
     >
       {text}
-    </button>
+    </span>
   );
 }
 

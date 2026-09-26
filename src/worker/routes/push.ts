@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { startClock } from '../clock';
 import { pushEndpointSchema, pushSubscriptionSchema } from '../../shared/schemas';
 import type { AppEnv } from '../env';
 import { HttpError, readJson } from '../http';
@@ -45,6 +46,8 @@ push.post('/subscribe', async (c) => {
       )
       .bind(user.id, MAX_DEVICES),
   ]);
+  // A new subscriber is the moment the clock matters most: check it is running, even in a long-lived isolate.
+  startClock(c.env, c.executionCtx, true);
   return c.json({ ok: true });
 });
 

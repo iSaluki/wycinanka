@@ -9,6 +9,8 @@ export interface Env {
   PBKDF2_ITERATIONS?: string;
   /** Contact URL or mailto: sent to push services with every reminder (VAPID "sub"). */
   PUSH_CONTACT?: string;
+  /** The hourly clock that sends daily reminders (clock.ts). Absent in Worker Previews. */
+  REMINDER_CLOCK?: DurableObjectNamespace<import('./clock').ReminderClock>;
   /** Speech transcriptions allowed per day, across all learners, before falling back to self-checking. */
   SPEECH_DAILY_LIMIT?: string;
 }

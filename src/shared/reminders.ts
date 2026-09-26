@@ -26,11 +26,18 @@ export function isValidTimeZone(tz: string): boolean {
   return localTime(0, tz) !== null;
 }
 
+/**
+ * Hours after the chosen one that a reminder may still go out. The hourly clock can run late or skip a beat,
+ * and a reminder an hour late is better than none; last_sent_day keeps it to one a day.
+ */
+export const REMINDER_GRACE_HOURS = 1;
+
 /** When a learner with these settings should be reminded at `now`: their local day, or null if not now. */
 export function reminderDue(settings: Settings, now: number): string | null {
   if (!settings.reminders) return null;
   const t = localTime(now, settings.timeZone ?? DEFAULT_TIME_ZONE) ?? localTime(now, DEFAULT_TIME_ZONE)!;
-  return t.hour === (settings.reminderHour ?? DEFAULT_REMINDER_HOUR) ? t.day : null;
+  const late = t.hour - (settings.reminderHour ?? DEFAULT_REMINDER_HOUR);
+  return late >= 0 && late <= REMINDER_GRACE_HOURS ? t.day : null;
 }
 
 export function reminderMessage(streakDays: number, due: number): { title: string; body: string; url: string } {

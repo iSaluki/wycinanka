@@ -227,10 +227,13 @@ export function Sounds() {
 
         <section className="stack" aria-labelledby="tw">
           <SectionHead pl="Łamańce językowe" en="tongue twisters" />
-          <p className="muted">Poles use these on each other too. Start slowly.</p>
+          <p className="muted">Poles use these on each other too. Listen at full speed first, then slow it down to practise.</p>
           {TONGUE_TWISTERS.map(([pl, en]) => (
             <div key={pl} className="example" style={{ alignItems: 'flex-start' }}>
-              <Speak text={pl} slow />
+              <div className="row" style={{ gap: 6, flex: 'none' }}>
+                <Speak text={pl} />
+                <Speak text={pl} slow />
+              </div>
               <div>
                 <div className="pl" lang="pl" style={{ fontSize: 24 }}>
                   {pl}

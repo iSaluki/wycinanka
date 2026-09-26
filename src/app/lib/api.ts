@@ -10,19 +10,31 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * Longest wait for an answer. A request on a network that has gone quiet (weak mobile signal, a captive Wi-Fi
+ * page) can otherwise hang for minutes, and the app waits for /auth/me before showing anything.
+ */
+const TIMEOUT_MS = 20_000;
+
 export async function api<T>(method: 'GET' | 'POST' | 'PUT' | 'DELETE', path: string, body?: unknown): Promise<T> {
   let res: Response;
+  let text: string;
+  const abort = typeof AbortController === 'function' ? new AbortController() : null;
+  const timer = abort ? setTimeout(() => abort.abort(), TIMEOUT_MS) : undefined;
   try {
     res = await fetch(`/api${path}`, {
       method,
       credentials: 'same-origin',
       headers: body !== undefined || method !== 'GET' ? { 'content-type': 'application/json' } : undefined,
       body: body !== undefined ? JSON.stringify(body) : method !== 'GET' ? '{}' : undefined,
+      signal: abort?.signal,
     });
+    text = await res.text();
   } catch {
     throw new ApiError(0, "Can't reach the server. Check your connection and try again.");
+  } finally {
+    clearTimeout(timer);
   }
-  const text = await res.text();
   let data: unknown = null;
   try {
     data = text ? JSON.parse(text) : null;

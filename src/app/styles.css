@@ -22,6 +22,7 @@
   --zielen: #1f7a4a;
   --zielen-soft: #e3f2e9;
   --zolc: #f2b705;
+  --highlight: rgb(242 183 5 / 0.38);
   --blekit: #1e4fb5;
   --blekit-soft: #e7edfa;
   --amarant: #b01e5e;
@@ -67,6 +68,7 @@
     --zielen: #4cc586;
     --zielen-soft: #173326;
     --zolc: #f5c63a;
+    --highlight: rgb(245 198 58 / 0.3);
     --blekit: #7d9fef;
     --blekit-soft: #1c2640;
     --amarant: #f06a9f;
@@ -93,6 +95,7 @@
   --zielen: #4cc586;
   --zielen-soft: #173326;
   --zolc: #f5c63a;
+  --highlight: rgb(245 198 58 / 0.3);
   --blekit: #7d9fef;
   --blekit-soft: #1c2640;
   --amarant: #f06a9f;
@@ -400,6 +403,14 @@ a {
   .rail .spacer {
     flex: 1;
   }
+  .rail-links {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .rail-full {
+    display: none;
+  }
   .main {
     padding: 48px 40px 72px;
   }
@@ -439,6 +450,12 @@ a {
   }
   .rail .tab[aria-current='page']::before {
     inset: 10px auto 10px -20px;
+  }
+  .rail-full {
+    display: flex;
+  }
+  .rail-compact {
+    display: none;
   }
   .aside {
     display: flex;
@@ -706,7 +723,6 @@ a {
   gap: 14px;
   padding: 24px 0 28px;
   border-top: 1.5px solid var(--ink);
-  border-bottom: 1px solid var(--rule);
 }
 
 .next-up h2 {
@@ -755,6 +771,28 @@ a.mini-card:hover h3 {
 
 .big-number {
   font: 700 60px/0.9 var(--font-pl);
+}
+
+/* Review count on the home page: label, number and what it means, as one link. */
+.review-line {
+  display: grid;
+  gap: 6px;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.review-line:hover .big-number {
+  color: var(--czerwien);
+}
+
+.start-links {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--ink-2);
+  font-size: 16px;
 }
 
 .wotd {
@@ -3235,22 +3273,27 @@ dialog.confirm p {
 
 /* Polish words in running text that say themselves when tapped */
 .say-word {
-  display: inline;
-  padding: 0;
-  border: 0;
-  border-bottom: 2px dotted var(--czerwien);
-  background: none;
-  color: inherit;
-  font: inherit;
   font-family: var(--font-pl);
-  line-height: inherit;
+  /* The antykwa has a smaller x-height than the sans: nudge it up so a Polish word doesn't look shrunken. */
+  font-size: 1.05em;
+  line-height: 1;
+  text-decoration-line: underline;
+  text-decoration-style: dotted;
+  text-decoration-color: var(--czerwien);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.2em;
+  -webkit-text-decoration-line: underline;
+  -webkit-text-decoration-style: dotted;
+  -webkit-text-decoration-color: var(--czerwien);
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .say-word:hover,
 .say-word[data-playing='true'] {
   color: var(--czerwien);
-  border-bottom-style: solid;
+  text-decoration-style: solid;
+  -webkit-text-decoration-style: solid;
 }
 
 .say-word:focus-visible {
@@ -3260,7 +3303,10 @@ dialog.confirm p {
 }
 
 .say-word-sample {
-  border-bottom: 2px dotted var(--czerwien);
+  text-decoration: underline dotted var(--czerwien);
+  -webkit-text-decoration: underline dotted var(--czerwien);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.2em;
 }
 
 .culture-tip {
@@ -3308,8 +3354,8 @@ dialog.confirm p {
 
 /* Key points, highlighted like a marker pen so a skim picks them up. */
 .culture-article strong {
-  padding: 0 2px;
-  background: linear-gradient(transparent 55%, color-mix(in srgb, var(--zolc) 45%, transparent) 55%);
+  /* No padding: it pushed the highlight away from the full stop or comma after it. */
+  background: linear-gradient(transparent 58%, var(--highlight) 58%, var(--highlight) 92%, transparent 92%);
   box-decoration-break: clone;
   -webkit-box-decoration-break: clone;
 }

@@ -34,8 +34,7 @@ export function Learn() {
     <Shell>
       <div className="stack-lg">
         <PageHead pl="Nauka" en="The course">
-          From the alphabet to the conditional in {UNITS.length - 1} units, after the alphabet. Every lesson is open; the red one is our suggestion. Once you've done a lesson in a
-          unit, revise the whole unit to keep it fresh. Culture breaks along the way are just for reading, and you can skip them.
+          The alphabet, then {UNITS.length - 1} units up to B1. Every lesson is open; the red one is where we'd go next.
         </PageHead>
         {LEVELS.map(([level, pl, en, blurb]) => {
           const units = UNITS.filter((u) => (level === 'A0' ? u.n === 0 : u.level === level && u.n > 0));

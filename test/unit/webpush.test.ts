@@ -94,9 +94,13 @@ describe('reminder timing', () => {
     expect(localTime(at, 'Not/AZone')).toBeNull();
   });
 
-  it('is due only at the chosen hour, and only when switched on', () => {
+  it('is due at the chosen hour (or an hour late), and only when switched on', () => {
     expect(reminderDue({ reminders: true, timeZone: 'Europe/London' }, at)).toBe('2026-09-24');
     expect(reminderDue({ reminders: true, timeZone: 'Europe/London', reminderHour: 9 }, at)).toBeNull();
+    // A clock running an hour late still reminds that day; later than that, it waits for tomorrow.
+    expect(reminderDue({ reminders: true, timeZone: 'Europe/London', reminderHour: 17 }, at)).toBe('2026-09-24');
+    expect(reminderDue({ reminders: true, timeZone: 'Europe/London', reminderHour: 16 }, at)).toBeNull();
+    expect(reminderDue({ reminders: true, timeZone: 'Europe/London', reminderHour: 19 }, at)).toBeNull();
     expect(reminderDue({ reminders: false, timeZone: 'Europe/London' }, at)).toBeNull();
     expect(reminderDue({ reminders: true, timeZone: 'Australia/Sydney', reminderHour: 3 }, at)).toBe('2026-09-25');
     // An unknown zone falls back to London rather than never reminding.

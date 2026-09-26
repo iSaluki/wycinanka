@@ -42,6 +42,7 @@ export function SayIt({ ex, locked, onResult }: { ex: SpeakExercise; locked: boo
   const [recording, setRecording] = useState<string | null>(null);
   const [tries, setTries] = useState(0);
   const active = useRef<Listening | null>(null);
+  const failures = useRef(0);
   const mode = selfCheck ? 'self' : current;
   // What the prompt gives away: translating and reading hide the model until the learner has had a go.
   const revealed = ex.mode === 'repeat' || ex.mode === 'reply' || locked || tries > 0 || phase === 'self';
@@ -112,15 +113,28 @@ export function SayIt({ ex, locked, onResult }: { ex: SpeakExercise; locked: boo
         setSelfCheck(true);
         setPhase('self');
         break;
-      case 'unavailable':
-        if (engine() !== 'self' && mode === 'browser' && !heard.recording) {
-          setMessage("Your browser's speech recognition isn't working, so the app will check you instead. Tap the microphone again.");
+      case 'unavailable': {
+        const next = engine();
+        if (heard.message && /resting/.test(heard.message)) {
+          setMessage(heard.message);
+          setSelfCheck(true);
+          setPhase('self');
+        } else if (next === mode && ++failures.current < 2) {
+          // Only this attempt failed (a dropped connection, a busy moment): try again rather than give up.
+          setMessage("That one couldn't be checked just now. Tap the microphone to try again.");
+        } else if (next !== 'self' && next !== mode) {
+          setMessage(
+            next === 'server'
+              ? "Your browser's speech recognition isn't working, so the app will check you instead. Tap the microphone again."
+              : "The app's speech checking isn't available, so your browser will check you instead. Tap the microphone again.",
+          );
         } else {
-          setMessage(heard.message && /resting/.test(heard.message) ? heard.message : "Speech checking isn't available right now, so check yourself this time.");
+          setMessage("Speech checking isn't available right now, so check yourself this time.");
           setSelfCheck(true);
           setPhase('self');
         }
         break;
+      }
     }
   };
 
