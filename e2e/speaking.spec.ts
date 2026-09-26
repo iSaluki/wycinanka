@@ -162,3 +162,29 @@ test('when checking is unavailable, learners listen back and mark themselves', a
   await page.getByRole('button', { name: 'Continue' }).click();
   await expect(page.getByText('Tap, say it, and hear yourself back')).toBeVisible();
 });
+
+test('an iPad sends its recording to the Worker even though Safari has a recogniser', async ({ page }) => {
+  await fakeRecogniser(page);
+  // iPadOS Safari reports itself as a Mac with a touch screen.
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'platform', { get: () => 'MacIntel' });
+    Object.defineProperty(navigator, 'maxTouchPoints', { get: () => 5 });
+  });
+  let expected = '';
+  let sent = 0;
+  await page.route('**/api/speech/transcribe', async (route) => {
+    sent++;
+    await route.fulfill({ json: { text: expected } });
+  });
+  await page.goto('/speaking');
+  await expect(page.getByText('checked by the app’s speech recognition')).toBeVisible();
+  await page.getByRole('button', { name: /Repeat after me/ }).click();
+  expected = await target(page);
+  await page.getByRole('button', { name: 'Speak now', exact: true }).click();
+  await page.waitForTimeout(1500);
+  const stop = page.getByRole('button', { name: 'Stop: I have finished speaking' });
+  if (await stop.isVisible()) await stop.click();
+  await expect(page.locator('.sheet.good')).toBeVisible({ timeout: 15_000 });
+  expect(sent).toBe(1);
+  expect(await page.evaluate(() => (window as unknown as { __langs: string[] }).__langs)).toEqual([]);
+});

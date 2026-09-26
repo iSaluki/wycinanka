@@ -36,7 +36,7 @@ The research behind the course design, the curriculum, architecture and security
 | Front end | React 19 + Vite, plain CSS; self-hosted fonts (Poltawski Nowy, Signika) |
 | API | Hono on Cloudflare Workers (`src/worker`) |
 | Data | Cloudflare D1 (`migrations/`, applied by the Worker itself on first request) |
-| Speech recognition | The browser's own (Web Speech API) where it has one; otherwise a short WAV clip is transcribed on the Worker by Whisper on Workers AI (`src/worker/routes/speech.ts`, nothing stored); otherwise learners listen back and mark themselves |
+| Speech recognition | The browser's own (Web Speech API) where it has one; otherwise, and always on iPhone and iPad (whose recogniser goes through Siri and is unreliable for Polish), a short WAV clip taken straight from Web Audio is transcribed on the Worker by Whisper on Workers AI (`src/worker/routes/speech.ts`, nothing stored); only when neither works do learners listen back and mark themselves |
 | Audio | Every fixed Polish text pre-recorded with [Piper](https://github.com/OHF-Voice/piper1-gpl), a free neural voice run locally (`scripts/voice.py`), served as small MP3s; the browser's own Polish voice for text typed into the tools, or for everything if the learner prefers it |
 | Shared | FSRS scheduler, answer grader, validation and progress rules (`src/shared`), used by both browser and Worker |
 | Content | TypeScript data in `src/content`, validated by tests |
@@ -76,7 +76,7 @@ Live at **https://polish.saluki.cloud**. The repository is set up so that a Clou
 - The Worker applies any pending migrations itself on its first request (`src/worker/migrate.ts`), using the same `d1_migrations` table as `wrangler d1 migrations apply`. No separate migration step is needed.
 - `PEPPER` is optional, so the first deploy works before any secret is set (see below).
 - Workers AI is bound as `AI` for speech transcription (Whisper). There is nothing to set up: it's part of every Workers account, and the free plan's daily allowance (10,000 neurons, roughly a few thousand short spoken answers) is shared by everyone who uses a browser without its own recognition. Beyond it, or if the binding is removed, speaking falls back to listening back and marking yourself. Transcription is throttled to 180 requests an hour per network (and per learner when signed in), and stops for the day at `SPEECH_DAILY_LIMIT` in `wrangler.jsonc` (2,000 by default), of which guests may use half, so a flood of requests can't use up the allowance for everyone.
-- An hourly Cron Trigger (`triggers` in `wrangler.jsonc`) sends daily reminders (`src/worker/reminders.ts`). The Web Push (VAPID) key pair is generated on first use and stored in D1, so there is nothing to configure; `PUSH_CONTACT` in `vars` is the contact URL push services see. On the free plan one run sends at most 40 reminders, so a deployment with more learners reminded in the same hour needs the paid plan and a higher `MAX_PUSHES_PER_RUN`.
+- Daily reminders (`src/worker/reminders.ts`) are sent by a Durable Object, `ReminderClock` (`src/worker/clock.ts`), whose alarm fires a minute past every hour and sets the next one. It needs no Cron Trigger (the free plan allows five per account) and starts itself on the first API request after a deploy. SQLite-backed Durable Objects and their alarms are part of the free plan. A reminder that misses its hour still goes out in the hour after. The Web Push (VAPID) key pair is generated on first use and stored in D1, so there is nothing to configure; `PUSH_CONTACT` in `vars` is the contact URL push services see. On the free plan one run sends at most 40 reminders, so a deployment with more learners reminded in the same hour needs the paid plan and a higher `MAX_PUSHES_PER_RUN`.
 
 ### Connect the repository (one time)
 
@@ -108,7 +108,7 @@ Add the `.sql` file to `migrations/` **and** the same text to `src/worker/migrat
 
 The free plan limits each request to about 10 ms of CPU, so `PBKDF2_ITERATIONS` in `wrangler.jsonc` defaults to 30,000. On the paid plan, raise it to 100,000 (the Workers maximum). Existing password hashes are upgraded automatically the next time each user signs in.
 
-Expired sessions and stale sign-in throttling rows are removed by the hourly Cron Trigger, and also at most once an hour in the background of normal API requests, so housekeeping continues even if the trigger is removed.
+Expired sessions and stale sign-in throttling rows are removed by the hourly reminder clock, and also at most once an hour in the background of normal API requests, so housekeeping continues even if the clock stops.
 
 ## Security
 

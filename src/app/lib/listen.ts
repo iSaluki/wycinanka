@@ -80,13 +80,26 @@ const recognitionCtor = (): RecognitionCtor | undefined => {
   return w.SpeechRecognition ?? w.webkitSpeechRecognition;
 };
 
-/** Whether this browser can record a clip and turn it into WAV. */
-export const canRecord = () =>
+type AudioContextCtor = typeof AudioContext;
+const audioContextCtor = (): AudioContextCtor | undefined =>
+  typeof window === 'undefined'
+    ? undefined
+    : (window.AudioContext ?? (window as unknown as { webkitAudioContext?: AudioContextCtor }).webkitAudioContext);
+
+/**
+ * Whether this browser can record a clip as WAV. The microphone's samples are taken straight from Web Audio,
+ * so nothing depends on MediaRecorder or on decoding its output (Safari on iPad records fragmented MP4 that
+ * its own decodeAudioData often refuses, which used to leave iPad learners marking themselves).
+ */
+export const canRecord = () => typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getUserMedia && !!audioContextCtor();
+
+/**
+ * iPhone and iPad. Safari there has a recogniser, but it goes through Siri's servers, often ends without a
+ * word or refuses Polish, so these devices send a clip to the Worker first and keep the recogniser as a fallback.
+ */
+const appleTouch = () =>
   typeof navigator !== 'undefined' &&
-  !!navigator.mediaDevices?.getUserMedia &&
-  typeof MediaRecorder !== 'undefined' &&
-  typeof AudioContext !== 'undefined' &&
-  typeof OfflineAudioContext !== 'undefined';
+  (/iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1));
 
 const broken = new Set<Engine>();
 const listeners = new Set<() => void>();
@@ -102,8 +115,10 @@ export function onEngineChange(fn: () => void): () => void {
 
 /** How speech will be checked on this device right now. */
 export function engine(): Engine {
-  if (recognitionCtor() && !broken.has('browser')) return 'browser';
-  if (canRecord() && !broken.has('server')) return 'server';
+  const browser = !!recognitionCtor() && !broken.has('browser');
+  const server = canRecord() && !broken.has('server');
+  if (browser && !(server && appleTouch())) return 'browser';
+  if (server) return 'server';
   return 'self';
 }
 
@@ -267,88 +282,115 @@ function withRecording(opts: ListenOptions, transcribe: boolean): Listening {
   let cancelled = false;
   let stopNow: () => void = () => undefined;
 
+  // Made now, while the tap that started this is still being handled: iOS keeps an audio context made later
+  // suspended, and a suspended context hears nothing.
+  let ctx: AudioContext | null = null;
+  try {
+    const AC = audioContextCtor();
+    if (AC) ctx = new AC();
+    void ctx?.resume().catch(() => undefined);
+  } catch {
+    ctx = null;
+  }
+
   const run = async () => {
+    if (!ctx) throw new Error('No Web Audio');
+    const audio = ctx;
     let stream: MediaStream;
     try {
       stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
     } catch (e) {
       const name = e instanceof DOMException ? e.name : '';
       state = 'over';
+      void audio.close().catch(() => undefined);
       return settle({ ok: false, error: name === 'NotAllowedError' || name === 'SecurityError' ? 'denied' : 'no-mic' });
     }
     if (cancelled) {
       stream.getTracks().forEach((t) => t.stop());
+      void audio.close().catch(() => undefined);
       return;
     }
-    const type = ['audio/webm;codecs=opus', 'audio/ogg;codecs=opus', 'audio/mp4', 'audio/webm'].find((t) => MediaRecorder.isTypeSupported?.(t));
-    const recorder = new MediaRecorder(stream, type ? { mimeType: type } : undefined);
-    const chunks: Blob[] = [];
-    recorder.ondataavailable = (e) => e.data.size && chunks.push(e.data);
-    const stopped = new Promise<void>((r) => (recorder.onstop = () => r()));
+    if (audio.state === 'suspended') await audio.resume().catch(() => undefined);
 
-    // A level meter, which also notices when the learner has finished speaking.
-    const ctx = new AudioContext();
-    const analyser = ctx.createAnalyser();
-    analyser.fftSize = 1024;
-    ctx.createMediaStreamSource(stream).connect(analyser);
-    const buf = new Float32Array(analyser.fftSize);
-    const started = Date.now();
+    // Collect the raw samples. ScriptProcessorNode is old, but it is in every browser and needs no extra file
+    // (an AudioWorklet module would); a clip lasts seconds, so its cost on the main thread doesn't matter.
+    const source = audio.createMediaStreamSource(stream);
+    const tap = audio.createScriptProcessor(4096, 1, 1);
+    const parts: Float32Array[] = [];
+    let taken = 0;
+    const limit = audio.sampleRate * (MAX_MS / 1000 + 1);
     let floor = 0.01;
     let spoke = false;
     let lastLoud = 0;
-    const timer = setInterval(() => {
-      analyser.getFloatTimeDomainData(buf);
+    const started = Date.now();
+    tap.onaudioprocess = (e) => {
+      if (state !== 'recording') return;
+      const data = e.inputBuffer.getChannelData(0);
+      if (taken < limit) {
+        parts.push(new Float32Array(data));
+        taken += data.length;
+      }
+      // A level meter, which also notices when the learner has finished speaking.
       let sum = 0;
-      for (const v of buf) sum += v * v;
-      const rms = Math.sqrt(sum / buf.length);
+      for (let i = 0; i < data.length; i++) sum += data[i] * data[i];
+      const rms = Math.sqrt(sum / data.length);
       const now = Date.now();
       // The first moment sets the room's noise level.
       if (now - started < 300) floor = Math.max(floor, rms);
-      const loud = rms > Math.max(0.02, floor * 2.5);
-      if (loud) {
+      if (rms > Math.max(0.02, floor * 2.5)) {
         spoke = true;
         lastLoud = now;
       }
       opts.onLevel?.(Math.min(1, rms * 8));
+    };
+    source.connect(tap);
+    // Some browsers only run a processor that is connected to the output. It writes nothing, so it stays silent.
+    tap.connect(audio.destination);
+
+    let finished: () => void = () => undefined;
+    const stopped = new Promise<void>((r) => (finished = r));
+    const timer = setInterval(() => {
+      const now = Date.now();
       if ((spoke && now - lastLoud > TRAILING_MS) || (!spoke && now - started > WAIT_MS) || now - started > MAX_MS) stopNow();
     }, 50);
-
     stopNow = () => {
       if (state !== 'recording') return;
       state = 'stopping';
       clearInterval(timer);
-      try {
-        recorder.stop();
-      } catch {
-        // Already stopped.
-      }
+      finished();
     };
     state = 'recording';
-    recorder.start(250);
     await stopped;
+    tap.onaudioprocess = null;
+    source.disconnect();
+    tap.disconnect();
     stream.getTracks().forEach((t) => t.stop());
-    void ctx.close().catch(() => undefined);
+    const rate = audio.sampleRate;
+    void audio.close().catch(() => undefined);
     state = 'over';
     if (cancelled) return;
     opts.onLevel?.(0);
-    const blob = new Blob(chunks, { type: recorder.mimeType || type || 'audio/webm' });
-    const recording = blob.size ? URL.createObjectURL(blob) : undefined;
+
+    const samples = resample(join(parts), rate, RATE);
+    const wav = encodeWav(samples, RATE);
+    const recording = samples.length ? URL.createObjectURL(new Blob([wav], { type: 'audio/wav' })) : undefined;
     if (!spoke) return settle({ ok: false, error: 'no-speech', recording });
     if (!transcribe) return settle({ ok: true, alternatives: [], recording });
     opts.onChecking?.();
     try {
-      const audio = await toWavBase64(blob);
-      const { text } = await api<{ text: string }>('POST', '/speech/transcribe', { audio });
+      const { text } = await api<{ text: string }>('POST', '/speech/transcribe', { audio: base64(wav) });
       if (!text.trim()) return settle({ ok: false, error: 'no-speech', recording });
       settle({ ok: true, alternatives: [text], recording });
     } catch (e) {
-      // Out of allowance, a preview without recognition, or offline: mark yourself from here on.
-      if (!(e instanceof ApiError) || e.status === 503 || e.status === 0 || e.status === 404) markBroken('server');
+      // Out of allowance or a preview without recognition: mark yourself from here on. A dropped connection or a
+      // busy moment is only this once.
+      if (e instanceof ApiError && (e.status === 503 || e.status === 404)) markBroken('server');
       settle({ ok: false, error: 'unavailable', message: e instanceof ApiError ? e.message : undefined, recording });
     }
   };
   void run().catch(() => {
     markBroken('server');
+    void ctx?.close().catch(() => undefined);
     settle({ ok: false, error: 'unavailable' });
   });
 
@@ -368,27 +410,33 @@ function withRecording(opts: ListenOptions, transcribe: boolean): Listening {
 const RATE = 16_000;
 const MAX_SECONDS = 10;
 
-/** Decode a recorded clip and re-encode it as 16 kHz 16-bit mono WAV, which Whisper reads directly. */
-export async function toWavBase64(blob: Blob): Promise<string> {
-  const data = await blob.arrayBuffer();
-  const ctx = new AudioContext();
-  let decoded: AudioBuffer;
-  try {
-    decoded = await ctx.decodeAudioData(data);
-  } finally {
-    void ctx.close().catch(() => undefined);
+function join(parts: Float32Array[]): Float32Array {
+  const out = new Float32Array(parts.reduce((n, p) => n + p.length, 0));
+  let at = 0;
+  for (const p of parts) {
+    out.set(p, at);
+    at += p.length;
   }
-  const seconds = Math.min(MAX_SECONDS, decoded.duration);
-  const offline = new OfflineAudioContext(1, Math.max(1, Math.ceil(seconds * RATE)), RATE);
-  const src = offline.createBufferSource();
-  src.buffer = decoded;
-  src.connect(offline.destination);
-  src.start();
-  const rendered = await offline.startRendering();
-  return base64(encodeWav(rendered.getChannelData(0), RATE));
+  return out;
 }
 
-export function encodeWav(samples: Float32Array, rate: number): Uint8Array {
+/** Down to Whisper's 16 kHz, averaging the samples that fall into each new one (a simple low-pass). */
+export function resample(input: Float32Array, from: number, to: number): Float32Array {
+  const limit = Math.min(input.length, Math.floor(from * MAX_SECONDS));
+  if (from === to) return input.slice(0, limit);
+  const ratio = from / to;
+  const out = new Float32Array(Math.floor(limit / ratio));
+  for (let i = 0; i < out.length; i++) {
+    const a = Math.floor(i * ratio);
+    const b = Math.min(limit, Math.max(a + 1, Math.floor((i + 1) * ratio)));
+    let sum = 0;
+    for (let k = a; k < b; k++) sum += input[k];
+    out[i] = sum / (b - a);
+  }
+  return out;
+}
+
+export function encodeWav(samples: Float32Array, rate: number): Uint8Array<ArrayBuffer> {
   const out = new DataView(new ArrayBuffer(44 + samples.length * 2));
   const text = (at: number, s: string) => [...s].forEach((c, i) => out.setUint8(at + i, c.charCodeAt(0)));
   text(0, 'RIFF');
