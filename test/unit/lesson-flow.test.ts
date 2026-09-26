@@ -159,3 +159,33 @@ describe('every lesson ends with a conversation', () => {
     expect(exercises.slice(0, outroStart).some((e) => e.kind === 'listen' || e.kind === 'dialogue')).toBe(false);
   });
 });
+
+describe('sentence building', () => {
+  it('only accepts, and only shows, answers the tiles can make', async () => {
+    const { buildable, lessonPlan: plan } = await import('../../src/app/lib/exercises');
+    expect(buildable('My jesteśmy tutaj.', ['tutaj', 'My', 'jesteśmy', 'są'])).toBe(true);
+    expect(buildable('My jesteśmy tu.', ['tutaj', 'My', 'jesteśmy', 'są'])).toBe(false);
+    expect(buildable('Nie ma sprawy.', ['nie ma sprawy', 'tak'])).toBe(true);
+    for (const l of LESSONS) {
+      for (const e of plan(l).exercises) {
+        if (e.kind !== 'build') continue;
+        expect(e.accepted.length, e.cardId).toBeGreaterThan(0);
+        for (const a of e.accepted) expect(buildable(a, e.tiles), `${e.cardId}: ${a}`).toBe(true);
+      }
+    }
+  });
+});
+
+describe('sentence reviews get harder as the card matures', () => {
+  it('moves from tiles to understanding to writing the whole sentence', async () => {
+    const { reviewExercise } = await import('../../src/app/lib/exercises');
+    const { getCard } = await import('../../src/content/course');
+    const s = LESSONS.find((l) => l.sentences.length)!.sentences[0];
+    const at = (reps: number) => reviewExercise(getCard(s.id)!, reps, s.id);
+    expect(at(0).kind).toBe('build');
+    expect(at(1).kind).toBe('build');
+    expect(at(2)).toMatchObject({ kind: 'type', lang: 'en' });
+    expect(at(3)).toMatchObject({ kind: 'type', lang: 'pl', prompt: s.en });
+    expect(at(4)).toMatchObject({ kind: 'type', lang: 'en' });
+  });
+});

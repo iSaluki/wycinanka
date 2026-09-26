@@ -265,7 +265,25 @@ function buildPolish(s: Sentence, wordPool: string[]): Exercise {
   const tokens = mergeChunks(tokenise(s.pl));
   const correct = new Set([s.pl, ...(s.altPl ?? [])].flatMap(tokenise).map(normalise));
   const extra = (s.extra?.length ? s.extra : distractors('', wordPool, 2)).filter((e) => !correct.has(normalise(e)));
-  return { kind: 'build', cardId: s.id, prompt: s.en, tiles: shuffle([...tokens, ...extra]), accepted: accPl(s), lang: 'pl' };
+  const tiles = shuffle([...tokens, ...extra]);
+  return { kind: 'build', cardId: s.id, prompt: s.en, tiles, accepted: accPl(s).filter((a) => buildable(a, tiles)), lang: 'pl' };
+}
+
+/**
+ * Whether an answer can be put together from these tiles. Other right answers ("My jesteśmy tu." next to the
+ * tiles' "tutaj") are left out of a build's answers, so the answer shown after a mistake is always one the
+ * learner could have built.
+ */
+export function buildable(answer: string, tiles: string[]): boolean {
+  const left = new Map<string, number>();
+  for (const w of tiles.flatMap(tokenise).map(normalise)) left.set(w, (left.get(w) ?? 0) + 1);
+  return tokenise(answer)
+    .map(normalise)
+    .every((w) => {
+      const n = left.get(w) ?? 0;
+      left.set(w, n - 1);
+      return n > 0;
+    });
 }
 
 function buildFromAudio(s: Sentence, wordPool: string[]): Exercise {
@@ -275,6 +293,11 @@ function buildFromAudio(s: Sentence, wordPool: string[]): Exercise {
 
 function gapFor(d: Drill): Exercise {
   return { kind: 'gap', cardId: d.id, text: d.text, en: d.en, options: shuffle(d.options), answer: d.answer, why: d.why };
+}
+
+/** Write a whole sentence in Polish from its English: the hardest form of a sentence card, for mature reviews. */
+function typeSentence(s: Sentence): Exercise {
+  return { kind: 'type', cardId: s.id, prompt: s.en, accepted: accPl(s), lang: 'pl' };
 }
 
 function translateToEnglish(s: Sentence): Exercise {
@@ -512,8 +535,12 @@ export function reviewExercise(src: CardSource, reps: number, cardId: string, sp
   if (src.kind === 'sentence') {
     const pool = nearbyLessons(src.lesson).flatMap((l) => l.sentences.flatMap((s) => tokenise(s.pl)));
     const sentence = preferForm(src.sentence, speaker);
-    if (reps >= 3) return translateToEnglish(sentence);
-    return reps % 2 === 0 ? buildPolish(sentence, pool) : buildFromAudio(sentence, pool);
+    // Harder as the memory grows: tiles first (read, then heard), then understanding it, then writing the whole
+    // sentence from the English with no tiles to lean on. Writing from memory is what builds the recall
+    // conversation needs, so mature cards come back that way every other time.
+    if (reps >= 3) return reps % 2 === 1 ? typeSentence(sentence) : translateToEnglish(sentence);
+    if (reps === 2) return translateToEnglish(sentence);
+    return reps === 0 ? buildPolish(sentence, pool) : buildFromAudio(sentence, pool);
   }
   if (src.kind === 'picture') return pictureChoice(src.picture, src.deck.pictures.map((p) => p.pl));
   if (src.kind === 'chunk') return chunkExercise(src.chunk, reps);
