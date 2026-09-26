@@ -2,22 +2,51 @@
  * Wycinanka service worker: makes the app installable, keeps it opening when the network drops,
  * and shows daily practice reminders sent by the Worker (see src/worker/reminders.ts).
  *
- * Caching is deliberately small. Hashed build files (/assets/*) and recordings (/voice/*) never change,
- * so they are served from the cache first (recordings once they have been played); everything else is
- * left to the browser's normal HTTP cache. Pages always try the network first and fall back to the
- * cached app shell.
+ * Caching is deliberately small. The build files the app needs (listed in /app-files.json at build time) are
+ * downloaded as soon as the worker installs, and again after each online visit, so the app opens offline after a
+ * single visit and files from older releases are dropped. Hashed build files and recordings (/voice/*) never
+ * change, so they are served from the cache first (recordings once they have been played); everything else is
+ * left to the browser's normal HTTP cache. Pages always try the network first and fall back to the cached
+ * app shell.
  * The API is never cached: progress must always come from the server.
  */
 
 // Three caches, each pruned to a size: the app shell, build files and recordings. Bump a name to start it afresh;
 // activate deletes every cache not listed here.
-const CACHE = 'wycinanka-shell-v2';
-const ASSETS = 'wycinanka-assets-v2';
+const CACHE = 'wycinanka-shell-v3';
+const ASSETS = 'wycinanka-assets-v3';
 const VOICE = 'wycinanka-voice-v2';
 const KEEP = [CACHE, ASSETS, VOICE];
-/** Most entries kept per cache. Build files change with every release; recordings add up (about 5 KB each). */
-const LIMITS = { [ASSETS]: 40, [VOICE]: 1500 };
+/**
+ * Most entries kept per cache. Build files are kept to the current release by refreshAppFiles(), with this as a
+ * backstop; recordings add up (about 5 KB each).
+ */
+const LIMITS = { [ASSETS]: 120, [VOICE]: 1500 };
 const SHELL = '/';
+const APP_FILES = '/app-files.json';
+
+/**
+ * Downloads any of the current release's build files that aren't cached yet, then drops cached build files
+ * that belong to older releases. Quietly does nothing offline or if the list is missing (a dev server).
+ */
+async function refreshAppFiles() {
+  try {
+    const res = await fetch(APP_FILES, { cache: 'no-store' });
+    if (!res.ok) return;
+    const files = await res.json();
+    if (!Array.isArray(files) || !files.length) return;
+    const cache = await caches.open(ASSETS);
+    const wanted = new Set(files.map((f) => new URL(f, self.location.origin).href));
+    for (const url of wanted) {
+      if (await cache.match(url)) continue;
+      const file = await fetch(url, { credentials: 'same-origin' });
+      if (file.status === 200) await cache.put(url, file);
+    }
+    for (const req of await cache.keys()) if (!wanted.has(req.url)) await cache.delete(req);
+  } catch {
+    // Offline or interrupted: the next online visit finishes the job.
+  }
+}
 
 /** Drops the oldest entries (Cache keys come back in the order they were added) beyond the cache's limit. */
 async function trim(name) {
@@ -60,6 +89,7 @@ self.addEventListener('install', (event) => {
       .open(CACHE)
       .then((c) => c.add(SHELL))
       .catch(() => undefined)
+      .then(refreshAppFiles)
       .then(() => self.skipWaiting()),
   );
 });
@@ -85,7 +115,8 @@ self.addEventListener('fetch', (event) => {
         .then((res) => {
           if (res.ok) {
             const copy = res.clone();
-            caches.open(CACHE).then((c) => c.put(SHELL, copy));
+            // The page just loaded may be a new release: keep the offline copy in step with it.
+            event.waitUntil(caches.open(CACHE).then((c) => c.put(SHELL, copy)).then(refreshAppFiles));
           }
           return res;
         })

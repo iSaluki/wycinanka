@@ -114,6 +114,22 @@ export const transcribeSchema = z
   })
   .strict();
 
+/**
+ * Something that went wrong in a learner's browser, sent so it shows up in the Worker's logs (Workers
+ * Observability): the app failing to start, a crash while rendering, an uncaught error, or speech checking
+ * giving up. Text only, and short; no progress or answers are ever included.
+ */
+export const clientReportSchema = z
+  .object({
+    kind: z.enum(['boot', 'render', 'error', 'rejection', 'speech']),
+    message: z.string().max(500),
+    detail: z.string().max(2000).optional(),
+    path: z.string().max(200),
+    /** Build the page came from, so reports from an old cached copy can be told apart. */
+    build: z.string().max(40).optional(),
+  })
+  .strict();
+
 /** A guest's progress (saved on their device), replayed server-side once when they create an account. */
 export const importSchema = z
   .object({

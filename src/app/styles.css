@@ -3717,3 +3717,9 @@ dialog.confirm p {
   height: 36px;
   font-size: 20px;
 }
+
+/* Carry on with a lesson left part-way */
+.resume {
+  align-self: center;
+  max-width: 34rem;
+}

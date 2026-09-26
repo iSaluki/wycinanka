@@ -155,3 +155,26 @@ export function useDeviceSubscribed(): [boolean | null, () => void] {
   }, [tick]);
   return [on, () => setTick((t) => t + 1)];
 }
+
+export interface ReminderStatus {
+  subscribed: boolean;
+  lastSentAt?: number | null;
+  lastResult?: string | null;
+}
+
+/** When this device was last sent a daily reminder, as the Worker recorded it. Null if it can't be checked. */
+export function useReminderStatus(active: boolean): ReminderStatus | null {
+  const [status, setStatus] = useState<ReminderStatus | null>(null);
+  useEffect(() => {
+    if (!active) return setStatus(null);
+    let live = true;
+    currentSubscription()
+      .then((sub) => (sub ? api<ReminderStatus>('POST', '/push/status', { endpoint: sub.endpoint }) : null))
+      .then((s) => live && setStatus(s))
+      .catch(() => live && setStatus(null));
+    return () => {
+      live = false;
+    };
+  }, [active]);
+  return status;
+}

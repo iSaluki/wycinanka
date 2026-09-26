@@ -6,6 +6,8 @@ import { account } from './routes/account';
 import { auth } from './routes/auth';
 import { progress } from './routes/progress';
 import { push } from './routes/push';
+import { report } from './routes/report';
+import { withPagePolicy } from './pages';
 import { speech, SPEECH_BODY_LIMIT, TRANSCRIBE_PATH } from './routes/speech';
 import { sendReminders } from './reminders';
 import { cleanUp } from './housekeeping';
@@ -41,13 +43,14 @@ app.route('/api/account', account);
 app.route('/api/progress', progress);
 app.route('/api/push', push);
 app.route('/api/speech', speech);
+app.route('/api/report', report);
 
 app.all('/api/*', () => {
   throw new HttpError(404, 'Not found.');
 });
 
-// Anything that is not an API route is the single-page app.
-app.all('*', (c) => c.env.ASSETS.fetch(c.req.raw));
+// Anything that is not an API route is the single-page app. Pages get a fresh CSP nonce (pages.ts).
+app.all('*', async (c) => withPagePolicy(await c.env.ASSETS.fetch(c.req.raw)));
 
 app.onError((err, c) => {
   if (err instanceof HttpError) return c.json({ error: err.message, ...err.extra }, err.status);

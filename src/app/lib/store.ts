@@ -12,7 +12,7 @@ import type { Card } from '../../shared/fsrs';
 import { localDay } from '../../shared/progress';
 import type { CardRow, ImportInput, LessonResult, ReviewInput, Settings, Snapshot } from '../../shared/schemas';
 import { api, ApiError } from './api';
-import { clearGuest, loadGuest, loadOutbox, saveGuest, saveOutbox, type PendingOp } from './saved';
+import { clearAccount, clearGuest, loadAccount, loadGuest, loadOutbox, saveAccount, saveGuest, saveOutbox, type PendingOp } from './saved';
 import { setSoundEffects } from './sfx';
 import { setPreferDeviceVoice, setSpeechRate } from './speech';
 
@@ -65,7 +65,17 @@ function set(patch: Partial<AppState>) {
   if (state.status === 'ready' && !state.user && ('progress' in patch || 'settings' in patch || 'guestLog' in patch)) {
     saveGuest(state.settings, state.guestLog, state.progress);
   }
+  if (state.status === 'ready' && state.user && ('progress' in patch || 'settings' in patch)) saveAccountSoon();
   listeners.forEach((l) => l());
+}
+
+let accountTimer: ReturnType<typeof setTimeout> | undefined;
+/** Keeps the offline copy of a signed-in learner's progress current, at most every couple of seconds. */
+function saveAccountSoon() {
+  clearTimeout(accountTimer);
+  accountTimer = setTimeout(() => {
+    if (state.user) saveAccount(state.user, state.settings, state.progress);
+  }, 2000);
 }
 
 export function useApp<T>(select: (s: AppState) => T): T {
@@ -137,20 +147,48 @@ function guestState(): Partial<AppState> {
   return g ? { settings: g.settings, guestLog: g.guestLog, progress: g.progress } : {};
 }
 
+/** Started without a connection from the offline copy: fetch the real progress once the connection is back. */
+let startedOffline = false;
+
+async function loadFromServer(): Promise<boolean> {
+  const me = await api<{ user: User | null }>('GET', '/auth/me');
+  if (!me.user) return false;
+  loadSnapshot(await api<Snapshot>('GET', '/progress'));
+  return true;
+}
+
+async function reconnect() {
+  if (!startedOffline || !state.user) return void flushOutbox();
+  try {
+    // Results from the offline visit go first, so the fresh progress from the server includes them.
+    await flushOutbox();
+    if (await loadFromServer()) startedOffline = false;
+    void flushOutbox();
+  } catch {
+    // Still offline: try again at the next 'online' event.
+  }
+}
+
 export async function init() {
   try {
-    const me = await api<{ user: User | null }>('GET', '/auth/me');
-    if (me.user) {
-      loadSnapshot(await api<Snapshot>('GET', '/progress'));
-      void flushOutbox();
-    } else set({ status: 'ready', user: null, ...guestState() });
+    if (await loadFromServer()) void flushOutbox();
+    else {
+      clearAccount();
+      set({ status: 'ready', user: null, ...guestState() });
+    }
   } catch (e) {
-    set({ status: 'ready', user: null, ...guestState(), syncError: e instanceof ApiError && e.status !== 401 ? e.message : null });
+    const account = e instanceof ApiError && e.status === 0 ? loadAccount() : null;
+    if (account) {
+      startedOffline = true;
+      set({ status: 'ready', user: { ...account.user }, settings: account.settings, progress: account.progress, syncError: SYNC_WAITING });
+    } else {
+      set({ status: 'ready', user: null, ...guestState(), syncError: e instanceof ApiError && e.status !== 401 ? e.message : null });
+    }
   }
   if (typeof window !== 'undefined') {
-    window.addEventListener('online', () => void flushOutbox());
+    window.addEventListener('online', () => void reconnect());
     document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible') void flushOutbox();
+      if (document.visibilityState === 'visible') void reconnect();
     });
   }
 }
@@ -327,6 +365,8 @@ export async function login(username: string, password: string): Promise<string 
 
 function resetToGuest() {
   clearGuest();
+  clearAccount();
+  clearTimeout(accountTimer);
   set({ user: null, settings: {}, progress: emptyState(), guestLog: { lessons: [], reviews: [] }, syncError: null });
 }
 

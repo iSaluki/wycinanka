@@ -57,6 +57,19 @@ push.post('/unsubscribe', async (c) => {
   return c.json({ ok: true });
 });
 
+/**
+ * When this device was last sent a daily reminder, and whether the push service accepted it, so the profile can
+ * show that reminders are really going out.
+ */
+push.post('/status', async (c) => {
+  const { endpoint } = await readJson(c, pushEndpointSchema);
+  const row = await c.env.DB.prepare('SELECT last_sent_at, last_result FROM push_subscriptions WHERE endpoint = ?1 AND user_id = ?2')
+    .bind(endpoint, c.get('user').id)
+    .first<{ last_sent_at: number | null; last_result: string | null }>();
+  if (!row) return c.json({ subscribed: false });
+  return c.json({ subscribed: true, lastSentAt: row.last_sent_at, lastResult: row.last_result });
+});
+
 /** Sends a sample reminder to this device now, so learners can check notifications work. */
 push.post('/test', async (c) => {
   const user = c.get('user');

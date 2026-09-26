@@ -3,6 +3,7 @@ import type { DialogueLine, Item, Spotlight } from '../../content/types';
 import { POLISH_LETTERS } from '../../shared/grade';
 import { maskAnswer, ruledOut, sentenceStart, shuffle, type Exercise, type ExtraTag } from '../lib/exercises';
 import { speak, stopSpeaking } from '../lib/speech';
+import { voiceFor, voiceOfSpeaker } from '../lib/voices';
 import { respell } from '../../shared/phonetics';
 import { chunkFor } from '../../content/chunks';
 import { GENDER_LABEL, Rich, Speak, usePolishVoice } from './common';
@@ -66,8 +67,8 @@ export function Choose({ ex, locked, onAnswer, checked, hints = 0 }: AnswerProps
         </figure>
       ) : (
         <div className="prompt-row">
-          {ex.promptLang === 'pl' && <Speak text={ex.say ?? ex.prompt} autoPlay={ex.audio} />}
-          {ex.audio && <Speak text={ex.prompt} slow />}
+          {ex.promptLang === 'pl' && <Speak text={ex.say ?? ex.prompt} autoPlay={ex.audio} voice={ex.voice ?? (ex.audio ? voiceFor(ex.say ?? ex.prompt, true) : undefined)} />}
+          {ex.audio && <Speak text={ex.prompt} slow voice={ex.voice ?? voiceFor(ex.prompt, true)} />}
           {hidePrompt ? (
             <span className="muted">Tap to hear it again</span>
           ) : ex.audio && !hasVoice && !checked && ex.fallback ? (
@@ -147,6 +148,9 @@ export function TypeAnswer({ ex, locked, onAnswer, hints = 0 }: AnswerProps<Of<'
     });
   };
   const toPolish = ex.lang === 'pl';
+  // Dictation needs something to play; without a Polish voice it becomes "write this in Polish".
+  const canHear = usePolishVoice(ex.audio ?? '');
+  const dictating = !!ex.audio && canHear;
   // Alt (Option on a Mac) + a letter types its Polish partner, as on a Polish keyboard: Alt+a → ą, Alt+x → ź.
   const onKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (!toPolish || !e.altKey || e.ctrlKey || e.metaKey) return;
@@ -157,12 +161,22 @@ export function TypeAnswer({ ex, locked, onAnswer, hints = 0 }: AnswerProps<Of<'
   };
   return (
     <>
-      <Instruction tag={ex.tag}>{toPolish ? 'Write this in Polish' : 'Write this in English'}</Instruction>
+      <Instruction tag={ex.tag}>{dictating ? 'Write what you hear' : toPolish ? 'Write this in Polish' : 'Write this in English'}</Instruction>
       <div className="prompt-row">
-        {!toPolish && <Speak text={ex.prompt} />}
-        <span className={toPolish ? 'prompt-en' : 'prompt-pl'} lang={toPolish ? 'en' : 'pl'}>
-          {ex.prompt}
-        </span>
+        {dictating ? (
+          <>
+            <Speak text={ex.audio!} autoPlay voice={voiceFor(ex.audio!, true)} />
+            <Speak text={ex.audio!} slow voice={voiceFor(ex.audio!, true)} />
+            {locked && <span className="prompt-en">{ex.prompt}</span>}
+          </>
+        ) : (
+          <>
+            {!toPolish && <Speak text={ex.prompt} />}
+            <span className={toPolish ? 'prompt-en' : 'prompt-pl'} lang={toPolish ? 'en' : 'pl'}>
+              {ex.prompt}
+            </span>
+          </>
+        )}
       </div>
       <input
         ref={ref}
@@ -237,8 +251,8 @@ export function Build({ ex, locked, onAnswer, hints = 0 }: AnswerProps<Of<'build
       <div className="prompt-row">
         {ex.audio && hasVoice ? (
           <>
-            <Speak text={ex.audio} autoPlay />
-            <Speak text={ex.audio} slow />
+            <Speak text={ex.audio} autoPlay voice={voiceFor(ex.audio, true)} />
+            <Speak text={ex.audio} slow voice={voiceFor(ex.audio, true)} />
           </>
         ) : (
           <>
@@ -569,7 +583,7 @@ export function Listen({ lines }: { lines: DialogueLine[] }) {
         return;
       }
       setPlaying(i);
-      speak(lines[i].pl, { natural: true, onEnd: () => window.setTimeout(() => step(i + 1), 350) });
+      speak(lines[i].pl, { natural: true, voice: voiceOfSpeaker(lines[i].who), onEnd: () => window.setTimeout(() => step(i + 1), 350) });
     };
     setPlays((n) => n + 1);
     step(from);
@@ -627,7 +641,7 @@ export function Dialogue({ lines }: { lines: DialogueLine[] }) {
   const [english, setEnglish] = useState(true);
   const speakers = [...new Set(lines.map((l) => l.who))];
   useEffect(() => {
-    speak(lines[shown - 1].pl);
+    speak(lines[shown - 1].pl, { voice: voiceOfSpeaker(lines[shown - 1].who) });
   }, [shown, lines]);
   return (
     <section className="dialogue">
@@ -644,7 +658,7 @@ export function Dialogue({ lines }: { lines: DialogueLine[] }) {
             <span className="pl" lang="pl" style={{ flex: 1 }}>
               {l.pl}
             </span>
-            <Speak text={l.pl} />
+            <Speak text={l.pl} voice={voiceOfSpeaker(l.who)} />
           </div>
           {english && <span className="en">{l.en}</span>}
         </div>

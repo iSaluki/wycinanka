@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { unitByKey, UNITS } from '../../content/course';
-import { PLACEMENT } from '../../content/placement';
 import { Label, Speak } from '../components/common';
 import { Rosette } from '../components/Rosette';
 import { Shell } from '../components/Shell';
@@ -24,7 +23,7 @@ const CHOICES = [
     title: 'I know some basics',
     quote: '„Cześć, dziękuję, dwa piwa…”',
     gloss: '"Hi, thanks, two beers…"',
-    body: `Take the ${PLACEMENT.length}-question placement check, or start at Unit ${unitByKey(5)?.n ?? 5}.`,
+    body: `Take the placement check (it stops once it finds your level), or start at Unit ${unitByKey(5)?.n ?? 5}.`,
     colour: 'var(--czerwien)',
     unit: 5,
     placement: true,

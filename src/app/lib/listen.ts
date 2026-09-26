@@ -1,4 +1,5 @@
 import { api, ApiError } from './api';
+import { report } from './report';
 
 /**
  * Listening to the learner speak Polish. Three ways, best first:
@@ -103,7 +104,9 @@ const appleTouch = () =>
 
 const broken = new Set<Engine>();
 const listeners = new Set<() => void>();
-const markBroken = (e: Engine) => {
+const markBroken = (e: Engine, why?: unknown) => {
+  // Worth knowing about: which devices lose speech checking, and why.
+  if (!broken.has(e)) report('speech', `${e} recognition stopped working: ${why instanceof Error ? why.message : String(why ?? 'no reason given')}`);
   broken.add(e);
   listeners.forEach((l) => l());
 };
@@ -186,8 +189,8 @@ function withBrowser(opts: ListenOptions): Listening {
     rec.interimResults = true;
     rec.maxAlternatives = 5;
     rec.continuous = false;
-  } catch {
-    markBroken('browser');
+  } catch (e) {
+    markBroken('browser', e);
     finish({ ok: false, error: 'unavailable' });
     return { done, stop: () => undefined, cancel: () => undefined };
   }
@@ -226,15 +229,15 @@ function withBrowser(opts: ListenOptions): Listening {
         return finish(heardSoFar() ?? { ok: false, error: 'aborted' });
       default:
         // 'network', 'service-not-allowed', 'language-not-supported'…: this browser can't do it.
-        markBroken('browser');
+        markBroken('browser', e.error);
         return finish({ ok: false, error: 'unavailable', message: e.error });
     }
   };
   rec.onend = () => finish(heardSoFar() ?? { ok: false, error: 'no-speech' });
   try {
     rec.start();
-  } catch {
-    markBroken('browser');
+  } catch (e) {
+    markBroken('browser', e);
     finish({ ok: false, error: 'unavailable' });
   }
   // A recogniser that never answers (no service behind it) mustn't leave the learner stuck: ask it to stop,
@@ -248,7 +251,7 @@ function withBrowser(opts: ListenOptions): Listening {
     watchdog = setTimeout(() => {
       const heard = heardSoFar();
       if (heard) return finish(heard);
-      if (!events) markBroken('browser');
+      if (!events) markBroken('browser', 'the recogniser never answered');
       finish({ ok: false, error: events ? 'no-speech' : 'unavailable' });
       try {
         rec.abort();
@@ -393,12 +396,12 @@ function withRecording(opts: ListenOptions, transcribe: boolean): Listening {
     } catch (e) {
       // Out of allowance or a preview without recognition: mark yourself from here on. A dropped connection or a
       // busy moment is only this once.
-      if (e instanceof ApiError && (e.status === 503 || e.status === 404)) markBroken('server');
+      if (e instanceof ApiError && (e.status === 503 || e.status === 404)) markBroken('server', `${e.status} ${e.message}`);
       settle({ ok: false, error: 'unavailable', message: e instanceof ApiError ? e.message : undefined, recording });
     }
   };
-  void run().catch(() => {
-    markBroken('server');
+  void run().catch((e: unknown) => {
+    markBroken('server', e);
     void ctx?.close().catch(() => undefined);
     settle({ ok: false, error: 'unavailable' });
   });

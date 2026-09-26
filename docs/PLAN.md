@@ -82,9 +82,10 @@ On first visit the learner picks a starting point:
 | **I know some basics** — greetings, numbers, a few phrases | Placement check, or jump to Unit 5 |
 | **I get by** — I can hold a simple conversation | Placement check, or jump to A2 |
 
-The **placement check** is up to 18 questions spanning A0→B1 (sounds, vocabulary, cases, aspect,
-conditional), grouped into six bands. It stops as soon as a band can no longer reach two-thirds correct, and suggests
-the first unit of that band. Nothing is ever locked: every unit can be opened from the course map; the map only
+The **placement check** is up to 35 questions spanning A0→B1 (sounds, vocabulary, cases, aspect,
+conditional), grouped into seven bands that follow the course order, five questions each with two typed (so they
+can't be guessed). It stops as soon as a band can no longer reach four in five correct, and suggests the first unit
+that band covers. Nothing is ever locked: every unit can be opened from the course map; the map only
 *suggests* the next lesson, and units below the suggested start are labelled as ones the learner probably knows.
 
 ### 2.2 A lesson (5–8 minutes)

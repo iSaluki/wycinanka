@@ -9,6 +9,7 @@ import { PICTURES } from '../../content/pictures';
 import { MINIMAL_PAIRS, SOUND_GROUPS, TONGUE_TWISTERS } from '../../content/sounds';
 import { audioKey } from './speech';
 import { buildWithChunk, mergeChunks, tokenise } from './exercises';
+import { heardInSecondVoice, inWomansVoice, isWoman } from './voices';
 
 /**
  * Every fixed Polish text the app reads aloud: the script list for the pre-recorded voice (scripts/voice).
@@ -44,7 +45,11 @@ export function spokenTexts(): string[] {
     if (build?.kind === 'build') add(...build.tiles);
     if (c.ex) add(...tokenise(c.ex[0]));
   }
-  for (const w of FREQUENCY) add(w.pl, w.ex?.[0]);
+  for (const w of FREQUENCY) {
+    add(w.pl, w.ex?.[0]);
+    // Example sentences are built from tiles too, and every tile says itself.
+    if (w.ex) add(...mergeChunks(tokenise(w.ex[0])), ...tokenise(w.ex[0]));
+  }
   for (const p of PICTURES) add(p.pl);
   for (const c of CULTURE) {
     add(...c.words.map(([pl]) => pl));
@@ -59,5 +64,25 @@ export function spokenTexts(): string[] {
   for (const p of MINIMAL_PAIRS) add(p.a[0], p.b[0]);
   for (const [pl] of TONGUE_TWISTERS) add(pl);
 
+  return [...new Set(out.map(audioKey).filter(Boolean))];
+}
+
+/**
+ * The texts the second (female) voice records (see voices.ts): women's lines in conversations, anything in a
+ * woman's first-person forms, and the half of the listening material it reads (words, sentences and example
+ * sentences heard in listening questions, "build what you hear" and dictation).
+ */
+export function femaleTexts(): string[] {
+  const out: string[] = [];
+  const listening: string[] = [];
+  for (const l of LESSONS) {
+    for (const d of l.dialogue ?? []) if (isWoman(d.who)) out.push(d.pl);
+    for (const i of l.items) listening.push(i.pl, ...(i.altPl ?? []), ...(i.ex ?? []));
+    for (const x of l.sentences) listening.push(x.pl, ...(x.altPl ?? []));
+  }
+  for (const w of FREQUENCY) if (w.ex) listening.push(w.ex[0]);
+  // Hashed as written, as the exercises do when they pick a voice.
+  out.push(...listening.filter(heardInSecondVoice));
+  out.push(...spokenTexts().filter(inWomansVoice));
   return [...new Set(out.map(audioKey).filter(Boolean))];
 }

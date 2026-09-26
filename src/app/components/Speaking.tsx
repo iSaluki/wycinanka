@@ -4,6 +4,7 @@ import { scoreSpeech, type SpeechScore } from '../../shared/speaking';
 import type { SpeakExercise } from '../lib/exercises';
 import { canRecord, engine, listen, onEngineChange, type Engine, type Listening } from '../lib/listen';
 import { stopSpeaking } from '../lib/speech';
+import { voiceOfSpeaker } from '../lib/voices';
 import { Speak } from './common';
 import { IconMic, IconPlay } from './icons';
 
@@ -156,7 +157,7 @@ export function SayIt({ ex, locked, onResult }: { ex: SpeakExercise; locked: boo
             <span className="pl" lang="pl" style={{ flex: 1 }}>
               {ex.cue.pl}
             </span>
-            <Speak text={ex.cue.pl} autoPlay />
+            <Speak text={ex.cue.pl} autoPlay voice={voiceOfSpeaker(ex.cue.who)} />
           </div>
           <span className="en">{ex.cue.en}</span>
         </div>

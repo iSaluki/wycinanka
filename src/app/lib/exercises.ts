@@ -1,9 +1,11 @@
 import type { DialogueLine, Drill, FrequencyWord, Item, Lesson, Sentence, Spotlight } from '../../content/types';
 import { getCard, LESSONS, type CardSource } from '../../content/course';
 import { PICTURES, type Picture } from '../../content/pictures';
+import { FREQUENCY } from '../../content/frequency';
 import { CHUNK_CORES, chunkCore, CHUNKS, type Chunk } from '../../content/chunks';
 import { normalise } from '../../shared/grade';
 import { respell } from '../../shared/phonetics';
+import { voiceOfSpeaker, type VoiceName } from './voices';
 
 /** Exercise model and generators for lessons and reviews. */
 
@@ -40,6 +42,8 @@ export type Exercise =
       image?: string;
       /** What to read aloud, when the Polish on screen is a spelling rather than a word (phonics). */
       say?: string;
+      /** Whose voice reads the prompt: a line from a conversation keeps its speaker's. */
+      voice?: VoiceName;
       tag?: ExtraTag;
     }
   | {
@@ -52,6 +56,11 @@ export type Exercise =
       tag?: ExtraTag;
       /** Other course words that also mean the prompt ("hello": cześć as well as dzień dobry). Accepted, and named as such. */
       also?: string[];
+      /**
+       * Dictation: this Polish is played instead of showing the prompt, and the learner writes what they hear.
+       * The prompt (its English) is shown only without a Polish voice, and as its meaning afterwards.
+       */
+      audio?: string;
     }
   | {
       kind: 'build';
@@ -247,6 +256,18 @@ function typePolish(item: Item): Exercise {
 }
 
 /**
+ * Dictation: hear a word and write it. Polish is read the way it is spelt, but not always spelt the way it
+ * sounds (rz and ż, ó and u, h and ch, a final d heard as t), so writing from the ear is its own skill.
+ * Only the word played counts as right, not other words with the same meaning.
+ */
+export function dictation(item: Item): Exercise {
+  return { kind: 'type', cardId: item.id, prompt: item.en, accepted: [item.pl], lang: 'pl', audio: item.pl };
+}
+
+/** Words worth writing from the ear: single words of four letters or more. */
+const dictatable = (i: Item) => !/\s/.test(i.pl.trim()) && i.pl.replace(/[^\p{L}]/gu, '').length >= 4;
+
+/**
  * Lexical chunking in sentence building: a known multi-word phrase ("nie ma sprawy", "czy mogę prosić o")
  * becomes one tile, so learners put sentences together from chunks as fluent speakers do.
  */
@@ -433,6 +454,7 @@ export function conversation(lesson: Lesson, rand = Math.random): Exercise[] {
     options: shuffle([l.en, ...shuffle(d.filter((x) => x.en !== l.en).map((x) => x.en), rand).slice(0, 2)], rand),
     answer: l.en,
     audio: true,
+    voice: voiceOfSpeaker(l.who),
     instruction: 'From the conversation: what does this mean?',
   }));
   allLines ??= LESSONS.flatMap((x) => x.dialogue ?? []);
@@ -451,6 +473,7 @@ export function conversation(lesson: Lesson, rand = Math.random): Exercise[] {
       options: shuffle([l.pl, ...shuffle(others, rand).slice(0, 2).map((x) => x.pl)], rand),
       answer: l.pl,
       optionStyle: 'pl',
+      voice: voiceOfSpeaker(d[i - 1].who),
       instruction: `Your turn as ${l.who}: what do you reply?`,
       hint: `${d[i - 1].who} said: "${d[i - 1].en}"`,
     }));
@@ -477,10 +500,10 @@ export function lessonPlan(lesson: Lesson, { speaking = true }: PlanOptions = {}
   const mixed = [...plain.slice(0, 2), ...shuffled.filter((i) => i.img), ...plain.slice(2)];
   const listen: Exercise[] = mixed.slice(0, 2).map((i) => chooseMeaning(i, enPool, true));
   const pickPl: Exercise[] = mixed.slice(2, 4).map((i) => choosePolish(i, plPool));
-  const produce: Exercise[] = shuffle(lesson.items)
-    .sort((a, b) => a.pl.length - b.pl.length)
-    .slice(0, 4)
-    .map(typePolish);
+  const byLength = shuffle(lesson.items).sort((a, b) => a.pl.length - b.pl.length);
+  const produce: Exercise[] = byLength.slice(0, 4).map(typePolish);
+  // Two words written from the ear, from those not already typed from the English.
+  const dictate: Exercise[] = shuffle(byLength.slice(4).filter(dictatable)).slice(0, 2).map(dictation);
   const sentences = shuffle(lesson.sentences);
   const builds: Exercise[] = sentences.slice(0, -1).map((s) => buildPolish(s, wordPool));
   const last = sentences[sentences.length - 1];
@@ -511,6 +534,7 @@ export function lessonPlan(lesson: Lesson, { speaking = true }: PlanOptions = {}
       ...middle,
       ...saySentence,
       ...produce,
+      ...dictate,
       ...recall,
       ...finale,
   ];
@@ -529,7 +553,8 @@ export function reviewExercise(src: CardSource, reps: number, cardId: string, sp
   if (src.kind === 'item') {
     const near = nearbyLessons(src.lesson);
     const item = preferForm(src.item, speaker);
-    if (reps >= 2) return typePolish(item);
+    // Mature words are written: from the English, and every third time from the ear.
+    if (reps >= 2) return reps % 3 === 2 && dictatable(item) ? dictation(item) : typePolish(item);
     return chooseMeaning(item, near.flatMap((l) => l.items.map((i) => i.en)), reps === 1);
   }
   if (src.kind === 'sentence') {
@@ -562,8 +587,35 @@ export function pictureChoice(p: Picture, pool: string[]): Exercise {
 }
 
 let wordPoolCache: string[] | undefined;
+let exampleTokens: string[] | undefined;
+
+/**
+ * Put a frequency word's example sentence together from tiles, from its English or from the sound. The words
+ * of the 500 list are otherwise only ever met alone; in a sentence they come with the forms and neighbours
+ * they are actually used with ("Jestem zmęczony" for być). Null when the example is a single word.
+ */
+export function wordInSentence(w: FrequencyWord, cardId = w.id, fromAudio = false): Exercise | null {
+  if (!w.ex) return null;
+  const [pl, en] = w.ex;
+  const tokens = mergeChunks(tokenise(pl));
+  if (tokens.length < 2) return null;
+  exampleTokens ??= FREQUENCY.flatMap((x) => (x.ex ? tokenise(x.ex[0]) : []));
+  const inSentence = new Set(tokenise(pl).map(normalise));
+  const extra = distractors('', exampleTokens.filter((t) => !inSentence.has(normalise(t))), 2);
+  const ex: Exercise = { kind: 'build', cardId, prompt: en, tiles: shuffle([...tokens, ...extra]), accepted: [pl], lang: 'pl' };
+  return fromAudio ? { ...ex, prompt: 'Listen and build what you hear.', audio: pl, meaning: en } : ex;
+}
+
+/**
+ * Frequency words: recognised first, then used in their example sentence, then written from the English, then
+ * built from the sound of the sentence, and so on, alternating the word alone with the word in use.
+ */
 function wordExercise(w: FrequencyWord, reps: number, cardId: string): Exercise {
-  if (reps >= 2) {
+  if (reps >= 1 && reps % 2 === 1) {
+    const inUse = wordInSentence(w, cardId, reps % 4 === 3);
+    if (inUse) return inUse;
+  }
+  if (reps >= 1) {
     const also = sameMeaning(w.en, w.pl);
     return { kind: 'type', cardId, prompt: w.en, accepted: [w.pl, ...also], lang: 'pl', hint: w.pos, ...(also.length ? { also } : {}) };
   }

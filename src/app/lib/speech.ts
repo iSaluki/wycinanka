@@ -6,6 +6,8 @@
  * spelling-based pronunciation guidance instead.
  */
 
+import { voiceFor, type VoiceName } from './voices';
+
 let voice: SpeechSynthesisVoice | null = null;
 let ready = false;
 const listeners = new Set<() => void>();
@@ -39,9 +41,11 @@ try {
 
 /** Which recordings exist: public/voice-index.json, written by scripts/voice.py. */
 interface VoiceIndex {
-  /** Folder under /voice/ for this voice and its settings. */
+  /** Folder under /voice/ for the main voice and its settings. */
   voice: string;
   ids: Set<string>;
+  /** The second (female) voice, for the texts voices.ts gives it. */
+  female?: { voice: string; ids: Set<string> };
 }
 
 let recorded: VoiceIndex | null = null;
@@ -71,8 +75,12 @@ async function loadVoiceIndex() {
   try {
     const res = await fetch('/voice-index.json');
     if (!res.ok) return;
-    const data = (await res.json()) as { voice: string; ids: string[] };
-    recorded = { voice: data.voice, ids: new Set(data.ids) };
+    const data = (await res.json()) as { voice: string; ids: string[]; female?: { voice: string; ids: string[] } };
+    recorded = {
+      voice: data.voice,
+      ids: new Set(data.ids),
+      female: data.female && { voice: data.female.voice, ids: new Set(data.female.ids) },
+    };
     listeners.forEach((l) => l());
   } catch {
     // Offline before the index was ever fetched: the device voice covers it.
@@ -88,9 +96,11 @@ export function setPreferDeviceVoice(on: boolean) {
   listeners.forEach((l) => l());
 }
 
-const recordingOf = (text: string): string | null => {
+/** The recording of a text in the voice asked for, or in the main voice when that one has none. */
+const recordingOf = (text: string, voice: VoiceName = 'm'): string | null => {
   if (!recorded || preferDevice) return null;
   const id = audioId(audioKey(text));
+  if (voice === 'f' && recorded.female?.ids.has(id)) return `/voice/${recorded.female.voice}/${id}.mp3`;
   return recorded.ids.has(id) ? `/voice/${recorded.voice}/${id}.mp3` : null;
 };
 
@@ -167,14 +177,15 @@ export function stopSpeaking() {
  */
 const NATURAL = 1.08;
 
-export function speak(text: string, opts: { slow?: boolean; natural?: boolean; onEnd?: () => void } = {}): void {
+export function speak(text: string, opts: { slow?: boolean; natural?: boolean; voice?: VoiceName; onEnd?: () => void } = {}): void {
   text = speakable(text);
   if (!text) {
     opts.onEnd?.();
     return;
   }
   stopSpeaking();
-  const src = recordingOf(text);
+  // Unless a voice is asked for, a woman's forms (byłam) are read by the female voice.
+  const src = recordingOf(text, opts.voice ?? voiceFor(text));
   if (src && typeof Audio !== 'undefined') {
     const audio = new Audio(src);
     playing = audio;

@@ -43,6 +43,14 @@ test('signing up keeps guest progress and it survives a reload', async ({ page }
   await page.reload();
   await expect(page.getByText(`You've finished 1 of ${LESSONS.length} lessons`)).toBeVisible();
 
+  // Without a connection the learner still sees their own progress, not an empty guest session.
+  await page.waitForTimeout(2500); // the offline copy is written a moment after a change
+  await page.route('**/api/**', (r) => r.abort('internetdisconnected'));
+  await page.reload();
+  await expect(page.getByRole('heading', { level: 1 })).toContainText(username);
+  await expect(page.getByText(`You've finished 1 of ${LESSONS.length} lessons`)).toBeVisible();
+  await page.unroute('**/api/**');
+
   // Sign out, then back in.
   await page.goto('/profile');
   await page.getByRole('button', { name: 'Sign out' }).click();
@@ -64,7 +72,11 @@ test('the placement check places a strong learner at B1', async ({ page }) => {
   await page.goto('/placement');
   for (const q of PLACEMENT) {
     await expect(page.locator('.prompt-en')).toHaveText(q.prompt);
-    await page.locator('button.option', { hasText: new RegExp(`^\\d${q.answer.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`) }).click();
+    if (q.options) await page.locator('button.option', { hasText: new RegExp(`^\\d${q.answer.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`) }).click();
+    else {
+      await page.getByLabel('The missing word, in Polish').fill(q.answer);
+      await page.getByRole('button', { name: 'Check', exact: true }).click();
+    }
   }
   // B1 starts with Unit 17's conditional, which now sits further along the course.
   const b1 = `Start at Unit ${unitByKey(17)!.n}`;
@@ -309,7 +321,7 @@ test('leaving a lesson part-way asks first, and closing a review really closes i
   await page.getByRole('button', { name: 'Next word' }).click();
   await page.getByRole('button', { name: 'Leave this lesson' }).click();
   const dialog = page.getByRole('dialog', { name: 'Leave this lesson?' });
-  await expect(dialog).toContainText('The lesson will start again next time');
+  await expect(dialog).toContainText('Your place is kept on this device');
   await dialog.getByRole('button', { name: 'Keep going' }).click();
   await expect(dialog).toBeHidden();
   await expect(page).toHaveURL(/\/lesson\/u01-l1$/);
@@ -404,4 +416,41 @@ test('guests do not collect badges, but are told they could', async ({ page }) =
   await page.goto('/profile');
   await expect(page.locator('#badges')).toContainText('Create a free account');
   await expect(page.locator('.badge-card')).toHaveCount(0);
+});
+
+test('a lesson left part-way can be carried on from the same question, or started again', async ({ page }) => {
+  await page.goto('/lesson/u01-l1');
+  await solveUntil(page, 'Build this in Polish');
+  const prompt = (await page.locator('.prompt-en').textContent())!.trim();
+  await page.getByRole('button', { name: 'Leave this lesson' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Leave' }).click();
+  await expect(page).toHaveURL(/\/learn$/);
+
+  // Back to the same question, even after a reload.
+  await page.goto('/lesson/u01-l1');
+  await page.reload();
+  await page.getByRole('button', { name: 'Carry on' }).click();
+  await expect(page.locator('.prompt-en')).toHaveText(prompt);
+  await solveLesson(page, 'u01-l1');
+  await expect(page.locator('.finish h1')).toBeVisible();
+
+  // Finished: nothing left to carry on.
+  await page.goto('/lesson/u01-l1');
+  await expect(page.getByRole('button', { name: 'Carry on' })).toHaveCount(0);
+  await expect(page.locator('.player')).toBeVisible();
+});
+
+test('dictation: a word is heard, not shown, and must be spelt exactly', async ({ page }) => {
+  await page.goto('/lesson/u01-l1');
+  await solveUntil(page, 'Write what you hear');
+  const label = (await page.locator('.prompt-row .speak').first().getAttribute('aria-label'))!;
+  const word = label.replace(/^Play: /, '');
+  await expect(page.locator('.player-body .prompt-en')).toHaveCount(0);
+  // One letter out would pass as a typo elsewhere; here it's the spelling being practised.
+  const slip = word.slice(0, -1) + (word.endsWith('a') ? 'e' : 'a');
+  await page.getByLabel('Your answer in Polish').fill(slip);
+  await page.getByRole('button', { name: 'Check' }).click();
+  await expect(page.locator('.sheet')).toBeVisible();
+  await expect(page.locator('.sheet.good')).toHaveCount(0);
+  await expect(page.locator('.sheet')).toContainText(word);
 });
