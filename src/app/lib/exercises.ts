@@ -1,6 +1,7 @@
 import type { DialogueLine, Drill, FrequencyWord, Item, Lesson, Sentence, Spotlight } from '../../content/types';
 import { getCard, LESSONS, type CardSource } from '../../content/course';
 import { PICTURES, type Picture } from '../../content/pictures';
+import { FREQUENCY } from '../../content/frequency';
 import { CHUNK_CORES, chunkCore, CHUNKS, type Chunk } from '../../content/chunks';
 import { normalise } from '../../shared/grade';
 import { respell } from '../../shared/phonetics';
@@ -581,8 +582,35 @@ export function pictureChoice(p: Picture, pool: string[]): Exercise {
 }
 
 let wordPoolCache: string[] | undefined;
+let exampleTokens: string[] | undefined;
+
+/**
+ * Put a frequency word's example sentence together from tiles, from its English or from the sound. The words
+ * of the 500 list are otherwise only ever met alone; in a sentence they come with the forms and neighbours
+ * they are actually used with ("Jestem zmęczony" for być). Null when the example is a single word.
+ */
+export function wordInSentence(w: FrequencyWord, cardId = w.id, fromAudio = false): Exercise | null {
+  if (!w.ex) return null;
+  const [pl, en] = w.ex;
+  const tokens = mergeChunks(tokenise(pl));
+  if (tokens.length < 2) return null;
+  exampleTokens ??= FREQUENCY.flatMap((x) => (x.ex ? tokenise(x.ex[0]) : []));
+  const inSentence = new Set(tokenise(pl).map(normalise));
+  const extra = distractors('', exampleTokens.filter((t) => !inSentence.has(normalise(t))), 2);
+  const ex: Exercise = { kind: 'build', cardId, prompt: en, tiles: shuffle([...tokens, ...extra]), accepted: [pl], lang: 'pl' };
+  return fromAudio ? { ...ex, prompt: 'Listen and build what you hear.', audio: pl, meaning: en } : ex;
+}
+
+/**
+ * Frequency words: recognised first, then used in their example sentence, then written from the English, then
+ * built from the sound of the sentence, and so on, alternating the word alone with the word in use.
+ */
 function wordExercise(w: FrequencyWord, reps: number, cardId: string): Exercise {
-  if (reps >= 2) {
+  if (reps >= 1 && reps % 2 === 1) {
+    const inUse = wordInSentence(w, cardId, reps % 4 === 3);
+    if (inUse) return inUse;
+  }
+  if (reps >= 1) {
     const also = sameMeaning(w.en, w.pl);
     return { kind: 'type', cardId, prompt: w.en, accepted: [w.pl, ...also], lang: 'pl', hint: w.pos, ...(also.length ? { also } : {}) };
   }

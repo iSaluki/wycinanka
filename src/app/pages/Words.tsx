@@ -5,7 +5,7 @@ import { PageHead, SectionHead, Speak } from '../components/common';
 import { respell } from '../../shared/phonetics';
 import { Session, type SessionResult } from '../components/Session';
 import { Shell } from '../components/Shell';
-import { shuffle, stepwise, type Exercise } from '../lib/exercises';
+import { shuffle, stepwise, wordInSentence, type Exercise } from '../lib/exercises';
 import { useTitle } from '../lib/router';
 import { submitReviews, useApp } from '../lib/store';
 
@@ -24,10 +24,11 @@ function learnSession(words: typeof FREQUENCY): Exercise[] {
     answer: w.en,
     options: shuffle([w.en, ...shuffle(enPool.filter((e) => e !== w.en)).slice(0, 3)]),
   });
-  const type: Exercise[] = shuffle(words)
-    .slice(0, 4)
-    .map((w) => ({ kind: 'type', cardId: w.id, prompt: w.en, accepted: [w.pl], lang: 'pl', hint: w.pos }));
-  return [...stepwise(items, choose, (w) => ({ cardId: w.id, pl: w.pl, en: w.en })), ...type];
+  const mixed = shuffle(words);
+  const type: Exercise[] = mixed.slice(0, 4).map((w) => ({ kind: 'type', cardId: w.id, prompt: w.en, accepted: [w.pl], lang: 'pl', hint: w.pos }));
+  // Then three of the others in use: their example sentences, built from tiles.
+  const inUse = mixed.slice(4).flatMap((w) => wordInSentence(w) ?? []).slice(0, 3);
+  return [...stepwise(items, choose, (w) => ({ cardId: w.id, pl: w.pl, en: w.en })), ...type, ...inUse];
 }
 
 export function Words() {

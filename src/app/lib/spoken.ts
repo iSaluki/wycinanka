@@ -44,7 +44,11 @@ export function spokenTexts(): string[] {
     if (build?.kind === 'build') add(...build.tiles);
     if (c.ex) add(...tokenise(c.ex[0]));
   }
-  for (const w of FREQUENCY) add(w.pl, w.ex?.[0]);
+  for (const w of FREQUENCY) {
+    add(w.pl, w.ex?.[0]);
+    // Example sentences are built from tiles too, and every tile says itself.
+    if (w.ex) add(...mergeChunks(tokenise(w.ex[0])), ...tokenise(w.ex[0]));
+  }
   for (const p of PICTURES) add(p.pl);
   for (const c of CULTURE) {
     add(...c.words.map(([pl]) => pl));

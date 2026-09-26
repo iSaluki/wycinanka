@@ -3,6 +3,7 @@ import { LESSONS } from '../src/content/course';
 import { mergeChunks, tokenise } from '../src/app/lib/exercises';
 import { chunkCore, CHUNKS } from '../src/content/chunks';
 import { PICTURES } from '../src/content/pictures';
+import { FREQUENCY } from '../src/content/frequency';
 import { respell } from '../src/shared/phonetics';
 
 // A course-wide answer key: warm-ups can ask about any earlier lesson.
@@ -20,6 +21,8 @@ const chunkByPl = new Map(CHUNKS.map((c) => [c.pl, c]));
 const chunkByEn = new Map(CHUNKS.map((c) => [c.en, c]));
 const picturesByEn = new Map(PICTURES.map((p) => [p.en, p]));
 const chunkByExample = new Map(CHUNKS.flatMap((c) => (c.ex ? [[c.ex[1], c] as const] : [])));
+/** Frequency words' example sentences, by their English and by their Polish. */
+const wordExamples = FREQUENCY.flatMap((w) => (w.ex ? [{ pl: w.ex[0], en: w.ex[1] }] : []));
 const lines = LESSONS.flatMap((l) => (l.dialogue ?? []).map((d, i) => ({ ...d, next: l.dialogue![i + 1] })));
 /** Dialogue lines with this Polish: the same line (Dzień dobry!) can appear in several conversations. */
 const linesByPl = (pl: string) => lines.filter((d) => d.pl === pl);
@@ -101,7 +104,13 @@ export async function solveLesson(page: Page, _lessonId: string, onStep?: (kind:
       const chunk = chunkByExample.get(en);
       const tiles = chunk
         ? mergeChunks(tokenise(chunk.ex![0]), [{ core: tokenise(chunkCore(chunk)).map((w) => w.toLocaleLowerCase('pl')) }])
-        : mergeChunks(tokenise((kind === 'Build what you hear' ? sentByPl.get(await spokenPrompt()) : sentByEn.get(en))!.pl));
+        : mergeChunks(
+            tokenise(
+              kind === 'Build what you hear'
+                ? await spokenPrompt()
+                : (sentByEn.get(en) ?? wordExamples.find((x) => x.en === en))!.pl,
+            ),
+          );
       for (const t of tiles) await page.locator('.bank .tile:not(.used)', { hasText: new RegExp(`^${t}$`) }).first().click();
     } else if (kind === 'Match the pairs') {
       const pairs = await page.locator('.match .col').first().locator('button').allTextContents();

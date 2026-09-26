@@ -206,3 +206,19 @@ describe('dictation', () => {
     expect(LESSONS.filter((l) => !l.phonics && lessonPlan(l).exercises.some((e) => e.kind === 'type' && e.audio)).length).toBeGreaterThan(60);
   });
 });
+
+describe('frequency words', () => {
+  it('are reviewed in their example sentences as well as on their own', async () => {
+    const { reviewExercise } = await import('../../src/app/lib/exercises');
+    const { getCard } = await import('../../src/content/course');
+    const { FREQUENCY } = await import('../../src/content/frequency');
+    const w = FREQUENCY.find((x) => x.pl === 'być')!;
+    const at = (reps: number) => reviewExercise(getCard(w.id)!, reps, w.id);
+    expect(at(0)).toMatchObject({ kind: 'choose', answer: w.en });
+    expect(at(1)).toMatchObject({ kind: 'build', accepted: [w.ex![0]], prompt: w.ex![1] });
+    expect(at(2)).toMatchObject({ kind: 'type', prompt: w.en });
+    expect(at(3)).toMatchObject({ kind: 'build', audio: w.ex![0] });
+    // About nine in ten examples have more than one word to put in order; the rest are asked on their own.
+    expect(FREQUENCY.filter((x) => reviewExercise(getCard(x.id)!, 1, x.id).kind === 'build').length).toBeGreaterThan(440);
+  });
+});

@@ -77,5 +77,6 @@ describe('recorded voice', () => {
       for (const as of [0, 1]) for (const e of rolePlay(l.dialogue ?? [], l.id, as)) check(e, `${l.id} role-play`);
     const cards = [...LESSONS.flatMap((l) => [...l.items, ...l.sentences, ...l.drills].map((x) => x.id)), ...PICTURES.map((p) => p.id), ...FREQUENCY.map((w) => w.id), ...CHUNK_DECKS.flatMap((d) => d.chunks.map((c) => c.id))];
     for (const id of cards) for (const reps of [0, 1, 2, 3, 4]) for (const speaker of [undefined, 'm', 'f'] as const) check(reviewExercise(getCard(id)!, reps, id, speaker), id);
-  });
+    // It builds every exercise the app can make, several times over: slow, but that is the point.
+  }, 60_000);
 });
