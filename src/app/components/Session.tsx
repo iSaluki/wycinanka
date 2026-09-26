@@ -94,7 +94,9 @@ function check(ex: GradedExercise, answer: string): { result: GradeResult | null
     case 'type':
     case 'build': {
       const r = grade(answer, ex.accepted, ex.lang, ex.lang === 'pl' ? isKnownForm : undefined);
-      return { result: r, pass: passes(r.verdict), expected: r.expected, lang: ex.lang };
+      // In dictation the spelling is what's being practised: a slip isn't forgiven as a typo.
+      const pass = ex.kind === 'type' && ex.audio ? r.verdict === 'correct' : passes(r.verdict);
+      return { result: r, pass, expected: r.expected, lang: ex.lang };
     }
     case 'match':
       return { result: null, pass: true, expected: '', lang: 'pl' };
@@ -328,6 +330,8 @@ export function Session({
       const rule = ruleFor(ex.cardId, result.endings.map(([, e]) => e));
       const why = rule ? ` ${rule}` : 'hint' in ex && ex.hint ? ` Tip: ${ex.hint.replace(/[{}]/g, '')}` : '';
       note = `Right word, wrong ending: ${ends}. The ending shows its job in the sentence (case, person or gender).${why}`;
+    } else if (result?.verdict === 'typo' && ex.kind === 'type' && ex.audio) {
+      note = `Nearly: it's spelt ${expected}. Listen again and look at the letters that sound alike (rz and ż, ó and u, h and ch).`;
     } else if (result?.verdict === 'typo') {
       note = 'Nearly — check the spelling.';
     } else if (pass && ex.kind === 'type' && ex.also?.includes(expected)) {

@@ -207,7 +207,7 @@ export function Home() {
         {fresh && (
           <ul className="start-links">
             <li>
-              Already know some Polish? <Link to="/placement">Take the placement check</Link>, 18 quick questions.
+              Already know some Polish? <Link to="/placement">Take the placement check</Link>; it stops as soon as it finds your level.
             </li>
             <li>
               Curious how it sounds? <Link to="/sounds">The alphabet and its sounds</Link>, or type any word into{' '}

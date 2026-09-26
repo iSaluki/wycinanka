@@ -147,6 +147,9 @@ export function TypeAnswer({ ex, locked, onAnswer, hints = 0 }: AnswerProps<Of<'
     });
   };
   const toPolish = ex.lang === 'pl';
+  // Dictation needs something to play; without a Polish voice it becomes "write this in Polish".
+  const canHear = usePolishVoice(ex.audio ?? '');
+  const dictating = !!ex.audio && canHear;
   // Alt (Option on a Mac) + a letter types its Polish partner, as on a Polish keyboard: Alt+a → ą, Alt+x → ź.
   const onKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (!toPolish || !e.altKey || e.ctrlKey || e.metaKey) return;
@@ -157,12 +160,22 @@ export function TypeAnswer({ ex, locked, onAnswer, hints = 0 }: AnswerProps<Of<'
   };
   return (
     <>
-      <Instruction tag={ex.tag}>{toPolish ? 'Write this in Polish' : 'Write this in English'}</Instruction>
+      <Instruction tag={ex.tag}>{dictating ? 'Write what you hear' : toPolish ? 'Write this in Polish' : 'Write this in English'}</Instruction>
       <div className="prompt-row">
-        {!toPolish && <Speak text={ex.prompt} />}
-        <span className={toPolish ? 'prompt-en' : 'prompt-pl'} lang={toPolish ? 'en' : 'pl'}>
-          {ex.prompt}
-        </span>
+        {dictating ? (
+          <>
+            <Speak text={ex.audio!} autoPlay />
+            <Speak text={ex.audio!} slow />
+            {locked && <span className="prompt-en">{ex.prompt}</span>}
+          </>
+        ) : (
+          <>
+            {!toPolish && <Speak text={ex.prompt} />}
+            <span className={toPolish ? 'prompt-en' : 'prompt-pl'} lang={toPolish ? 'en' : 'pl'}>
+              {ex.prompt}
+            </span>
+          </>
+        )}
       </div>
       <input
         ref={ref}

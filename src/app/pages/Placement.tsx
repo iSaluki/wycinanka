@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { unitByKey } from '../../content/course';
-import { BANDS, bandFailed, PLACEMENT, placementResult } from '../../content/placement';
+import { BANDS, bandFailed, isRight, PLACEMENT, placementResult } from '../../content/placement';
 import { IconClose } from '../components/icons';
 import { Label } from '../components/common';
 import { navigate, useTitle } from '../lib/router';
@@ -12,6 +12,7 @@ export function Placement() {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [i, setI] = useState(0);
   const [done, setDone] = useState(false);
+  const [typed, setTyped] = useState('');
   const q = PLACEMENT[i];
 
   const result = useMemo(() => placementResult(answers), [answers]);
@@ -25,6 +26,7 @@ export function Placement() {
       return;
     }
     setI(i + 1);
+    setTyped('');
   };
 
   const accept = async (unit: number) => {
@@ -36,7 +38,7 @@ export function Placement() {
   if (done) {
     const unit = unitByKey(result.startUnit)!;
     const band = BANDS.find((b) => b.band === result.band);
-    const right = PLACEMENT.filter((p) => answers[p.id] === p.answer).length;
+    const right = PLACEMENT.filter((p) => isRight(p, answers[p.id])).length;
     return (
       <main className="player">
         <div />
@@ -92,6 +94,7 @@ export function Placement() {
             {after}
           </p>
         )}
+        {q.options ? (
         <div className="options grid-2" key={q.id}>
           {q.options.map((o, k) => (
             <button key={o} className={`option ${q.text ? 'pl-opt' : ''}`} onClick={() => answer(o)} lang={q.text ? 'pl' : 'en'}>
@@ -108,6 +111,40 @@ export function Placement() {
             I don't know
           </button>
         </div>
+        ) : (
+          <form
+            key={q.id}
+            className="stack"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (typed.trim()) answer(typed);
+            }}
+          >
+            <input
+              className="answer-input"
+              value={typed}
+              onChange={(e) => setTyped(e.target.value)}
+              lang="pl"
+              aria-label="The missing word, in Polish"
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              enterKeyHint="done"
+              maxLength={60}
+              autoFocus
+            />
+            <p className="keys-tip">Polish letters are welcome but not needed here: “bede” counts for “będę”.</p>
+            <div className="row wrap">
+              <button type="submit" className="btn red" disabled={!typed.trim()}>
+                Check
+              </button>
+              <button type="button" className="btn quiet" onClick={() => answer('')}>
+                I don't know
+              </button>
+            </div>
+          </form>
+        )}
       </div>
       <div />
     </main>

@@ -52,6 +52,11 @@ export type Exercise =
       tag?: ExtraTag;
       /** Other course words that also mean the prompt ("hello": cześć as well as dzień dobry). Accepted, and named as such. */
       also?: string[];
+      /**
+       * Dictation: this Polish is played instead of showing the prompt, and the learner writes what they hear.
+       * The prompt (its English) is shown only without a Polish voice, and as its meaning afterwards.
+       */
+      audio?: string;
     }
   | {
       kind: 'build';
@@ -245,6 +250,18 @@ function typePolish(item: Item): Exercise {
   const also = sameMeaning(item.en, item.pl).filter((p) => !accPl(item).some(sameText(p)));
   return { kind: 'type', cardId: item.id, prompt: item.en, accepted: [...accPl(item), ...also], lang: 'pl', hint: item.hint, ...(also.length ? { also } : {}) };
 }
+
+/**
+ * Dictation: hear a word and write it. Polish is read the way it is spelt, but not always spelt the way it
+ * sounds (rz and ż, ó and u, h and ch, a final d heard as t), so writing from the ear is its own skill.
+ * Only the word played counts as right, not other words with the same meaning.
+ */
+export function dictation(item: Item): Exercise {
+  return { kind: 'type', cardId: item.id, prompt: item.en, accepted: [item.pl], lang: 'pl', audio: item.pl };
+}
+
+/** Words worth writing from the ear: single words of four letters or more. */
+const dictatable = (i: Item) => !/\s/.test(i.pl.trim()) && i.pl.replace(/[^\p{L}]/gu, '').length >= 4;
 
 /**
  * Lexical chunking in sentence building: a known multi-word phrase ("nie ma sprawy", "czy mogę prosić o")
@@ -477,10 +494,10 @@ export function lessonPlan(lesson: Lesson, { speaking = true }: PlanOptions = {}
   const mixed = [...plain.slice(0, 2), ...shuffled.filter((i) => i.img), ...plain.slice(2)];
   const listen: Exercise[] = mixed.slice(0, 2).map((i) => chooseMeaning(i, enPool, true));
   const pickPl: Exercise[] = mixed.slice(2, 4).map((i) => choosePolish(i, plPool));
-  const produce: Exercise[] = shuffle(lesson.items)
-    .sort((a, b) => a.pl.length - b.pl.length)
-    .slice(0, 4)
-    .map(typePolish);
+  const byLength = shuffle(lesson.items).sort((a, b) => a.pl.length - b.pl.length);
+  const produce: Exercise[] = byLength.slice(0, 4).map(typePolish);
+  // Two words written from the ear, from those not already typed from the English.
+  const dictate: Exercise[] = shuffle(byLength.slice(4).filter(dictatable)).slice(0, 2).map(dictation);
   const sentences = shuffle(lesson.sentences);
   const builds: Exercise[] = sentences.slice(0, -1).map((s) => buildPolish(s, wordPool));
   const last = sentences[sentences.length - 1];
@@ -511,6 +528,7 @@ export function lessonPlan(lesson: Lesson, { speaking = true }: PlanOptions = {}
       ...middle,
       ...saySentence,
       ...produce,
+      ...dictate,
       ...recall,
       ...finale,
   ];
@@ -529,7 +547,8 @@ export function reviewExercise(src: CardSource, reps: number, cardId: string, sp
   if (src.kind === 'item') {
     const near = nearbyLessons(src.lesson);
     const item = preferForm(src.item, speaker);
-    if (reps >= 2) return typePolish(item);
+    // Mature words are written: from the English, and every third time from the ear.
+    if (reps >= 2) return reps % 3 === 2 && dictatable(item) ? dictation(item) : typePolish(item);
     return chooseMeaning(item, near.flatMap((l) => l.items.map((i) => i.en)), reps === 1);
   }
   if (src.kind === 'sentence') {

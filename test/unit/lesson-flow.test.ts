@@ -189,3 +189,20 @@ describe('sentence reviews get harder as the card matures', () => {
     expect(at(4)).toMatchObject({ kind: 'type', lang: 'en' });
   });
 });
+
+describe('dictation', () => {
+  it('asks for a couple of words from the ear in each lesson, never ones already typed from the English', () => {
+    for (const l of LESSONS.filter((x) => !x.phonics)) {
+      const ex = lessonPlan(l, { speaking: false }).exercises;
+      const heard = ex.filter((e) => e.kind === 'type' && e.audio);
+      const typed = new Set(ex.filter((e) => e.kind === 'type' && !e.audio && e.lang === 'pl').map(cardOf));
+      expect(heard.length, l.id).toBeLessThanOrEqual(2);
+      for (const e of heard) {
+        if (e.kind !== 'type') continue;
+        expect(e.accepted).toEqual([e.audio]);
+        expect(typed.has(e.cardId), `${l.id}: ${e.audio}`).toBe(false);
+      }
+    }
+    expect(LESSONS.filter((l) => !l.phonics && lessonPlan(l).exercises.some((e) => e.kind === 'type' && e.audio)).length).toBeGreaterThan(60);
+  });
+});

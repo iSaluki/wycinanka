@@ -72,7 +72,11 @@ test('the placement check places a strong learner at B1', async ({ page }) => {
   await page.goto('/placement');
   for (const q of PLACEMENT) {
     await expect(page.locator('.prompt-en')).toHaveText(q.prompt);
-    await page.locator('button.option', { hasText: new RegExp(`^\\d${q.answer.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`) }).click();
+    if (q.options) await page.locator('button.option', { hasText: new RegExp(`^\\d${q.answer.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`) }).click();
+    else {
+      await page.getByLabel('The missing word, in Polish').fill(q.answer);
+      await page.getByRole('button', { name: 'Check', exact: true }).click();
+    }
   }
   // B1 starts with Unit 17's conditional, which now sits further along the course.
   const b1 = `Start at Unit ${unitByKey(17)!.n}`;
@@ -434,4 +438,19 @@ test('a lesson left part-way can be carried on from the same question, or starte
   await page.goto('/lesson/u01-l1');
   await expect(page.getByRole('button', { name: 'Carry on' })).toHaveCount(0);
   await expect(page.locator('.player')).toBeVisible();
+});
+
+test('dictation: a word is heard, not shown, and must be spelt exactly', async ({ page }) => {
+  await page.goto('/lesson/u01-l1');
+  await solveUntil(page, 'Write what you hear');
+  const label = (await page.locator('.prompt-row .speak').first().getAttribute('aria-label'))!;
+  const word = label.replace(/^Play: /, '');
+  await expect(page.locator('.player-body .prompt-en')).toHaveCount(0);
+  // One letter out would pass as a typo elsewhere; here it's the spelling being practised.
+  const slip = word.slice(0, -1) + (word.endsWith('a') ? 'e' : 'a');
+  await page.getByLabel('Your answer in Polish').fill(slip);
+  await page.getByRole('button', { name: 'Check' }).click();
+  await expect(page.locator('.sheet')).toBeVisible();
+  await expect(page.locator('.sheet.good')).toHaveCount(0);
+  await expect(page.locator('.sheet')).toContainText(word);
 });

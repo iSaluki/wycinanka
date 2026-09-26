@@ -91,7 +91,9 @@ export async function solveLesson(page: Page, _lessonId: string, onStep?: (kind:
       await clickOption(byEn.get(await text('.prompt-en'))!.pl);
     } else if (kind === 'Write this in Polish') {
       const en = await text('.prompt-en');
-      await page.getByLabel('Your answer in Polish').fill(byEn.get(en)?.pl ?? chunkCore(chunkByEn.get(en)!));
+      await page.getByLabel('Your answer in Polish').fill(byEn.get(en)?.pl ?? sentByEn.get(en)?.pl ?? chunkCore(chunkByEn.get(en)!));
+    } else if (kind === 'Write what you hear') {
+      await page.getByLabel('Your answer in Polish').fill(await spokenPrompt());
     } else if (kind === 'Write this in English') {
       await page.getByLabel('Your answer in English').fill(sentByPl.get(await text('.prompt-pl'))!.en);
     } else if (kind === 'Build this in Polish' || kind === 'Build what you hear') {
