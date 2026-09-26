@@ -31,7 +31,7 @@ function spokenBy(e: Exercise): string[] {
     case 'type':
       return e.lang === 'pl' ? e.accepted : [e.prompt];
     case 'build':
-      return [...e.accepted, ...(e.audio ? [e.audio] : [])];
+      return [...e.accepted, ...e.tiles, ...(e.audio ? [e.audio] : [])];
     case 'speak':
       return [e.pl, ...(e.cue ? [e.cue.pl] : [])];
   }

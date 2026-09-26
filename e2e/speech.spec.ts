@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { audioId } from '../src/app/lib/speech';
-import { solveLesson } from './helpers';
+import { solveLesson, solveUntil } from './helpers';
 
 /**
  * Headless Chromium has no Polish voice, so give it a pretend one that records what it is asked to say.
@@ -127,4 +127,21 @@ test('Polish words in culture notes say themselves when tapped, and articles hav
 
   await page.locator('.culture-article p').getByRole('button', { name: 'barszcz: hear it' }).first().click();
   await expect.poll(() => page.evaluate(() => (window as unknown as { __played: string[] }).__played)).toContain(`/voice/${index.voice}/${audioId('barszcz')}.mp3`);
+});
+
+test('building a sentence reads it out as it appears, and each tile as it goes into place', async ({ page }) => {
+  await fakePolishVoice(page);
+  await page.route('**/voice-index.json', (r) => r.fulfill({ status: 404 }));
+  await page.goto('/lesson/u01-l1');
+  await solveUntil(page, 'Build this in Polish');
+  const prompt = (await page.locator('.prompt-en').textContent())!.trim();
+  // The sentence itself, in Polish, is heard once the exercise is up.
+  await expect.poll(async () => (await spokenTexts(page)).length).toBeGreaterThan(0);
+  const before = await spokenTexts(page);
+  expect(before[before.length - 1]).toMatch(/\p{L}/u);
+  expect(before[before.length - 1]).not.toBe(prompt);
+  const tile = page.locator('.bank .tile:not(.used)').first();
+  const word = (await tile.textContent())!.trim();
+  await tile.click();
+  await expect.poll(async () => (await spokenTexts(page)).at(-1)).toBe(word);
 });

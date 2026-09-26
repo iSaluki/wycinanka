@@ -176,6 +176,8 @@ function withBrowser(opts: ListenOptions): Listening {
     settle(h);
   };
   let finals: string[][] = [];
+  /** What was heard so far, final or not: some Android versions end without ever marking a result final. */
+  let latest: string[] = [];
   let events = 0;
   let rec: Recognition;
   try {
@@ -200,29 +202,35 @@ function withBrowser(opts: ListenOptions): Listening {
       else interim += ` ${alts[0] ?? ''}`;
     }
     const sofar = [...finals.map((a) => a[0]), interim.trim()].join(' ').trim();
+    // Android can also repeat earlier words in each new result ("dzień", "dzień dobry"): the last result on its
+    // own is offered as a guess too, and scoring keeps whichever matches best.
+    const last = e.results.length ? e.results[e.results.length - 1][0]?.transcript.trim() : '';
+    if (sofar) latest = [...new Set([sofar, ...(last ? [last] : [])])];
     if (sofar) opts.onInterim?.(sofar);
+  };
+  const heardSoFar = (): Heard | null => {
+    if (finals.length) return { ok: true, alternatives: [...new Set([...guesses(finals), ...latest])] };
+    if (latest.length) return { ok: true, alternatives: latest };
+    return null;
   };
   rec.onerror = (e) => {
     events++;
     switch (e.error) {
       case 'no-speech':
-        return finish({ ok: false, error: 'no-speech' });
+        return finish(heardSoFar() ?? { ok: false, error: 'no-speech' });
       case 'not-allowed':
         return finish({ ok: false, error: 'denied' });
       case 'audio-capture':
         return finish({ ok: false, error: 'no-mic' });
       case 'aborted':
-        return finish({ ok: false, error: 'aborted' });
+        return finish(heardSoFar() ?? { ok: false, error: 'aborted' });
       default:
         // 'network', 'service-not-allowed', 'language-not-supported'…: this browser can't do it.
         markBroken('browser');
         return finish({ ok: false, error: 'unavailable', message: e.error });
     }
   };
-  rec.onend = () => {
-    if (!finals.length) return finish({ ok: false, error: 'no-speech' });
-    finish({ ok: true, alternatives: guesses(finals) });
-  };
+  rec.onend = () => finish(heardSoFar() ?? { ok: false, error: 'no-speech' });
   try {
     rec.start();
   } catch {
@@ -238,7 +246,8 @@ function withBrowser(opts: ListenOptions): Listening {
       // Already stopped.
     }
     watchdog = setTimeout(() => {
-      if (finals.length) return finish({ ok: true, alternatives: guesses(finals) });
+      const heard = heardSoFar();
+      if (heard) return finish(heard);
       if (!events) markBroken('browser');
       finish({ ok: false, error: events ? 'no-speech' : 'unavailable' });
       try {
