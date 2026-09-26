@@ -1,3 +1,5 @@
+# Pages (HTML) get this policy from the Worker instead, with a per-request nonce for the scripts Cloudflare
+# injects (src/worker/pages.ts). This one covers every other file.
 /*
   Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:; connect-src 'self'; media-src 'self' blob:; frame-src https://www.youtube-nocookie.com; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests
   X-Content-Type-Options: nosniff
@@ -20,4 +22,8 @@
 
 # Which recordings exist: checked on every visit so new content is heard with the recorded voice.
 /voice-index.json
+  Cache-Control: no-cache
+
+# The build files to keep for offline use: must always be current.
+/app-files.json
   Cache-Control: no-cache

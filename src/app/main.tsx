@@ -10,6 +10,9 @@ import '@fontsource/signika/700.css';
 import './styles.css';
 import { initPwa } from './lib/pwa';
 import { BootError, showBootError } from './BootError';
+import { report, watchForErrors } from './lib/report';
+
+watchForErrors();
 
 const root = document.getElementById('root')!;
 
@@ -24,6 +27,8 @@ try {
 // or privacy-hardened browser lacks) shows a message instead of leaving a blank page.
 import('./App')
   .then(({ App }) => {
+    // Seen by boot-watch.js, which reports start-ups that never finish.
+    (window as { __wycinankaStarted?: boolean }).__wycinankaStarted = true;
     createRoot(root).render(
       <StrictMode>
         <BootError>
@@ -32,4 +37,7 @@ import('./App')
       </StrictMode>,
     );
   })
-  .catch((err: unknown) => showBootError(root, err));
+  .catch((err: unknown) => {
+    report('boot', err);
+    showBootError(root, err);
+  });

@@ -12,7 +12,16 @@ import { badgeStates } from '../../shared/badges';
 import { Link, navigate, useTitle } from '../lib/router';
 import { hasDeviceVoice } from '../lib/speech';
 import { DEFAULT_REMINDER_HOUR } from '../../shared/reminders';
-import { disableReminders, enableReminders, forgetThisDevice, reminderSupport, sendTestReminder, useDeviceSubscribed } from '../lib/reminders';
+import {
+  disableReminders,
+  enableReminders,
+  forgetThisDevice,
+  reminderSupport,
+  sendTestReminder,
+  useDeviceSubscribed,
+  useReminderStatus,
+  type ReminderStatus,
+} from '../lib/reminders';
 import { changePassword, DEFAULT_SETTINGS, deleteAccount, downloadExport, logout, updateSettings, useApp } from '../lib/store';
 import { PasswordInput } from './Auth';
 
@@ -43,6 +52,16 @@ function Switch({ label, checked, disabled, onChange }: { label: string; checked
 const HOURS = Array.from({ length: 17 }, (_, i) => i + 6); // 06:00 to 22:00
 const hourLabel = (h: number) => `${String(h).padStart(2, '0')}:00`;
 
+/** What the Worker last did for this device's daily reminder, in words. */
+function statusLine(status: ReminderStatus, hour: number): string {
+  if (!status.subscribed) return "This device isn't registered for reminders any more. Switch them off and on again.";
+  if (!status.lastSentAt) return `No daily reminder sent yet. The first comes at ${hourLabel(hour)} on a day you haven't practised.`;
+  const when = new Date(status.lastSentAt).toLocaleString('en-GB', { weekday: 'long', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  return status.lastResult === 'failed'
+    ? `The last reminder, on ${when}, wasn't accepted by your browser's notification service. Try switching reminders off and on again.`
+    : `Last reminder sent ${when}.`;
+}
+
 function RemindersField() {
   const user = useApp((s) => s.user);
   const s = useApp((st) => st.settings);
@@ -52,6 +71,7 @@ function RemindersField() {
   const support = reminderSupport();
   const hour = s.reminderHour ?? DEFAULT_REMINDER_HOUR;
   const on = !!s.reminders && device === true;
+  const status = useReminderStatus(on);
 
   const run = async (work: () => Promise<void>, done?: string) => {
     setBusy(true);
@@ -103,6 +123,7 @@ function RemindersField() {
           </button>
         </div>
       )}
+      {usable && on && status && <p className="help reminder-status">{statusLine(status, hour)}</p>}
       {msg && (
         <div className={`banner ${msg.ok ? '' : 'error'}`} role="status">
           <p>{msg.text}</p>

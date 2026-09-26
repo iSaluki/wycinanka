@@ -1,4 +1,5 @@
-import { Component, type ReactNode } from 'react';
+import { Component, type ErrorInfo, type ReactNode } from 'react';
+import { report } from './lib/report';
 
 const HELP =
   "Wycinanka couldn't start in this browser. Try reloading. If you use Brave, turn off Shields for this site; otherwise update your browser (on an iPad, update iPadOS).";
@@ -33,8 +34,9 @@ export class BootError extends Component<{ children: ReactNode }, { error: unkno
     return { error };
   }
 
-  componentDidCatch(error: unknown) {
+  componentDidCatch(error: unknown, info: ErrorInfo) {
     console.error(error);
+    report('render', error, info.componentStack ?? undefined);
   }
 
   render() {

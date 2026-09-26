@@ -524,6 +524,13 @@ describe('daily reminders', () => {
     const gone = await env.DB.prepare('SELECT COUNT(*) AS n FROM push_subscriptions WHERE endpoint = ?1').bind(subs.get(expired.username)).first<{ n: number }>();
     expect(gone!.n).toBe(0);
 
+    // The learner's profile can see when it went and that it was accepted.
+    const status = await lazy.c.call('POST', '/api/push/status', { endpoint: subs.get(lazy.username) });
+    expect(status.json).toMatchObject({ subscribed: true, lastSentAt: now, lastResult: 'sent' });
+    expect((await keen.c.call('POST', '/api/push/status', { endpoint: subs.get(keen.username) })).json).toMatchObject({ subscribed: true, lastSentAt: null });
+    // Nobody else can ask about a device.
+    expect((await keen.c.call('POST', '/api/push/status', { endpoint: subs.get(lazy.username) })).json).toEqual({ subscribed: false });
+
     sent.length = 0;
     await sendReminders(env, now + 30 * 60_000, fetcher);
     expect(sent).not.toContain(subs.get(lazy.username));
@@ -654,5 +661,34 @@ describe('static app', () => {
     const res = await worker.fetch(`${ORIGIN}/learn`);
     expect(res.status).toBe(200);
     expect(await res.text()).toContain('<!doctype html>');
+  });
+
+  it("gives every page its own CSP nonce for Cloudflare's injected scripts, with the usual security headers", async () => {
+    const a = await worker.fetch(`${ORIGIN}/learn`);
+    const b = await worker.fetch(`${ORIGIN}/`);
+    const nonce = (r: Response) => /'nonce-([^']+)'/.exec(r.headers.get('content-security-policy') ?? '')?.[1];
+    expect(nonce(a)).toMatch(/^[A-Za-z0-9+/]{22}==$/);
+    expect(nonce(a)).not.toBe(nonce(b));
+    expect(a.headers.get('content-security-policy')).not.toContain('unsafe-inline');
+    expect(a.headers.get('x-frame-options')).toBe('DENY');
+    expect(a.headers.get('x-content-type-options')).toBe('nosniff');
+  });
+});
+
+describe('problem reports from browsers', () => {
+  it('logs a report and rejects anything else', async () => {
+    const c = client();
+    const ok = await c.call('POST', '/api/report', { kind: 'boot', message: 'SyntaxError: Unexpected token', path: '/', build: 'index-abc.js' });
+    expect(ok.status).toBe(200);
+    expect((await c.call('POST', '/api/report', { kind: 'nonsense', message: 'x', path: '/' })).status).toBe(400);
+    expect((await c.call('POST', '/api/report', { kind: 'error', message: 'x'.repeat(501), path: '/' })).status).toBe(400);
+    expect((await c.call('POST', '/api/report', { kind: 'error', message: 'x', path: '/', answer: 'secret' })).status).toBe(400);
+  });
+
+  it('stops listening to a network that sends too many', async () => {
+    const c = client();
+    let last = 0;
+    for (let i = 0; i < 31; i++) last = (await c.call('POST', '/api/report', { kind: 'error', message: `e${i}`, path: '/' })).status;
+    expect(last).toBe(429);
   });
 });

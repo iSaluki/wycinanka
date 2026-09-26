@@ -27,6 +27,8 @@ export const POLICIES = {
   speechIp: { limit: 180, windowMs: 60 * 60_000, lockMs: 30 * 60_000 },
   /** The same, per signed-in learner, so learners sharing a network (a school, a family) don't share one limit. */
   speechUser: { limit: 180, windowMs: 60 * 60_000, lockMs: 30 * 60_000 },
+  /** Problem reports from browsers: a broken device sends a handful, not a flood. */
+  reportIp: { limit: 30, windowMs: 60 * 60_000, lockMs: 60 * 60_000 },
 } satisfies Record<string, Policy>;
 
 /** Milliseconds until the key unlocks, or 0 if it is not locked. */

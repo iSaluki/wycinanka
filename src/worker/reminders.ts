@@ -112,7 +112,9 @@ export async function sendReminders(
   const stmts = outcomes.map((o) =>
     o.result === 'gone'
       ? db.prepare('DELETE FROM push_subscriptions WHERE endpoint = ?1').bind(o.endpoint)
-      : db.prepare('UPDATE push_subscriptions SET last_sent_day = ?1 WHERE endpoint = ?2').bind(o.day, o.endpoint),
+      : db
+          .prepare('UPDATE push_subscriptions SET last_sent_day = ?1, last_sent_at = ?2, last_result = ?3 WHERE endpoint = ?4')
+          .bind(o.day, now, o.result, o.endpoint),
   );
   if (stmts.length) await db.batch(stmts);
   console.log(JSON.stringify({ event: 'reminders', ...tally }));
