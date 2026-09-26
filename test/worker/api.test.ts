@@ -1,6 +1,8 @@
 import { env } from 'cloudflare:workers';
 import { exports } from 'cloudflare:workers';
+import { runDurableObjectAlarm, runInDurableObject } from 'cloudflare:test';
 import { describe, expect, it } from 'vitest';
+import { nextTick } from '../../src/worker/clock';
 import { LESSONS, lessonCardIds } from '../../src/content/course';
 import { localDay } from '../../src/shared/progress';
 import { app, cleanUp } from '../../src/worker/index';
@@ -525,6 +527,19 @@ describe('daily reminders', () => {
     sent.length = 0;
     await sendReminders(env, now + 30 * 60_000, fetcher);
     expect(sent).not.toContain(subs.get(lazy.username));
+  });
+
+  it('keeps an hourly clock running without a Cron Trigger', async () => {
+    const stub = env.REMINDER_CLOCK!.get(env.REMINDER_CLOCK!.idFromName('test-clock'));
+    await stub.start();
+    const first = await runInDurableObject(stub, (_o, state) => state.storage.getAlarm());
+    expect(first).toBe(nextTick(Date.now()));
+    // Starting again leaves the alarm alone; the alarm sends reminders and sets the next one.
+    await stub.start();
+    expect(await runInDurableObject(stub, (_o, state) => state.storage.getAlarm())).toBe(first);
+    expect(await runDurableObjectAlarm(stub)).toBe(true);
+    expect(await runInDurableObject(stub, (_o, state) => state.storage.getAlarm())).toBeGreaterThan(Date.now());
+    expect(nextTick(Date.UTC(2031, 0, 15, 19, 59))).toBe(Date.UTC(2031, 0, 15, 20, 1));
   });
 
   it("can't take over another learner's device without its keys", async () => {

@@ -7,9 +7,11 @@
   "build": { "command": "npm run build" },
   "routes": [{ "pattern": "polish.saluki.cloud", "custom_domain": true }],
   "observability": { "enabled": true },
-  // Hourly: sends daily practice reminders at each learner's chosen local hour (src/worker/reminders.ts),
-  // then tidies expired sessions. One of the free plan's five Cron Triggers.
-  "triggers": { "crons": ["0 * * * *"] },
+  // Daily practice reminders run on a Durable Object's hourly alarm (src/worker/clock.ts), not a Cron Trigger:
+  // the account's Cron Triggers are all in use. SQLite-backed Durable Objects and alarms are on the free plan.
+  // It starts itself on the first API request after a deploy. No crons here, so a deploy never fails on the limit.
+  "durable_objects": { "bindings": [{ "name": "REMINDER_CLOCK", "class_name": "ReminderClock" }] },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["ReminderClock"] }],
   "assets": {
     "directory": "./dist/client",
     "binding": "ASSETS",
