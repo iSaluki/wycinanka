@@ -11,6 +11,7 @@ import { Build, Choose, Dialogue, Gap, Listen, Match, Meet, SpotlightView, TypeA
 import { IconClose } from './icons';
 import { SayIt, type SpokenResult } from './Speaking';
 import { Label } from './common';
+import type { SavedSession } from '../lib/resume';
 
 /**
  * Runs a sequence of exercises: check → feedback → continue. Wrong answers come back once, a few questions
@@ -151,8 +152,14 @@ export function Session({
   onFinish,
   leaveNote,
   banner,
+  resumeFrom,
+  onProgress,
 }: {
   exercises: Exercise[];
+  /** A session left part-way, to carry on from instead of starting at the first exercise. */
+  resumeFrom?: SavedSession | null;
+  /** Called after every step with everything needed to resume from there. */
+  onProgress?: (s: SavedSession) => void;
   /** Called when the learner leaves early, after confirming if they had started, with what was answered so far. */
   onClose: (partial: SessionResult) => void;
   /** What the leave prompt says is kept, when the caller saves partial results. */
@@ -166,11 +173,22 @@ export function Session({
   pausableSpeaking?: boolean;
   onFinish: (r: SessionResult) => void;
 }) {
-  const [queue, setQueue] = useState<Entry[]>(() => exercises.map((ex, i) => ({ ex, retry: false, key: i })));
-  const [pos, setPos] = useState(0);
+  const [queue, setQueue] = useState<Entry[]>(() => resumeFrom?.queue ?? exercises.map((ex, i) => ({ ex, retry: false, key: i })));
+  const [pos, setPos] = useState(resumeFrom?.pos ?? 0);
   const [answer, setAnswer] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
-  const results = useRef<SessionResult>({ correct: 0, total: 0, missed: new Set(), ratings: new Map(), attempts: [], spoken: { tried: 0, said: 0 } });
+  const results = useRef<SessionResult>(
+    resumeFrom
+      ? {
+          correct: resumeFrom.correct,
+          total: resumeFrom.total,
+          missed: new Set(resumeFrom.missed),
+          ratings: new Map(resumeFrom.ratings),
+          attempts: resumeFrom.attempts,
+          spoken: resumeFrom.spoken,
+        }
+      : { correct: 0, total: 0, missed: new Set(), ratings: new Map(), attempts: [], spoken: { tried: 0, said: 0 } },
+  );
   const matchMisses = useRef(new Set<string>());
   const started = useRef(Date.now());
   const finished = useRef(false);
@@ -189,7 +207,23 @@ export function Session({
 
   const entry = queue[pos];
   const graded = entry && isGraded(entry.ex);
-  const gradedCount = useMemo(() => exercises.filter(isGraded).length, [exercises]);
+  const gradedCount = useMemo(() => (resumeFrom ? resumeFrom.queue.filter((e) => !e.retry).map((e) => e.ex) : exercises).filter(isGraded).length, [exercises, resumeFrom]);
+
+  // After every step, what it takes to carry on from here later.
+  useEffect(() => {
+    if (!onProgress || pos === 0 || pos >= queue.length) return;
+    const r = results.current;
+    onProgress({
+      queue,
+      pos,
+      correct: r.correct,
+      total: r.total,
+      missed: [...r.missed],
+      ratings: [...r.ratings],
+      attempts: r.attempts,
+      spoken: r.spoken,
+    });
+  }, [pos, queue, onProgress]);
 
   const goTo = useCallback(
     (to: number, length: number) => {

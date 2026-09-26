@@ -83,3 +83,46 @@ export function loadOutbox(username: string): PendingOp[] {
 export function saveOutbox(username: string, ops: PendingOp[]) {
   write(OUTBOX_KEY, ops.length ? { username, ops } : null);
 }
+
+/* ---------- A signed-in learner's copy, for opening the app offline ---------- */
+
+const ACCOUNT_KEY = 'wycinanka:account';
+
+interface SavedAccount {
+  user: { username: string; createdAt: number };
+  settings: Settings;
+  lessons: Array<[string, LessonRecord]>;
+  cards: CardRow[];
+  activity: Array<[string, DayRecord]>;
+}
+
+/**
+ * The last progress seen from the server, so a signed-in learner who opens the app without a connection sees
+ * their own progress (and their results wait in the outbox) instead of an empty guest session.
+ */
+export function saveAccount(user: SavedAccount['user'], settings: Settings, p: ProgressState) {
+  const saved: SavedAccount = {
+    user: { username: user.username, createdAt: user.createdAt },
+    settings,
+    lessons: [...p.lessons],
+    cards: [...p.cards].map(([id, c]) => toRow(id, c)),
+    activity: [...p.activity],
+  };
+  write(ACCOUNT_KEY, saved);
+}
+
+export function loadAccount(): { user: SavedAccount['user']; settings: Settings; progress: ProgressState } | null {
+  const a = read<SavedAccount>(ACCOUNT_KEY);
+  if (!a || !a.user?.username || !Array.isArray(a.cards)) return null;
+  return {
+    user: a.user,
+    settings: a.settings ?? {},
+    progress: {
+      lessons: new Map(a.lessons ?? []),
+      cards: new Map(a.cards.map((r) => [r.cardId, fromRow(r)])),
+      activity: new Map(a.activity ?? []),
+    },
+  };
+}
+
+export const clearAccount = () => write(ACCOUNT_KEY, null);

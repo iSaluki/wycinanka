@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { getCard, getLesson, getUnitOfLesson, lessonCardIds, nextLessonAfter } from '../../content/course';
 import { cultureAfter } from '../../content/culture-stops';
 import { Label, Speak } from '../components/common';
@@ -12,6 +12,7 @@ import { lessonPictures, revisionCards, sprinkle, warmupCards } from '../lib/rei
 import { Link, navigate, useTitle } from '../lib/router';
 import { completeLesson, getState, submitReviews, useApp } from '../lib/store';
 import { NotFound } from './NotFound';
+import { clearSession, loadSession, markSent, saveSession, type SavedSession } from '../lib/resume';
 import type { Lesson } from '../../content/types';
 
 interface Outcome {
@@ -35,6 +36,11 @@ export function LessonPage({ id }: { id: string }) {
   const signedIn = useApp((s) => !!s.user);
   const speakingOn = useApp((s) => s.settings.speaking !== false);
   const [run, setRun] = useState(0);
+  const owner = useApp((s) => s.user?.username ?? 'guest');
+  // A lesson left part-way on this device: offer to carry on from there.
+  const [saved, setSaved] = useState(() => loadSession(id, owner));
+  const [resumeFrom, setResumeFrom] = useState<SavedSession | null>(null);
+  const keep = useCallback((s: SavedSession) => saveSession(id, owner, s), [id, owner]);
   const exercises = useMemo(() => {
     if (!lesson) return [];
     const progress = getState().progress;
@@ -65,6 +71,7 @@ export function LessonPage({ id }: { id: string }) {
   if (!lesson || !unit) return <NotFound />;
 
   const finish = async (r: SessionResult) => {
+    clearSession(lesson.id);
     const own = new Set(lessonCardIds(lesson));
     const lessonAttempts = r.attempts.filter((a) => !a.tag);
     const correct = lessonAttempts.filter((a) => a.pass).length + (r.correct - r.attempts.filter((a) => a.pass).length);
@@ -82,21 +89,51 @@ export function LessonPage({ id }: { id: string }) {
     setOutcome({ ...out, revised: extra.filter((a) => a.tag === 'revision').length, pictures: extra.filter((a) => a.tag === 'picture').length, missed, spoken: r.spoken });
   };
 
-  if (outcome) return <Finish lessonId={lesson.id} outcome={outcome} onRetry={() => (setOutcome(null), setRun(run + 1))} />;
-  // Leaving part-way: the lesson starts again next time, but warm-up and revision answers were real reviews.
+  if (outcome) return <Finish lessonId={lesson.id} outcome={outcome} onRetry={() => (setOutcome(null), setResumeFrom(null), setRun(run + 1))} />;
+  // Leaving part-way: the place is kept on this device, and warm-up and revision answers (real reviews) are sent now.
   const leave = (r: SessionResult) => {
     navigate('/learn');
     const extra = r.attempts.filter((a) => a.tag && r.ratings.get(a.cardId));
-    if (extra.length) void submitReviews(extra.map((a) => ({ cardId: a.cardId, ...r.ratings.get(a.cardId)! })));
+    if (extra.length) {
+      void submitReviews(extra.map((a) => ({ cardId: a.cardId, ...r.ratings.get(a.cardId)! })));
+      markSent(lesson.id, extra.map((a) => a.cardId));
+    }
   };
+
+  if (saved) {
+    const left = saved.queue.length - saved.pos;
+    return (
+      <main className="player">
+        <div />
+        <div className="resume stack" style={{ gap: 18 }}>
+          <Label pl="dokończ lekcję" en="finish the lesson" />
+          <h1>{lesson.title}</h1>
+          <p className="muted">
+            You left this lesson part-way through. Carry on where you stopped, with {left} question{left === 1 ? '' : 's'} to go, or start it again.
+          </p>
+          <div className="row wrap">
+            <button type="button" className="btn red" onClick={() => (setResumeFrom(saved), setSaved(null))}>
+              Carry on
+            </button>
+            <button type="button" className="btn quiet" onClick={() => (clearSession(lesson.id), setSaved(null))}>
+              Start again
+            </button>
+          </div>
+        </div>
+        <div />
+      </main>
+    );
+  }
 
   return (
     <Session
       key={run}
       exercises={exercises}
+      resumeFrom={resumeFrom}
+      onProgress={keep}
       what="lesson"
       onClose={leave}
-      leaveNote="The lesson will start again next time, but your answers to review questions are saved."
+      leaveNote="Your place is kept on this device: open the lesson again to carry on."
       banner={<SpeakerNote lesson={lesson} speaker={speaker} />}
       onFinish={finish}
     />

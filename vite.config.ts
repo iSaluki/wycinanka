@@ -1,8 +1,27 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import type { Plugin } from 'vite';
+
+/**
+ * Writes app-files.json: the build files the app needs to open offline (its scripts, styles and the Latin
+ * font files Polish uses). The service worker downloads them all as soon as it installs, so the app opens
+ * without a connection after a single visit, not only after the second.
+ */
+function appFiles(): Plugin {
+  return {
+    name: 'app-files',
+    generateBundle(_options, bundle) {
+      const files = Object.keys(bundle)
+        .filter((f) => f.startsWith('assets/') && (/\.(js|css)$/.test(f) || /-latin(-ext)?-.*\.woff2$/.test(f)))
+        .sort()
+        .map((f) => `/${f}`);
+      this.emitFile({ type: 'asset', fileName: 'app-files.json', source: `${JSON.stringify(files)}\n` });
+    },
+  };
+}
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), appFiles()],
   build: {
     outDir: 'dist/client',
     emptyOutDir: true,

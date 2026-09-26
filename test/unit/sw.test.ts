@@ -2,9 +2,9 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 /** Loads the service worker's helpers without a browser: its top level only defines functions and listeners. */
-function load() {
+function load(fetch: (url: string) => Promise<Response> = async () => new Response(null, { status: 404 })) {
   const src = readFileSync('public/sw.js', 'utf8');
-  const self = { addEventListener: () => undefined };
+  const self = { addEventListener: () => undefined, location: { origin: 'https://x' } };
   const stores = new Map<string, Map<string, Response>>();
   const caches = {
     open: async (name: string) => {
@@ -12,13 +12,25 @@ function load() {
       const m = stores.get(name)!;
       return {
         keys: async () => [...m.keys()].map((k) => new Request(k)),
+        match: async (k: string) => m.get(k),
         delete: async (r: Request) => m.delete(r.url),
         put: async (k: string, v: Response) => void m.set(k, v),
       };
     },
   };
-  const fn = new Function('self', 'caches', `${src}\nreturn { answerRange, trim, LIMITS, VOICE };`);
-  return { ...(fn(self, caches) as { answerRange: (req: Request, res: Response) => Promise<Response>; trim: (n: string) => Promise<void>; LIMITS: Record<string, number>; VOICE: string }), caches, stores };
+  const fn = new Function('self', 'caches', 'fetch', `${src}\nreturn { answerRange, trim, refreshAppFiles, LIMITS, VOICE, ASSETS };`);
+  return {
+    ...(fn(self, caches, fetch) as {
+      answerRange: (req: Request, res: Response) => Promise<Response>;
+      trim: (n: string) => Promise<void>;
+      refreshAppFiles: () => Promise<void>;
+      LIMITS: Record<string, number>;
+      VOICE: string;
+      ASSETS: string;
+    }),
+    caches,
+    stores,
+  };
 }
 
 describe('service worker', () => {
@@ -44,5 +56,21 @@ describe('service worker', () => {
     const left = [...stores.get(VOICE)!.keys()];
     expect(left).toHaveLength(LIMITS[VOICE]);
     expect(left[0]).toBe('https://x/voice/3.mp3');
+  });
+
+  it('downloads the current build files for offline use and drops older ones', async () => {
+    const fetched: string[] = [];
+    const sw = load(async (url) => {
+      fetched.push(url);
+      if (url === '/app-files.json') return Response.json(['/assets/App-new.js', '/assets/index-new.css']);
+      return new Response('x', { status: 200 });
+    });
+    const c = await sw.caches.open(sw.ASSETS);
+    await c.put('https://x/assets/App-old.js', new Response('old'));
+    await c.put('https://x/assets/index-new.css', new Response('kept'));
+    await sw.refreshAppFiles();
+    expect([...sw.stores.get(sw.ASSETS)!.keys()].sort()).toEqual(['https://x/assets/App-new.js', 'https://x/assets/index-new.css']);
+    // Already cached: not downloaded again.
+    expect(fetched).not.toContain('https://x/assets/index-new.css');
   });
 });
