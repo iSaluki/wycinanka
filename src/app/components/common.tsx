@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useState, type ReactNode } from 'react';
+import type { VoiceName } from '../lib/voices';
 import { canSpeak, hasPolishVoice, onVoicesChanged, speak } from '../lib/speech';
 import { IconSlow, IconSpeaker } from './icons';
 
@@ -15,12 +16,12 @@ export function usePolishVoice(text?: string): boolean {
 }
 
 /** Plays Polish text aloud. Disabled, with an explanation, when it can't be spoken on this device. */
-export function Speak({ text, slow, label, autoPlay }: { text: string; slow?: boolean; label?: string; autoPlay?: boolean }) {
+export function Speak({ text, slow, label, autoPlay, voice }: { text: string; slow?: boolean; label?: string; autoPlay?: boolean; voice?: VoiceName }) {
   const has = usePolishVoice(text);
   const [playing, setPlaying] = useState(false);
   const play = () => {
     setPlaying(true);
-    speak(text, { slow, onEnd: () => setPlaying(false) });
+    speak(text, { slow, voice, onEnd: () => setPlaying(false) });
   };
   useEffect(() => {
     if (autoPlay && has) play();

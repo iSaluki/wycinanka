@@ -25,10 +25,15 @@ from pathlib import Path
 import lameenc
 from piper import PiperVoice, SynthesisConfig
 
-# Voice and settings: https://huggingface.co/rhasspy/piper-voices (CC0 dataset)
+# Voices and settings: https://huggingface.co/rhasspy/piper-voices (CC0 datasets). The main voice (a man's) reads
+# everything; the second (a woman's) reads the texts src/app/lib/voices.ts gives it: women's lines, a woman's
+# first-person forms and half of the listening practice.
 MODEL = 'pl_PL-mc_speech-medium'
 MODEL_URL = 'https://huggingface.co/rhasspy/piper-voices/resolve/main/pl/pl_PL/mc_speech/medium/'
 VOICE = 'mc-speech-2'
+FEMALE_MODEL = 'pl_PL-gosia-medium'
+FEMALE_MODEL_URL = 'https://huggingface.co/rhasspy/piper-voices/resolve/main/pl/pl_PL/gosia/medium/'
+FEMALE_VOICE = 'gosia-1'
 # Slightly slower than natural: these are learners.
 SYNTH = SynthesisConfig(length_scale=1.08)
 BITRATE = 40  # kbit/s, mono: clear speech at about 5 KB a second
@@ -42,14 +47,14 @@ INDEX = ROOT / 'public' / 'voice-index.json'
 CACHE = Path.home() / '.cache' / 'wycinanka-voice'
 
 
-def model_path() -> Path:
+def model_path(model: str = MODEL, url: str = MODEL_URL) -> Path:
     CACHE.mkdir(parents=True, exist_ok=True)
     for ext in ('.onnx', '.onnx.json'):
-        f = CACHE / f'{MODEL}{ext}'
+        f = CACHE / f'{model}{ext}'
         if not f.exists():
             print(f'Downloading {f.name}…', flush=True)
-            urllib.request.urlretrieve(MODEL_URL + f.name, f)
-    return CACHE / f'{MODEL}.onnx'
+            urllib.request.urlretrieve(url + f.name, f)
+    return CACHE / f'{model}.onnx'
 
 
 def texts() -> list[dict]:
@@ -81,17 +86,10 @@ def mp3(voice: PiperVoice, text: str) -> bytes:
     return enc.encode(pcm) + enc.flush()
 
 
-def main() -> None:
-    items = texts()
+def record(folder: Path, items: list[dict], model: str, url: str) -> tuple[int, int]:
+    """Records the texts missing from a voice's folder and deletes ones no longer needed. Returns (new, removed)."""
     ids = {i['id'] for i in items}
-    if len(ids) != len(items):
-        sys.exit('Two texts share a recording id: change audioId.')
-    folder = OUT / VOICE
     folder.mkdir(parents=True, exist_ok=True)
-    # Other voices, and recordings of text that has left the course.
-    for old in OUT.iterdir():
-        if old.is_dir() and old.name != VOICE:
-            shutil.rmtree(old)
     removed = 0
     for f in folder.glob('*.mp3'):
         if f.stem not in ids:
@@ -99,14 +97,36 @@ def main() -> None:
             removed += 1
     todo = [i for i in items if not (folder / f"{i['id']}.mp3").exists()]
     if todo:
-        voice = PiperVoice.load(model_path())
+        voice = PiperVoice.load(model_path(model, url))
         for n, i in enumerate(todo, 1):
             (folder / f"{i['id']}.mp3").write_bytes(mp3(voice, i['text']))
             if n % 100 == 0 or n == len(todo):
-                print(f'{n}/{len(todo)}', flush=True)
-    INDEX.write_text(json.dumps({'voice': VOICE, 'ids': sorted(ids)}, separators=(',', ':')) + '\n')
-    size = sum(f.stat().st_size for f in folder.glob('*.mp3'))
-    print(f'{len(ids)} recordings ({len(todo)} new, {removed} removed), {size / 1e6:.1f} MB')
+                print(f'{folder.name}: {n}/{len(todo)}', flush=True)
+    return len(todo), removed
+
+
+def main() -> None:
+    items = texts()
+    ids = {i['id'] for i in items}
+    if len(ids) != len(items):
+        sys.exit('Two texts share a recording id: change audioId.')
+    female = [i for i in items if i.get('female')]
+    # Voices and settings no longer used.
+    OUT.mkdir(parents=True, exist_ok=True)
+    for old in OUT.iterdir():
+        if old.is_dir() and old.name not in (VOICE, FEMALE_VOICE):
+            shutil.rmtree(old)
+    new, removed = record(OUT / VOICE, items, MODEL, MODEL_URL)
+    new_f, removed_f = record(OUT / FEMALE_VOICE, female, FEMALE_MODEL, FEMALE_MODEL_URL)
+    INDEX.write_text(
+        json.dumps(
+            {'voice': VOICE, 'ids': sorted(ids), 'female': {'voice': FEMALE_VOICE, 'ids': sorted(i['id'] for i in female)}},
+            separators=(',', ':'),
+        )
+        + '\n'
+    )
+    size = sum(f.stat().st_size for f in OUT.glob('*/*.mp3'))
+    print(f'{len(ids)} + {len(female)} recordings ({new} + {new_f} new, {removed + removed_f} removed), {size / 1e6:.1f} MB')
 
 
 if __name__ == '__main__':

@@ -5,6 +5,7 @@ import { FREQUENCY } from '../../content/frequency';
 import { CHUNK_CORES, chunkCore, CHUNKS, type Chunk } from '../../content/chunks';
 import { normalise } from '../../shared/grade';
 import { respell } from '../../shared/phonetics';
+import { voiceOfSpeaker, type VoiceName } from './voices';
 
 /** Exercise model and generators for lessons and reviews. */
 
@@ -41,6 +42,8 @@ export type Exercise =
       image?: string;
       /** What to read aloud, when the Polish on screen is a spelling rather than a word (phonics). */
       say?: string;
+      /** Whose voice reads the prompt: a line from a conversation keeps its speaker's. */
+      voice?: VoiceName;
       tag?: ExtraTag;
     }
   | {
@@ -451,6 +454,7 @@ export function conversation(lesson: Lesson, rand = Math.random): Exercise[] {
     options: shuffle([l.en, ...shuffle(d.filter((x) => x.en !== l.en).map((x) => x.en), rand).slice(0, 2)], rand),
     answer: l.en,
     audio: true,
+    voice: voiceOfSpeaker(l.who),
     instruction: 'From the conversation: what does this mean?',
   }));
   allLines ??= LESSONS.flatMap((x) => x.dialogue ?? []);
@@ -469,6 +473,7 @@ export function conversation(lesson: Lesson, rand = Math.random): Exercise[] {
       options: shuffle([l.pl, ...shuffle(others, rand).slice(0, 2).map((x) => x.pl)], rand),
       answer: l.pl,
       optionStyle: 'pl',
+      voice: voiceOfSpeaker(d[i - 1].who),
       instruction: `Your turn as ${l.who}: what do you reply?`,
       hint: `${d[i - 1].who} said: "${d[i - 1].en}"`,
     }));

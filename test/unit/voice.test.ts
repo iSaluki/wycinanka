@@ -7,10 +7,32 @@ import { FREQUENCY } from '../../src/content/frequency';
 import { chunkLearnSession, lessonForSpeaker, lessonPlan, reviewExercise, rolePlay, type Exercise } from '../../src/app/lib/exercises';
 import { speakingRound, type SpeakingMode } from '../../src/app/lib/speaking';
 import { audioId, audioKey } from '../../src/app/lib/speech';
-import { spokenTexts } from '../../src/app/lib/spoken';
+import { femaleTexts, spokenTexts } from '../../src/app/lib/spoken';
+import { voiceFor, voiceOfSpeaker } from '../../src/app/lib/voices';
 
-const index = JSON.parse(readFileSync('public/voice-index.json', 'utf8')) as { voice: string; ids: string[] };
+const index = JSON.parse(readFileSync('public/voice-index.json', 'utf8')) as { voice: string; ids: string[]; female: { voice: string; ids: string[] } };
 const recorded = new Set(index.ids);
+
+/** What an exercise plays in the second (female) voice, picked as the components pick it. */
+function femaleBy(e: Exercise): string[] {
+  const f = (text: string, listening = false) => (voiceFor(text, listening) === 'f' ? [text] : []);
+  switch (e.kind) {
+    case 'dialogue':
+    case 'listen':
+      return e.lines.filter((l) => voiceOfSpeaker(l.who) === 'f').map((l) => l.pl);
+    case 'choose':
+      if (!e.audio && e.promptLang !== 'pl') return [];
+      return e.voice ? (e.voice === 'f' ? [e.say ?? e.prompt] : []) : f(e.say ?? e.prompt, !!e.audio);
+    case 'build':
+      return e.audio ? f(e.audio, true) : [];
+    case 'type':
+      return e.audio ? f(e.audio, true) : [];
+    case 'speak':
+      return e.cue && voiceOfSpeaker(e.cue.who) === 'f' ? [e.cue.pl] : [];
+    default:
+      return [];
+  }
+}
 
 /** The Polish an exercise can read aloud, as the player and its feedback do. */
 function spokenBy(e: Exercise): string[] {
@@ -59,10 +81,22 @@ describe('recorded voice', () => {
     }
   });
 
+  it('records the second voice for every text it reads, with no stale files', () => {
+    const wanted = new Set(femaleTexts().map(audioId));
+    const have = new Set(index.female.ids);
+    expect([...wanted].filter((id) => !have.has(id)), 'run `npm run voice`').toEqual([]);
+    for (const id of have) {
+      expect(existsSync(`public/voice/${index.female.voice}/${id}.mp3`), id).toBe(true);
+      expect(wanted.has(id), `${id} is no longer read by the second voice: run \`npm run voice\``).toBe(true);
+    }
+  });
+
   it('covers everything lessons, phrases and reviews read aloud', () => {
     const texts = new Set(spokenTexts());
+    const female = new Set(femaleTexts());
     const check = (e: Exercise, where: string) => {
       for (const t of spokenBy(e)) expect(texts.has(audioKey(t)), `${where}: "${t}"`).toBe(true);
+      for (const t of femaleBy(e)) expect(female.has(audioKey(t)), `${where} (second voice): "${t}"`).toBe(true);
     };
     for (const l of LESSONS)
       for (const speaker of [undefined, 'f'] as const)
