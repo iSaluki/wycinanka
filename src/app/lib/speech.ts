@@ -133,7 +133,17 @@ export function speakable(text: string): string {
 
 /** The speed setting is tuned for synthetic voices, where 0.9 is the default; recordings play at 1× there. */
 const DEFAULT_RATE = 0.9;
-const speedOf = (slow?: boolean) => (slow ? Math.max(0.5, rate * 0.65) : rate);
+const speedOf = (slow?: boolean) => (slow ? Math.max(0.5, rate * 0.75) : rate);
+
+/**
+ * Playback speed for a recording. Slowing a recording down stretches it, and much below 0.8× the stretching
+ * is louder than the speech (long words turn into a warble), so "slow" stays gentle: the recordings are
+ * already made a little slower than natural speech.
+ */
+export function recordingRate(slow?: boolean, r = rate): number {
+  const normal = Math.min(2, Math.max(0.75, r / DEFAULT_RATE));
+  return slow ? Math.min(normal, Math.max(0.75, normal * 0.82)) : normal;
+}
 
 let playing: HTMLAudioElement | null = null;
 
@@ -168,7 +178,7 @@ export function speak(text: string, opts: { slow?: boolean; natural?: boolean; o
   if (src && typeof Audio !== 'undefined') {
     const audio = new Audio(src);
     playing = audio;
-    audio.playbackRate = opts.natural ? NATURAL : Math.min(2, Math.max(0.5, speedOf(opts.slow) / DEFAULT_RATE));
+    audio.playbackRate = opts.natural ? NATURAL : recordingRate(opts.slow);
     audio.preservesPitch = true;
     audio.onended = () => {
       if (playing === audio) playing = null;
