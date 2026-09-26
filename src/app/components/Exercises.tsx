@@ -218,10 +218,18 @@ const ALT_LETTERS: Record<string, string> = {
 export function Build({ ex, locked, onAnswer, hints = 0 }: AnswerProps<Of<'build'>>) {
   const [chosen, setChosen] = useState<number[]>([]);
   const hasVoice = usePolishVoice(ex.audio ?? '');
+  // The sentence is read out as it appears, from the English as well as from sound: hearing it while putting it
+  // together ties the words to their sounds. Each tile then says itself as it goes into place.
+  const sentence = ex.audio ?? ex.accepted[0];
+  const canHear = usePolishVoice(sentence);
   useEffect(() => setChosen([]), [ex]);
   const update = (next: number[]) => {
     setChosen(next);
     onAnswer(next.length ? next.map((i) => ex.tiles[i]).join(' ') : null);
+  };
+  const place = (i: number) => {
+    speak(ex.tiles[i]);
+    update([...chosen, i]);
   };
   return (
     <>
@@ -233,7 +241,10 @@ export function Build({ ex, locked, onAnswer, hints = 0 }: AnswerProps<Of<'build
             <Speak text={ex.audio} slow />
           </>
         ) : (
-          <span className="prompt-en">{ex.audio ? ex.meaning : ex.prompt}</span>
+          <>
+            {!ex.audio && canHear && <Speak text={sentence} autoPlay />}
+            <span className="prompt-en">{ex.audio ? ex.meaning : ex.prompt}</span>
+          </>
         )}
       </div>
       {ex.audio && hasVoice && locked && ex.meaning && <p className="build-meaning">{ex.meaning}</p>}
@@ -262,7 +273,7 @@ export function Build({ ex, locked, onAnswer, hints = 0 }: AnswerProps<Of<'build
             lang="pl"
             disabled={locked || chosen.includes(i)}
             aria-hidden={chosen.includes(i)}
-            onClick={() => update([...chosen, i])}
+            onClick={() => place(i)}
           >
             {t}
           </button>

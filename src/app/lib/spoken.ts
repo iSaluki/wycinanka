@@ -8,6 +8,7 @@ import { PHRASEBOOK } from '../../content/phrasebook';
 import { PICTURES } from '../../content/pictures';
 import { MINIMAL_PAIRS, SOUND_GROUPS, TONGUE_TWISTERS } from '../../content/sounds';
 import { audioKey } from './speech';
+import { buildWithChunk, mergeChunks, tokenise } from './exercises';
 
 /**
  * Every fixed Polish text the app reads aloud: the script list for the pre-recorded voice (scripts/voice).
@@ -26,12 +27,23 @@ export function spokenTexts(): string[] {
       // Phonics items are spellings: their examples are read together instead.
       if (i.ex?.length) add(i.ex.join(', '));
     }
-    for (const s of l.sentences) add(s.pl, ...(s.altPl ?? []));
+    for (const s of l.sentences) {
+      add(s.pl, ...(s.altPl ?? []));
+      // Sentence-building tiles say themselves when tapped: every word and phrase tile, and the spare words
+      // (a sentence's own extras, or words from nearby sentences).
+      for (const form of [s.pl, ...(s.altPl ?? [])]) add(...mergeChunks(tokenise(form)), ...tokenise(form));
+      add(...(s.extra ?? []));
+    }
     for (const d of l.drills) add(d.text.replace('___', d.answer));
     for (const line of l.dialogue ?? []) add(line.pl);
     for (const [pl] of l.spotlight?.examples ?? []) add(pl);
   }
-  for (const c of CHUNKS) add(c.pl, chunkCore(c), c.ex?.[0]);
+  for (const c of CHUNKS) {
+    add(c.pl, chunkCore(c), c.ex?.[0]);
+    const build = buildWithChunk(c);
+    if (build?.kind === 'build') add(...build.tiles);
+    if (c.ex) add(...tokenise(c.ex[0]));
+  }
   for (const w of FREQUENCY) add(w.pl, w.ex?.[0]);
   for (const p of PICTURES) add(p.pl);
   for (const c of CULTURE) {

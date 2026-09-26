@@ -31,7 +31,13 @@ async function fakeRecogniser(page: Page) {
         setTimeout(() => {
           const said = String(w.__heard);
           (w.__langs as string[] | undefined)?.push(lang);
-          if (said) {
+          if (said && w.__android) {
+            // As some Android versions do: results are never marked final, and each repeats the words before it.
+            const first = { isFinal: false, length: 1, 0: { transcript: said.split(' ')[0] } };
+            this.onresult?.({ resultIndex: 0, results: { length: 1, 0: first } });
+            const all = { isFinal: false, length: 1, 0: { transcript: said } };
+            this.onresult?.({ resultIndex: 1, results: { length: 2, 0: first, 1: all } });
+          } else if (said) {
             const alt = { transcript: said, confidence: 0.9 };
             this.onresult?.({ resultIndex: 0, results: { length: 1, 0: { isFinal: true, length: 1, 0: alt } } });
           } else this.onerror?.({ error: 'no-speech' });
@@ -187,4 +193,14 @@ test('an iPad sends its recording to the Worker even though Safari has a recogni
   await expect(page.locator('.sheet.good')).toBeVisible({ timeout: 15_000 });
   expect(sent).toBe(1);
   expect(await page.evaluate(() => (window as unknown as { __langs: string[] }).__langs)).toEqual([]);
+});
+
+test('speech is still checked when an Android recogniser never marks its result final', async ({ page }) => {
+  await fakeRecogniser(page);
+  await page.addInitScript(() => ((window as unknown as { __android: boolean }).__android = true));
+  await page.goto('/speaking');
+  await page.getByRole('button', { name: /Repeat after me/ }).click();
+  await hear(page, await target(page));
+  await page.getByRole('button', { name: 'Speak now', exact: true }).click();
+  await expect(page.locator('.sheet.good')).toBeVisible();
 });
