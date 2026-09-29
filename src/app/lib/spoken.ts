@@ -5,6 +5,7 @@ import { CULTURE } from '../../content/culture';
 import { FREQUENCY } from '../../content/frequency';
 import { CASES } from '../../content/grammar';
 import { PHRASEBOOK } from '../../content/phrasebook';
+import { READING } from '../../content/reading';
 import { PICTURES } from '../../content/pictures';
 import { MINIMAL_PAIRS, SOUND_GROUPS, TONGUE_TWISTERS } from '../../content/sounds';
 import { audioKey } from './speech';
@@ -56,6 +57,11 @@ export function spokenTexts(): string[] {
     // Polish words in the articles say themselves when tapped.
     for (const text of [...c.body, c.video?.caption ?? '', c.image?.caption ?? '']) add(...[...text.matchAll(/\{([^}]+)\}/g)].map((m) => m[1]));
   }
+  // Reading texts: every sentence on its own, so each can be tapped, and the new words glossed under them.
+  for (const t of READING) {
+    for (const l of t.lines) add(l.pl);
+    for (const [pl] of t.words) add(pl);
+  }
   for (const g of PHRASEBOOK) for (const [pl] of g.phrases) add(pl);
   for (const c of CASES) add(c.example[0]);
   for (const l of ALPHABET) add(l.example[0], `${l.name}. ${l.example[0]}`);
@@ -81,6 +87,8 @@ export function femaleTexts(): string[] {
     for (const x of l.sentences) listening.push(x.pl, ...(x.altPl ?? []));
   }
   for (const w of FREQUENCY) if (w.ex) listening.push(w.ex[0]);
+  // A reading text is read right through by one speaker, so its lines all take the voice the text is given.
+  for (const t of READING) if (t.voice === 'f') out.push(...t.lines.map((l) => l.pl));
   // Hashed as written, as the exercises do when they pick a voice.
   out.push(...listening.filter(heardInSecondVoice));
   out.push(...spokenTexts().filter(inWomansVoice));

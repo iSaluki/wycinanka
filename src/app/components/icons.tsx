@@ -175,6 +175,14 @@ export const IconPhrases = (p: P) => (
   </svg>
 );
 
+/** An open book: whole texts to read and listen to. */
+export const IconReading = (p: P) => (
+  <svg {...base} {...p}>
+    <path d="M12 6.5C10.5 5 8.2 4.3 4 4.3v13.4c4.2 0 6.5.7 8 2.2 1.5-1.5 3.8-2.2 8-2.2V4.3c-4.2 0-6.5.7-8 2.2Z" />
+    <path d="M12 6.5v13.4" />
+  </svg>
+);
+
 /** A microphone: speaking practice. */
 export const IconMic = (p: P) => (
   <svg {...base} {...p}>
