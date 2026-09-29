@@ -9,6 +9,7 @@ import { useStats } from '../lib/derived';
 import { unitCardIds } from '../lib/reinforce';
 import { Link, useTitle } from '../lib/router';
 import { useApp } from '../lib/store';
+import { MASTERY } from '../../shared/progress';
 
 const LEVELS: Array<[Level | 'A0', string, string, string]> = [
   ['A0', 'Alfabet', 'Letters and sounds', 'Read any Polish word aloud before learning a single phrase.'],
@@ -16,6 +17,12 @@ const LEVELS: Array<[Level | 'A0', string, string, string]> = [
   ['A2', 'Podstawowy', 'Elementary', 'Past and future, aspect, getting around, free time, commands, health, comparing and advice.'],
   ['B1', 'Średnio zaawansowany', 'Intermediate', 'The conditional, quantities, plurals for people, który and swój, prefixed verbs of motion, work and home.'],
 ];
+
+/**
+ * A lesson finished below the mastery mark: done, but enough of it was missed that it is still worth coming back
+ * to. Marked rather than locked — nothing in the course is ever locked.
+ */
+const shaky = (rec: { best: number } | undefined) => !!rec && rec.best < MASTERY;
 
 export function Learn() {
   useTitle('Course');
@@ -85,7 +92,10 @@ export function Learn() {
                             return (
                               <Fragment key={l.id}>
                               <li>
-                                <Link to={`/lesson/${l.id}`} className={`lesson-link ${rec ? 'done' : ''} ${isNext ? 'next' : ''}`}>
+                                <Link
+                                  to={`/lesson/${l.id}`}
+                                  className={`lesson-link ${rec ? 'done' : ''} ${shaky(rec) ? 'shaky' : ''} ${isNext ? 'next' : ''}`}
+                                >
                                   <span className="dot" aria-hidden="true" />
                                   <span className="t">
                                     <span>
@@ -93,6 +103,7 @@ export function Learn() {
                                       {l.title}
                                     </span>
                                     <small>
+                                      {shaky(rec) ? <span className="again">Worth another go · </span> : null}
                                       {l.goal} <span className="lesson-meta">{lessonMeta(l)}</span>
                                     </small>
                                   </span>

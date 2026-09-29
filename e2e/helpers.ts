@@ -1,6 +1,6 @@
 import { expect, type Page } from '@playwright/test';
 import { LESSONS } from '../src/content/course';
-import { mergeChunks, tokenise } from '../src/app/lib/exercises';
+import { mergeChunks, ruleText, tokenise } from '../src/app/lib/exercises';
 import { chunkCore, CHUNKS } from '../src/content/chunks';
 import { PICTURES } from '../src/content/pictures';
 import { FREQUENCY } from '../src/content/frequency';
@@ -127,6 +127,11 @@ export async function solveLesson(page: Page, _lessonId: string, onStep?: (kind:
       // Headless browsers have no microphone: speaking has its own tests (speaking.spec.ts).
       await page.getByRole('button', { name: 'Skip', exact: true }).click();
       continue;
+    } else if (kind === 'Why is it this form?') {
+      // A mature grammar drill asks for the rule behind the ending instead of the gap.
+      const shown = (await text('.prompt-pl')).replace(/\s+/g, ' ').trim();
+      const d = drills.find((x) => x.why && x.text.replace('___', x.answer).replace(/\s+/g, ' ').trim() === shown)!;
+      await clickOption(ruleText(d.why!));
     } else if (kind === 'Fill the gap') {
       const en = await text('.player-body p.muted');
       const gapText = (await text('.gap-text')).replace(/\s+/g, ' ');

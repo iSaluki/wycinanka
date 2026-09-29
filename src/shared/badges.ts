@@ -1,5 +1,5 @@
 import { CHUNKS } from '../content/chunks';
-import { LESSONS, UNITS } from '../content/course';
+import { cardIdsForWord, LESSONS, UNITS } from '../content/course';
 import { FREQUENCY } from '../content/frequency';
 import { PICTURES } from '../content/pictures';
 import type { Level } from '../content/types';
@@ -87,7 +87,13 @@ export const BADGES: Badge[] = [
 ];
 
 const LEVEL_OF = new Map<string, Level | 'A0'>(UNITS.flatMap((u) => u.lessons.map((l) => [l.id, u.n === 0 ? 'A0' : u.level] as const)));
-const WORD_IDS = new Set(FREQUENCY.map((w) => w.id));
+/**
+ * Each of the 500 words with every card id it may have been learnt under: its own, and the lesson card that
+ * teaches the same word where there is one. Nearly a third of the list is also taught in a lesson, and the
+ * frequency deck doesn't teach those a second time, so counting only its own ids would leave "all 500 words"
+ * out of anyone's reach.
+ */
+const WORD_CARDS = FREQUENCY.map((w) => cardIdsForWord(w));
 const PICTURE_IDS = new Set(PICTURES.map((p) => p.id));
 const PHRASE_IDS = new Set(CHUNKS.map((c) => c.id));
 
@@ -114,14 +120,14 @@ export function badgeStats(p: ProgressState): BadgeStats {
     levels[level]++;
     if (rec.best >= 100) perfect++;
   }
-  let words = 0;
   let pictures = 0;
   let phrases = 0;
   for (const id of p.cards.keys()) {
-    if (WORD_IDS.has(id)) words++;
-    else if (PICTURE_IDS.has(id)) pictures++;
+    if (PICTURE_IDS.has(id)) pictures++;
     else if (PHRASE_IDS.has(id)) phrases++;
   }
+  // One word counts once, whichever of its cards is in the deck.
+  const words = WORD_CARDS.filter((ids) => ids.some((id) => p.cards.has(id))).length;
   let reviews = 0;
   let xp = 0;
   for (const d of p.activity.values()) {
