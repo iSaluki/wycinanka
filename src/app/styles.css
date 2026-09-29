@@ -1128,6 +1128,17 @@ a.mini-card:hover h3 {
   color: var(--czerwien);
 }
 
+/* Finished, but below the mastery mark: a half-cut petal rather than a filled one. */
+.lesson-link.shaky .dot {
+  background: linear-gradient(135deg, var(--zielen) 0 50%, transparent 50% 100%);
+  border-color: var(--zielen);
+}
+
+.lesson-link .again {
+  font-size: 13px;
+  color: var(--ink-3);
+}
+
 /* ---------- Player ---------- */
 
 .player {

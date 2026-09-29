@@ -1,11 +1,12 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { BAND_SIZE, COVERAGE, FREQUENCY } from '../../content/frequency';
-import type { Item } from '../../content/types';
+import { cardIdsForWord } from '../../content/course';
+import type { FrequencyWord, Item } from '../../content/types';
 import { PageHead, SectionHead, Speak } from '../components/common';
 import { respell } from '../../shared/phonetics';
 import { Session, type SessionResult } from '../components/Session';
 import { Shell } from '../components/Shell';
-import { shuffle, stepwise, wordInSentence, type Exercise } from '../lib/exercises';
+import { shuffle, stepwise, wordInSentence, wordMeaningChoice, type Exercise } from '../lib/exercises';
 import { useTitle } from '../lib/router';
 import { submitReviews, useApp } from '../lib/store';
 
@@ -15,15 +16,8 @@ const LEARN_BATCH = 8;
 /** Meet a batch of new words a few at a time, recognising each one straight away, then recall some. Results seed their review cards. */
 function learnSession(words: typeof FREQUENCY): Exercise[] {
   const items: Item[] = words.map((w) => ({ id: w.id, pl: w.pl, en: w.en, hint: w.ex ? `${w.ex[0]} — ${w.ex[1]}` : undefined }));
-  const enPool = FREQUENCY.slice(0, 200).map((w) => w.en);
-  const choose = (w: Item): Exercise => ({
-    kind: 'choose',
-    cardId: w.id,
-    prompt: w.pl,
-    promptLang: 'pl',
-    answer: w.en,
-    options: shuffle([w.en, ...shuffle(enPool.filter((e) => e !== w.en)).slice(0, 3)]),
-  });
+  const byId = new Map(words.map((w) => [w.id, w]));
+  const choose = (w: Item): Exercise => wordMeaningChoice(byId.get(w.id)!);
   const mixed = shuffle(words);
   const type: Exercise[] = mixed.slice(0, 4).map((w) => ({ kind: 'type', cardId: w.id, prompt: w.en, accepted: [w.pl], lang: 'pl', hint: w.pos }));
   // Then three of the others in use: their example sentences, built from tiles.
@@ -38,9 +32,12 @@ export function Words() {
   const [session, setSession] = useState<Exercise[] | null>(null);
   const [note, setNote] = useState<string | null>(null);
 
-  const known = useMemo(() => FREQUENCY.filter((w) => cards.has(w.id)).length, [cards]);
+  // A word already taught in a lesson counts as known under that card, not as something new to learn again.
+  const isKnown = useCallback((w: FrequencyWord) => cardIdsForWord(w).some((id) => cards.has(id)), [cards]);
+  const known = useMemo(() => FREQUENCY.filter(isKnown).length, [isKnown]);
   const words = BANDS[band];
-  const unlearnt = words.filter((w) => !cards.has(w.id));
+  const unlearnt = words.filter((w) => !isKnown(w));
+  const fromCourse = words.filter((w) => !cards.has(w.id) && isKnown(w)).length;
 
   const finish = async (r: SessionResult) => {
     setSession(null);
@@ -79,7 +76,7 @@ export function Words() {
 
         <div className="bands" role="group" aria-label="Word bands">
           {BANDS.map((b, i) => {
-            const k = b.filter((w) => cards.has(w.id)).length;
+            const k = b.filter(isKnown).length;
             return (
               <button key={i} className="band" aria-pressed={band === i} onClick={() => setBand(i)}>
                 <b>
@@ -112,6 +109,13 @@ export function Words() {
           </button>
         </div>
 
+        {fromCourse > 0 && (
+          <p className="muted" style={{ fontSize: 14 }}>
+            {fromCourse} of these you already know from the course, so they aren't taught again here: they come back with the lessons that
+            taught them.
+          </p>
+        )}
+
         <ol className="word-list">
           {words.map((w) => (
             <li key={w.id}>
@@ -121,7 +125,13 @@ export function Words() {
                   <span className="pl" lang="pl">
                     {w.pl}
                   </span>
-                  {cards.has(w.id) && <span className="known-dot" title="In your review deck" aria-label="In your review deck" />}
+                  {isKnown(w) && (
+                    <span
+                      className="known-dot"
+                      title={cards.has(w.id) ? 'In your review deck' : 'Already learnt in the course'}
+                      aria-label={cards.has(w.id) ? 'In your review deck' : 'Already learnt in the course'}
+                    />
+                  )}
                 </div>
                 <small>
                   {w.en} · <i>{w.pos}</i> · <span className="say">{respell(w.pl)}</span>

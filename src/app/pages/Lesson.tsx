@@ -6,7 +6,8 @@ import { Rosette } from '../components/Rosette';
 import { Session, type SessionResult } from '../components/Session';
 import { markCultureSeen, useCultureSeen } from '../lib/cultureStops';
 import { useStats } from '../lib/derived';
-import { isGraded, lessonForSpeaker, lessonPlan, pictureRound, practiceExercises, shuffle } from '../lib/exercises';
+import { MASTERY } from '../../shared/progress';
+import { isGraded, lessonForSpeaker, lessonPlan, pictureRound, practiceExercises, shuffle, type Exercise } from '../lib/exercises';
 import { speakingPaused } from '../lib/listen';
 import { lessonPictures, revisionCards, sprinkle, warmupCards } from '../lib/reinforce';
 import { Link, navigate, useTitle } from '../lib/router';
@@ -14,6 +15,9 @@ import { completeLesson, getState, submitReviews, useApp } from '../lib/store';
 import { NotFound } from './NotFound';
 import { clearSession, loadSession, markSent, saveSession, type SavedSession } from '../lib/resume';
 import type { Lesson } from '../../content/types';
+
+/** A session's ratings, ready to send as reviews. */
+const ratingsOf = (r: SessionResult) => [...r.ratings.entries()].map(([cardId, { rating, at }]) => ({ cardId, rating, at }));
 
 interface Outcome {
   score: number;
@@ -67,6 +71,9 @@ export function LessonPage({ id }: { id: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lesson, speaker, signedIn, speakingOn, run]);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
+  /** A second go at what was missed, and whether it has been taken. */
+  const [fixing, setFixing] = useState<Exercise[] | null>(null);
+  const [fixed, setFixed] = useState(false);
 
   if (!lesson || !unit) return <NotFound />;
 
@@ -89,7 +96,44 @@ export function LessonPage({ id }: { id: string }) {
     setOutcome({ ...out, revised: extra.filter((a) => a.tag === 'revision').length, pictures: extra.filter((a) => a.tag === 'picture').length, missed, spoken: r.spoken });
   };
 
-  if (outcome) return <Finish lessonId={lesson.id} outcome={outcome} onRetry={() => (setOutcome(null), setResumeFrom(null), setRun(run + 1))} />;
+  // A second go at what was missed, straight away while it is still fresh: retrieval to the point of getting it
+  // right, rather than moving on from a lesson half learnt. These are real reviews of cards the lesson has just
+  // added, so their ratings are sent as such; the lesson's score keeps the first attempt.
+  const fixUp = () => {
+    if (!outcome) return;
+    const { progress } = getState();
+    const cards = outcome.missed.flatMap((id) => {
+      const c = progress.cards.get(id);
+      return c ? [{ id, reps: c.reps }] : [];
+    });
+    const exercises = practiceExercises(cards, speaker);
+    // Nothing to ask (a card the device hasn't saved yet): say it was done rather than open an empty session.
+    if (exercises.length) setFixing(exercises);
+    else setFixed(true);
+  };
+
+  if (fixing)
+    return (
+      <Session
+        exercises={fixing}
+        what="practice"
+        rateable
+        onClose={(r) => (setFixing(null), void submitReviews(ratingsOf(r)))}
+        leaveNote="The ones you've answered are saved."
+        onFinish={(r) => (setFixing(null), setFixed(true), void submitReviews(ratingsOf(r)))}
+      />
+    );
+
+  if (outcome)
+    return (
+      <Finish
+        lessonId={lesson.id}
+        outcome={outcome}
+        fixed={fixed}
+        onFix={fixUp}
+        onRetry={() => (setOutcome(null), setResumeFrom(null), setFixed(false), setRun(run + 1))}
+      />
+    );
   // Leaving part-way: the place is kept on this device, and warm-up and revision answers (real reviews) are sent now.
   const leave = (r: SessionResult) => {
     navigate('/learn');
@@ -155,7 +199,20 @@ function SpeakerNote({ lesson, speaker }: { lesson: Lesson; speaker?: 'm' | 'f' 
   );
 }
 
-function Finish({ lessonId, outcome, onRetry }: { lessonId: string; outcome: Outcome; onRetry: () => void }) {
+function Finish({
+  lessonId,
+  outcome,
+  fixed,
+  onFix,
+  onRetry,
+}: {
+  lessonId: string;
+  outcome: Outcome;
+  /** Whether the second go at what was missed has already been taken. */
+  fixed: boolean;
+  onFix: () => void;
+  onRetry: () => void;
+}) {
   const stats = useStats();
   const user = useApp((s) => s.user);
   const next = nextLessonAfter(lessonId);
@@ -208,9 +265,26 @@ function Finish({ lessonId, outcome, onRetry }: { lessonId: string; outcome: Out
           </p>
         )}
         {outcome.missed.length > 0 && <Missed ids={outcome.missed} />}
-        {outcome.score < 70 && (
+        {outcome.missed.length > 0 && !fixed && (
+          <div className="stack" style={{ maxWidth: '46ch', alignItems: 'center', gap: 8 }}>
+            <p className="muted">
+              {outcome.score < MASTERY
+                ? 'Getting these right now, while they are fresh, is worth more than moving on: a word you leave unlearnt makes the next lesson harder.'
+                : 'Worth a second go while they are fresh.'}
+            </p>
+            <button className={`btn ${outcome.score < MASTERY ? 'red' : 'quiet'}`} onClick={onFix}>
+              Practise the {outcome.missed.length} you missed
+            </button>
+          </div>
+        )}
+        {fixed && (
           <p className="muted" style={{ maxWidth: '46ch' }}>
-            The words you missed will come back sooner in review. Practising the lesson again today also helps.
+            <b lang="pl">Jeszcze raz.</b> Second go done. They'll still come back in review, which is what makes them stick.
+          </p>
+        )}
+        {outcome.score < MASTERY && (
+          <p className="muted" style={{ maxWidth: '46ch' }}>
+            Under {MASTERY}% on a lesson usually means it went by too fast. The course map keeps this one marked, so you can come back to it.
           </p>
         )}
         {!user && (

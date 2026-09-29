@@ -8,6 +8,13 @@ export function lessonScore(correct: number, total: number): number {
   return Math.round((Math.min(correct, total) / total) * 100);
 }
 
+/**
+ * Below this, a lesson has been got through rather than learnt: getting on for a third of it was missed or
+ * needed help. The lesson still counts as done — nothing is ever locked — but it is marked as worth another go,
+ * and the finish screen offers a second pass over what was missed while it is still fresh.
+ */
+export const MASTERY = 70;
+
 /** 10 XP for finishing, up to 10 more for accuracy. */
 export function lessonXp(score: number): number {
   return LESSON_BASE_XP + Math.round(Math.max(0, Math.min(100, score)) / 10);

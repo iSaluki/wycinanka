@@ -81,4 +81,23 @@ export function nextLessonAfter(id: string): Lesson | undefined {
   return i >= 0 ? LESSONS[i + 1] : undefined;
 }
 
+/**
+ * The lesson card that teaches the same word as a word of the 500, where one does.
+ *
+ * Nearly a third of the frequency list is also taught in a lesson, under a different card id. Left alone, a
+ * learner who has known {dom} since Unit 1 is shown it again as a brand-new word, and then reviews it twice
+ * under two schedules that know nothing about each other. The frequency deck therefore treats a word as already
+ * learnt when its lesson card is in the deck, and doesn't teach it a second time.
+ */
+const itemByWord = new Map<string, string>();
+for (const u of UNITS) for (const l of u.lessons) if (!l.phonics) for (const i of l.items) itemByWord.set(i.pl.toLocaleLowerCase('pl'), i.id);
+
+export const lessonCardForWord = (pl: string): string | undefined => itemByWord.get(pl.toLocaleLowerCase('pl'));
+
+/** Every card id under which this word may already have been learnt: its own, and the lesson's if there is one. */
+export const cardIdsForWord = (word: { id: string; pl: string }): string[] => {
+  const other = lessonCardForWord(word.pl);
+  return other ? [word.id, other] : [word.id];
+};
+
 export const TOTAL_LESSONS = LESSONS.length;

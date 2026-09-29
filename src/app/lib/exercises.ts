@@ -1,10 +1,13 @@
-import type { DialogueLine, Drill, FrequencyWord, Item, Lesson, Sentence, Spotlight } from '../../content/types';
+import type { DialogueLine, Drill, FrequencyWord, Gender, Item, Lesson, Sentence, Spotlight } from '../../content/types';
 import { getCard, LESSONS, type CardSource } from '../../content/course';
+import { skillOfLesson } from '../../content/skills';
 import { PICTURES, type Picture } from '../../content/pictures';
 import { FREQUENCY } from '../../content/frequency';
 import { CHUNK_CORES, chunkCore, CHUNKS, type Chunk } from '../../content/chunks';
 import { normalise } from '../../shared/grade';
+import { confusionWithAny, hardDistractors, overlap } from '../../shared/confusable';
 import { respell } from '../../shared/phonetics';
+import { confusionBonus } from './confusions';
 import { voiceOfSpeaker, type VoiceName } from './voices';
 
 /** Exercise model and generators for lessons and reviews. */
@@ -162,7 +165,7 @@ export function shuffle<T>(xs: readonly T[], rand = Math.random): T[] {
   return a;
 }
 
-/** Pick `n` distinct distractors whose normalised text differs from the answer. */
+/** Pick `n` distinct distractors whose normalised text differs from the answer, in no particular order. */
 function distractors(answer: string, pool: string[], n: number): string[] {
   const seen = new Set([normalise(answer)]);
   const out: string[] = [];
@@ -176,9 +179,71 @@ function distractors(answer: string, pool: string[], n: number): string[] {
   return out;
 }
 
+/**
+ * `n` wrong answers that could really be mistaken for this one (see `src/shared/confusable.ts`), preferring
+ * any this learner has chosen before. Falls back to picking at random when the pool is too small to choose from.
+ */
+function hardOptions(cardId: string, answer: string, pool: string[], n: number): string[] {
+  const chosenBefore = confusionBonus(cardId);
+  const picked = hardDistractors(answer, pool, n, { key: (x) => x, bonus: chosenBefore, bonusWidens: !!chosenBefore });
+  return picked.length >= n ? picked : [...picked, ...fillUp(answer, pool, picked, n)];
+}
+
+/** Applies a card's confusion bonus to whichever field a candidate shows, or nothing when there is none. */
+function bonusOn<T>(bonus: ((text: string) => number) | undefined, text: (x: T) => string): ((x: T) => number) | undefined {
+  return bonus && ((x: T) => bonus(text(x)));
+}
+
+/**
+ * Tops a set of wrong answers up to `n` with ones picked at random, for the few questions early in the course
+ * where too little has been taught to find anything genuinely confusable. Never repeats an answer already there.
+ */
+function fillUp(answer: string, pool: string[], already: string[], n: number): string[] {
+  const taken = new Set([normalise(answer), ...already.map(normalise)]);
+  return distractors(answer, pool.filter((p) => !taken.has(normalise(p))), n - already.length);
+}
+
+/** A word with both its languages, so a wrong answer can be chosen by its Polish and shown in English. */
+type WordLike = { pl: string; en: string; g?: Gender };
+
 function nearbyLessons(lesson: Lesson): Lesson[] {
   const i = LESSONS.findIndex((l) => l.id === lesson.id);
   return LESSONS.slice(Math.max(0, i - 2), i + 3);
+}
+
+const tileCache = new Map<string, string[]>();
+
+/** The words of the sentences around this one: where a sentence's spare tiles come from. */
+function nearbyTiles(lesson: Lesson): string[] {
+  let pool = tileCache.get(lesson.id);
+  if (!pool) {
+    pool = nearbyLessons(lesson).flatMap((l) => l.sentences.flatMap((x) => tokenise(x.pl)));
+    tileCache.set(lesson.id, pool);
+  }
+  return pool;
+}
+
+const knownCache = new Map<string, WordLike[]>();
+
+/**
+ * The words a wrong answer in this lesson may be drawn from: everything taught up to just after it. A wrong
+ * answer has to be a word the learner could believe, and any earlier word is one they have met — which also
+ * means there are enough of them to find one that is genuinely easy to mistake for the answer. Sticking to the
+ * two lessons either side leaves almost nothing to choose from in Unit 1.
+ *
+ * Phonics lessons are left out: their items are spellings whose "meanings" are sounds and rules ("ch / h",
+ * "final consonants lose their voice"), which nobody would mistake for the meaning of a word.
+ */
+function knownWords(lesson: Lesson): WordLike[] {
+  let pool = knownCache.get(lesson.id);
+  if (!pool) {
+    const i = LESSONS.findIndex((l) => l.id === lesson.id);
+    pool = LESSONS.slice(0, i + 3)
+      .filter((l) => !l.phonics)
+      .flatMap((l) => l.items);
+    knownCache.set(lesson.id, pool);
+  }
+  return pool;
 }
 
 const accEn = (x: { en: string; altEn?: string[] }) => [x.en, ...(x.altEn ?? [])];
@@ -206,16 +271,45 @@ export function sameMeaning(en: string, pl: string): string[] {
 
 const sameText = (a: string) => (b: string) => normalise(a) === normalise(b);
 
-function chooseMeaning(item: Item, pool: string[], audio = false): Exercise {
+/**
+ * "What does this mean?" — the Polish is shown, the meanings are the options. The wrong meanings belong to
+ * words that look or sound like this one, so the whole word has to be read rather than its first letter or its
+ * topic: shown {kot}, the options are the meanings of {kot}, {kod}, {kto} and {koc}.
+ */
+function chooseMeaning(item: Item, pool: WordLike[], audio = false): Exercise {
   // Never offer another right meaning as a wrong option.
   const right = accEn(item);
-  const opts = shuffle([item.en, ...distractors(item.en, pool.filter((e) => !right.some(sameText(e))), 3)]);
+  const alsoRight = (w: WordLike) => right.some(sameText(w.en));
+  const chosenBefore = confusionBonus(item.id);
+  const wrong = hardDistractors(item.pl, pool, 3, {
+    key: (w) => w.pl,
+    label: (w) => w.en,
+    answerLabel: item.en,
+    exclude: alsoRight,
+    bonus: bonusOn(chosenBefore, (w: WordLike) => w.en),
+    bonusWidens: !!chosenBefore,
+  }).map((w) => w.en);
+  const spare = wrong.length < 3 ? fillUp(item.en, pool.filter((w) => !alsoRight(w)).map((w) => w.en), wrong, 3) : [];
+  const opts = shuffle([item.en, ...wrong, ...spare].slice(0, 4));
   return { kind: 'choose', cardId: item.id, prompt: item.pl, promptLang: 'pl', options: opts, answer: item.en, audio, hint: item.hint };
 }
 
-function choosePolish(item: Item, pool: string[]): Exercise {
+/**
+ * "Choose the Polish" — the wrong answers are the Polish words most easily mistaken for this one, a word of the
+ * same gender for choice, so the form itself has to be recalled and not just the rough shape of the word.
+ */
+function choosePolish(item: Item, pool: WordLike[]): Exercise {
   const right = sameMeaning(item.en, item.pl);
-  const opts = shuffle([item.pl, ...distractors(item.pl, pool.filter((p) => !right.some(sameText(p))), 3)]);
+  const alsoRight = (w: WordLike) => right.some(sameText(w.pl));
+  const chosenBefore = confusionBonus(item.id);
+  const wrong = hardDistractors(item.pl, pool, 3, {
+    key: (w) => w.pl,
+    exclude: alsoRight,
+    bonus: (w) => (item.g && w.g === item.g ? 0.1 : 0) + (chosenBefore?.(w.pl) ?? 0),
+    bonusWidens: !!chosenBefore,
+  }).map((w) => w.pl);
+  const spare = wrong.length < 3 ? fillUp(item.pl, pool.filter((w) => !alsoRight(w)).map((w) => w.pl), wrong, 3) : [];
+  const opts = shuffle([item.pl, ...wrong, ...spare].slice(0, 4));
   const ex: Exercise = { kind: 'choose', cardId: item.id, prompt: item.en, promptLang: 'en', options: opts, answer: item.pl };
   // A word with a picture is named from the picture, so it attaches to the thing rather than the English.
   return item.img ? { ...ex, image: item.img, instruction: 'What is this in Polish?' } : ex;
@@ -282,10 +376,22 @@ export function mergeChunks(tokens: string[], cores: Array<{ core: string[] }> =
   return out;
 }
 
+/**
+ * Spare tiles worth thinking about: words from nearby sentences that could be mistaken for one the sentence
+ * needs — another case of the same noun, another person of the same verb. A tile that obviously doesn't belong
+ * is no test of anything. Never a word the sentence actually uses.
+ */
+function extraTiles(tokens: string[], pool: string[], n: number, correct: Set<string>): string[] {
+  const candidates = pool.filter((w) => !correct.has(normalise(w)));
+  const picked = hardDistractors('', candidates, n, { key: (w) => w, score: (_, w) => confusionWithAny(w, tokens) });
+  return picked.length >= n ? picked : [...picked, ...distractors('', candidates.filter((w) => !picked.includes(w)), n - picked.length)];
+}
+
 function buildPolish(s: Sentence, wordPool: string[]): Exercise {
   const tokens = mergeChunks(tokenise(s.pl));
   const correct = new Set([s.pl, ...(s.altPl ?? [])].flatMap(tokenise).map(normalise));
-  const extra = (s.extra?.length ? s.extra : distractors('', wordPool, 2)).filter((e) => !correct.has(normalise(e)));
+  // Sentences carry spare tiles chosen by hand; where one doesn't, they are worked out.
+  const extra = s.extra?.length ? s.extra.filter((e) => !correct.has(normalise(e))) : extraTiles(tokens, wordPool, 2, correct);
   const tiles = shuffle([...tokens, ...extra]);
   return { kind: 'build', cardId: s.id, prompt: s.en, tiles, accepted: accPl(s).filter((a) => buildable(a, tiles)), lang: 'pl' };
 }
@@ -314,6 +420,83 @@ function buildFromAudio(s: Sentence, wordPool: string[]): Exercise {
 
 function gapFor(d: Drill): Exercise {
   return { kind: 'gap', cardId: d.id, text: d.text, en: d.en, options: shuffle(d.options), answer: d.answer, why: d.why };
+}
+
+/* ---------- Why this form? ---------- */
+
+/** A rule as an answer to choose: its first sentence, which is the part that states it. */
+export const ruleText = (why: string) => (why.match(/^[^.!?]*[.!?]/)?.[0] ?? why).trim();
+
+interface RuleSource {
+  drill: Drill;
+  /** The grammar this drill belongs to: two rules about the same case could both be true of one sentence. */
+  skill: string;
+  /** Where in the course it sits, so rules are drawn from nearby grammar rather than the far end of the course. */
+  at: number;
+}
+
+let ruleCache: RuleSource[] | undefined;
+
+function rules(): RuleSource[] {
+  ruleCache ??= LESSONS.flatMap((l, at) =>
+    l.drills.filter((d) => d.why).map((drill) => ({ drill, skill: skillOfLesson(l.id) ?? `lesson:${l.id}`, at })),
+  );
+  return ruleCache;
+}
+
+/**
+ * "Why is it this form?" — the drill's own rule against rules from other grammar.
+ *
+ * A learner can pass every gap-fill by ear and still not know what decides the ending, which is what they need
+ * when they meet a word no drill ever showed them. The rules are already written, one per drill, and are read at
+ * the moment a drill is failed; asking for one back is retrieval of the explanation rather than of the form.
+ *
+ * The wrong answers are always rules about **other** grammar (another case, another tense), never another rule
+ * about this one: two rules about the accusative could both be true of the same sentence, and a wrong answer
+ * that is actually right teaches the learner to distrust the app.
+ */
+export function whyExercise(d: Drill, rand = Math.random): Exercise | null {
+  if (!d.why) return null;
+  const all = rules();
+  const own = all.find((r) => r.drill.id === d.id);
+  if (!own) return null;
+  const answer = ruleText(d.why);
+  const seen = new Set([normalise(answer)]);
+  const candidates = all.filter((r) => {
+    if (r.skill === own.skill) return false;
+    const k = normalise(ruleText(r.drill.why!));
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+  if (candidates.length < 2) return null;
+  // Rules of about the same length as the right one, from the nearest other grammar: a one-line rule among two
+  // three-line ones can be picked out without reading any of them, and a rule from grammar the learner has met
+  // is worded in words they know.
+  const cost = (r: RuleSource) => {
+    const text = ruleText(r.drill.why!);
+    return Math.abs(text.length - answer.length) / Math.max(text.length, answer.length) + Math.abs(r.at - own.at) / LESSONS.length;
+  };
+  const near = [...candidates].sort((a, b) => cost(a) - cost(b)).slice(0, 12);
+  const wrong = shuffle(near, rand).slice(0, 2).map((r) => ruleText(r.drill.why!));
+  return {
+    kind: 'choose',
+    cardId: d.id,
+    prompt: d.text.replace('___', d.answer),
+    promptLang: 'pl',
+    options: shuffle([answer, ...wrong], rand),
+    answer,
+    instruction: 'Why is it this form?',
+    hint: d.en,
+  };
+}
+
+/**
+ * Grammar drills get harder as they mature: the gap while the form is still being learnt, then every other time
+ * the reason behind it, which is what carries over to words no drill ever showed.
+ */
+function drillExercise(d: Drill, reps: number): Exercise {
+  return reps >= 2 && reps % 2 === 0 ? (whyExercise(d) ?? gapFor(d)) : gapFor(d);
 }
 
 /** Write a whole sentence in Polish from its English: the hardest form of a sentence card, for mature reviews. */
@@ -431,8 +614,70 @@ export interface LessonPlan {
   outroStart: number;
 }
 
-/** Every dialogue line in the course, for wrong replies in "what do you reply?". */
+/** Every dialogue line in the course, for the wrong answers in the closing conversation. */
 let allLines: DialogueLine[] | undefined;
+
+const replyCache = new WeakMap<DialogueLine[], DialogueLine[]>();
+
+/**
+ * Lines from other conversations that could stand in as a reply, leaving out this conversation's own and the
+ * short all-purpose ones ("Tak.", "Dziękuję!") that would fit anywhere.
+ */
+function replyPool(own: DialogueLine[]): DialogueLine[] {
+  let out = replyCache.get(own);
+  if (!out) {
+    allLines ??= LESSONS.flatMap((x) => x.dialogue ?? []);
+    out = allLines.filter((x) => !own.some((y) => y.pl === x.pl) && x.pl.split(/\s+/).length >= 3);
+    replyCache.set(own, out);
+  }
+  return out;
+}
+
+const candidateCache = new WeakMap<DialogueLine[], DialogueLine[]>();
+
+/**
+ * Lines a wrong answer for this conversation may be drawn from: its own lines first, then every other line in
+ * the course, and only one line per English meaning so that no two options can read the same. Worked out once
+ * per conversation and kept, because each question weighs every line in the course.
+ */
+function candidateLines(own: DialogueLine[]): DialogueLine[] {
+  let out = candidateCache.get(own);
+  if (!out) {
+    allLines ??= LESSONS.flatMap((x) => x.dialogue ?? []);
+    const seen = new Set<string>();
+    out = [...own, ...allLines].filter((x) => {
+      const k = normalise(x.en);
+      if (seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    });
+    candidateCache.set(own, out);
+  }
+  return out;
+}
+
+/**
+ * Wrong meanings for a line that was heard: the English of lines that share words with it, from this
+ * conversation first and then the rest of the course. Against three lines that share nothing, one recognised
+ * word settles the question; against lines built from the same words, the whole line has to be understood.
+ */
+function heardMeanings(line: DialogueLine, own: DialogueLine[], rand: () => number): string[] {
+  const candidates = candidateLines(own);
+  const mine = normalise(line.en);
+  const wrong = hardDistractors(line.pl, candidates, 2, {
+    key: (x) => x.pl,
+    label: (x) => x.en,
+    answerLabel: line.en,
+    exclude: (x) => normalise(x.en) === mine,
+    score: overlap,
+    // A line from the same conversation is about the same thing, so it is a likelier misunderstanding.
+    bonus: (x) => (own.includes(x) ? 0.15 : 0),
+    rand,
+  }).map((x) => x.en);
+  if (wrong.length >= 2) return wrong;
+  const spare = candidates.map((x) => x.en).filter((e) => normalise(e) !== mine && !wrong.includes(e));
+  return [...wrong, ...shuffle(spare, rand).slice(0, 2 - wrong.length)];
+}
 
 /**
  * The lesson's conversation, three ways: heard at natural speed with no text, a question or two on what was
@@ -451,7 +696,7 @@ export function conversation(lesson: Lesson, rand = Math.random): Exercise[] {
     cardId: `${lesson.id}:heard-${i}`,
     prompt: l.pl,
     promptLang: 'pl',
-    options: shuffle([l.en, ...shuffle(d.filter((x) => x.en !== l.en).map((x) => x.en), rand).slice(0, 2)], rand),
+    options: shuffle([l.en, ...heardMeanings(l, d, rand)], rand),
     answer: l.en,
     audio: true,
     voice: voiceOfSpeaker(l.who),
@@ -460,7 +705,7 @@ export function conversation(lesson: Lesson, rand = Math.random): Exercise[] {
   allLines ??= LESSONS.flatMap((x) => x.dialogue ?? []);
   // Wrong replies come from other conversations, leaving out short all-purpose lines ("Tak.", "Dziękuję!") that
   // could fit anywhere.
-  const others = allLines.filter((x) => !d.some((y) => y.pl === x.pl) && x.pl.split(/\s+/).length >= 3);
+  const others = replyPool(d);
   const mine = d.map((l, i) => ({ l, i })).filter(({ l, i }) => i > 0 && l.who === speakers[1] && d[i - 1].who !== l.who);
   const replies: Exercise[] = shuffle(mine, rand)
     .slice(0, 2)
@@ -470,7 +715,9 @@ export function conversation(lesson: Lesson, rand = Math.random): Exercise[] {
       cardId: `${lesson.id}:reply-${i}`,
       prompt: d[i - 1].pl,
       promptLang: 'pl',
-      options: shuffle([l.pl, ...shuffle(others, rand).slice(0, 2).map((x) => x.pl)], rand),
+      // Wrong replies that answer the same cue are the ones worth ruling out: a line about something else can
+      // be dismissed without understanding either.
+      options: shuffle([l.pl, ...hardDistractors(d[i - 1].pl, others, 2, { key: (x) => x.pl, score: overlap, rand }).map((x) => x.pl)], rand),
       answer: l.pl,
       optionStyle: 'pl',
       voice: voiceOfSpeaker(d[i - 1].who),
@@ -487,19 +734,17 @@ export function conversation(lesson: Lesson, rand = Math.random): Exercise[] {
  */
 export function lessonPlan(lesson: Lesson, { speaking = true }: PlanOptions = {}): LessonPlan {
   if (lesson.phonics) return phonicsPlan(lesson, speaking);
-  const near = nearbyLessons(lesson);
-  const enPool = near.flatMap((l) => l.items.map((i) => i.en));
-  const plPool = near.flatMap((l) => l.items.map((i) => i.pl));
-  const wordPool = near.flatMap((l) => l.sentences.flatMap((s) => tokenise(s.pl)));
+  const wordsNear = knownWords(lesson);
+  const wordPool = nearbyTiles(lesson);
 
   const items = withPictures(lesson.items);
-  const intro = stepwise(items, (i) => chooseMeaning(i, enPool), wordPair);
+  const intro = stepwise(items, (i) => chooseMeaning(i, wordsNear), wordPair);
   // A second pass, mixed across the whole lesson: hear it, then find the Polish for the English (or the picture).
   const shuffled = shuffle(items);
   const plain = shuffled.filter((i) => !i.img);
   const mixed = [...plain.slice(0, 2), ...shuffled.filter((i) => i.img), ...plain.slice(2)];
-  const listen: Exercise[] = mixed.slice(0, 2).map((i) => chooseMeaning(i, enPool, true));
-  const pickPl: Exercise[] = mixed.slice(2, 4).map((i) => choosePolish(i, plPool));
+  const listen: Exercise[] = mixed.slice(0, 2).map((i) => chooseMeaning(i, wordsNear, true));
+  const pickPl: Exercise[] = mixed.slice(2, 4).map((i) => choosePolish(i, wordsNear));
   const byLength = shuffle(lesson.items).sort((a, b) => a.pl.length - b.pl.length);
   const produce: Exercise[] = byLength.slice(0, 4).map(typePolish);
   // Two words written from the ear, from those not already typed from the English.
@@ -545,17 +790,16 @@ export const lessonExercises = (lesson: Lesson): Exercise[] => lessonPlan(lesson
 
 /** One exercise for a review card. Mature cards are asked productively (typed); young ones by recognition. */
 export function reviewExercise(src: CardSource, reps: number, cardId: string, speaker?: 'm' | 'f'): Exercise {
-  if (src.kind === 'drill') return gapFor(src.drill);
+  if (src.kind === 'drill') return drillExercise(src.drill, reps);
   if (src.kind === 'item' && src.lesson.phonics) {
     const pool = LESSONS.filter((l) => l.phonics).flatMap((l) => l.items);
     return reps % 2 === 0 ? soundOf(src.item, pool) : readWord(src.item, pool);
   }
   if (src.kind === 'item') {
-    const near = nearbyLessons(src.lesson);
     const item = preferForm(src.item, speaker);
     // Mature words are written: from the English, and every third time from the ear.
     if (reps >= 2) return reps % 3 === 2 && dictatable(item) ? dictation(item) : typePolish(item);
-    return chooseMeaning(item, near.flatMap((l) => l.items.map((i) => i.en)), reps === 1);
+    return chooseMeaning(item, knownWords(src.lesson), reps === 1);
   }
   if (src.kind === 'sentence') {
     const pool = nearbyLessons(src.lesson).flatMap((l) => l.sentences.flatMap((s) => tokenise(s.pl)));
@@ -572,21 +816,24 @@ export function reviewExercise(src: CardSource, reps: number, cardId: string, sp
   return wordExercise(src.word, reps, cardId);
 }
 
-/** "What is this in Polish?" — a picture and four Polish words, the wrong ones from the same deck. */
+/**
+ * "What is this in Polish?" — a picture and four Polish words. The wrong ones come from the same deck, so they
+ * are all things of the same kind, and the most easily confused of those.
+ */
 export function pictureChoice(p: Picture, pool: string[]): Exercise {
   return {
     kind: 'choose',
     cardId: p.id,
     prompt: p.en,
     promptLang: 'en',
-    options: shuffle([p.pl, ...distractors(p.pl, pool, 3)]),
+    options: shuffle([p.pl, ...hardOptions(p.id, p.pl, pool, 3)]),
     answer: p.pl,
     image: p.img,
     instruction: 'What is this in Polish?',
   };
 }
 
-let wordPoolCache: string[] | undefined;
+let wordPoolCache: Array<{ pl: string; en: string; pos: string }> | undefined;
 let exampleTokens: string[] | undefined;
 
 /**
@@ -601,7 +848,7 @@ export function wordInSentence(w: FrequencyWord, cardId = w.id, fromAudio = fals
   if (tokens.length < 2) return null;
   exampleTokens ??= FREQUENCY.flatMap((x) => (x.ex ? tokenise(x.ex[0]) : []));
   const inSentence = new Set(tokenise(pl).map(normalise));
-  const extra = distractors('', exampleTokens.filter((t) => !inSentence.has(normalise(t))), 2);
+  const extra = extraTiles(tokens, exampleTokens, 2, inSentence);
   const ex: Exercise = { kind: 'build', cardId, prompt: en, tiles: shuffle([...tokens, ...extra]), accepted: [pl], lang: 'pl' };
   return fromAudio ? { ...ex, prompt: 'Listen and build what you hear.', audio: pl, meaning: en } : ex;
 }
@@ -610,6 +857,17 @@ export function wordInSentence(w: FrequencyWord, cardId = w.id, fromAudio = fals
  * Frequency words: recognised first, then used in their example sentence, then written from the English, then
  * built from the sound of the sentence, and so on, alternating the word alone with the word in use.
  */
+/** "What does this word mean?", with the wrong meanings chosen as they are everywhere else. */
+export const wordMeaningChoice = (w: FrequencyWord, cardId = w.id): Exercise => ({
+  kind: 'choose',
+  cardId,
+  prompt: w.pl,
+  promptLang: 'pl',
+  options: shuffle([w.en, ...wordMeanings(w, cardId)]),
+  answer: w.en,
+  audio: false,
+});
+
 function wordExercise(w: FrequencyWord, reps: number, cardId: string): Exercise {
   if (reps >= 1 && reps % 2 === 1) {
     const inUse = wordInSentence(w, cardId, reps % 4 === 3);
@@ -619,18 +877,48 @@ function wordExercise(w: FrequencyWord, reps: number, cardId: string): Exercise 
     const also = sameMeaning(w.en, w.pl);
     return { kind: 'type', cardId, prompt: w.en, accepted: [w.pl, ...also], lang: 'pl', hint: w.pos, ...(also.length ? { also } : {}) };
   }
-  wordPoolCache ??= LESSONS.flatMap((l) => l.items.map((i) => i.en));
-  const opts = shuffle([w.en, ...distractors(w.en, wordPoolCache, 3)]);
-  return { kind: 'choose', cardId, prompt: w.pl, promptLang: 'pl', options: opts, answer: w.en, audio: false };
+  return wordMeaningChoice(w, cardId);
+}
+
+/**
+ * Wrong meanings for a word of the 500: the meanings of words it could be mistaken for, from the same part of
+ * speech where possible, since a preposition offered against three verbs gives itself away.
+ */
+function wordMeanings(w: FrequencyWord, cardId: string): string[] {
+  wordPoolCache ??= [...FREQUENCY, ...LESSONS.filter((l) => !l.phonics).flatMap((l) => l.items.map((i) => ({ pl: i.pl, en: i.en, pos: '' })))];
+  const right = new Set([normalise(w.en), ...sameMeaning(w.en, w.pl).map(normalise)]);
+  const own = normalise(w.pl);
+  const alsoRight = (x: { pl: string; en: string }) => right.has(normalise(x.en)) || normalise(x.pl) === own;
+  const chosenBefore = confusionBonus(cardId);
+  const wrong = hardDistractors(w.pl, wordPoolCache, 3, {
+    key: (x) => x.pl,
+    label: (x) => x.en,
+    answerLabel: w.en,
+    exclude: alsoRight,
+    bonus: (x) => (x.pos && x.pos === w.pos ? 0.1 : 0) + (chosenBefore?.(x.en) ?? 0),
+    bonusWidens: !!chosenBefore,
+  }).map((x) => x.en);
+  if (wrong.length >= 3) return wrong;
+  return [...wrong, ...fillUp(w.en, wordPoolCache.filter((x) => !alsoRight(x)).map((x) => x.en), wrong, 3)];
 }
 
 /* ---------- Lexical chunks ---------- */
 
+let chunkTokens: string[] | undefined;
+
 const litHint = (c: Chunk) => (c.lit ? `Word for word it's "${c.lit}", but it means "${c.en}". Learn it as one phrase.` : undefined);
 
-/** "What does this phrase mean?" */
+/** "What does this phrase mean?" — against the meanings of the phrases it sounds most like. */
 export function chunkMeaning(c: Chunk): Exercise {
-  const opts = shuffle([c.en, ...distractors(c.en, CHUNKS.map((x) => x.en), 3)]);
+  const others = CHUNKS.filter((x) => x.id !== c.id && normalise(x.en) !== normalise(c.en));
+  const wrong = hardDistractors(c.pl, others, 3, {
+    key: (x) => x.pl,
+    label: (x) => x.en,
+    answerLabel: c.en,
+    bonus: bonusOn(confusionBonus(c.id), (x: Chunk) => x.en),
+    bonusWidens: true,
+  }).map((x) => x.en);
+  const opts = shuffle([c.en, ...wrong, ...fillUp(c.en, others.map((x) => x.en), wrong, 3)].slice(0, 4));
   return { kind: 'choose', cardId: c.id, prompt: c.pl, promptLang: 'pl', options: opts, answer: c.en, instruction: 'What does this phrase mean?', hint: litHint(c) };
 }
 
@@ -660,7 +948,8 @@ export function buildWithChunk(c: Chunk): Exercise | null {
   const [pl, en] = c.ex;
   const tiles = mergeChunks(tokenise(pl), [{ core: tokenise(chunkCore(c)).map((w) => w.toLocaleLowerCase('pl')) }, ...CHUNK_CORES]);
   const inSentence = new Set(tokenise(pl).map(normalise));
-  const extra = distractors('', CHUNKS.flatMap((x) => (x.ex ? tokenise(x.ex[0]) : [])).filter((w) => !inSentence.has(normalise(w))), 2);
+  chunkTokens ??= CHUNKS.flatMap((x) => (x.ex ? tokenise(x.ex[0]) : []));
+  const extra = extraTiles(tiles, chunkTokens, 2, inSentence);
   return { kind: 'build', cardId: c.id, prompt: en, tiles: shuffle([...tiles, ...extra]), accepted: [pl], lang: 'pl' };
 }
 

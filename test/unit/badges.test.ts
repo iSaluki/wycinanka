@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { LESSONS } from '../../src/content/course';
+import { cardIdsForWord, LESSONS } from '../../src/content/course';
 import { FREQUENCY } from '../../src/content/frequency';
 import { BADGES, badgeStates, badgeStats, bestStreak, earnedBadges } from '../../src/shared/badges';
 import { applyLesson, applyReviews, emptyState, emptyTouched } from '../../src/shared/engine';
@@ -49,7 +49,11 @@ describe('badges', () => {
     );
     const s = badgeStats(p);
     expect(s.bestStreak).toBe(7);
-    expect(s.words).toBe(3);
+    // A word of the 500 that a lesson also teaches counts as learnt from that lesson: the frequency deck never
+    // teaches it a second time, so the badge has to see it under either card or "all 500 words" is unreachable.
+    const fromLessons = FREQUENCY.filter((w) => !p.cards.has(w.id) && cardIdsForWord(w).some((id) => p.cards.has(id)));
+    expect(fromLessons.length, 'the first units teach words that are also in the 500').toBeGreaterThan(0);
+    expect(s.words).toBe(3 + fromLessons.length);
     expect(s.reviews).toBe(3);
     expect(s.perfect).toBe(0);
     expect(earnedBadges(p)).toEqual(expect.arrayContaining(['streak-3', 'streak-7']));

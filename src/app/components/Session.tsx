@@ -3,7 +3,9 @@ import type { Rating } from '../../shared/fsrs';
 import { lessonOfCard, LESSONS } from '../../content/course';
 import { isKnownForm } from '../../content/lexicon';
 import { grade, passes, type GradeResult } from '../../shared/grade';
-import { hintLimit, isGraded, type Exercise, type ExtraTag, type GradedExercise } from '../lib/exercises';
+import { answeredSlowly, type PaceInput } from '../../shared/pace';
+import { hintLimit, isGraded, tokenise, type Exercise, type ExtraTag, type GradedExercise } from '../lib/exercises';
+import { noteConfusion } from '../lib/confusions';
 import { pauseSpeaking } from '../lib/listen';
 import { playCorrect, playFinished, playWrong, soundEffectsOn } from '../lib/sfx';
 import { speak } from '../lib/speech';
@@ -83,6 +85,22 @@ function ruleFor(cardId: string, forms: string[]): string | undefined {
     if (d) return d.why;
   }
   return undefined;
+}
+
+/** How long this question should take someone who knows the answer (see `src/shared/pace.ts`). */
+function paceOf(ex: GradedExercise, expected: string): PaceInput | null {
+  switch (ex.kind) {
+    case 'choose':
+      return { how: 'pick', length: ex.prompt.length, options: ex.options.length, audio: !!ex.audio };
+    case 'gap':
+      return { how: 'pick', length: ex.text.length + ex.en.length, options: ex.options.length };
+    case 'type':
+      return { how: 'type', length: expected.length, audio: !!ex.audio };
+    case 'build':
+      return { how: 'build', length: expected.length, options: tokenise(expected).length, audio: !!ex.audio };
+    case 'match':
+      return null;
+  }
 }
 
 function check(ex: GradedExercise, answer: string): { result: GradeResult | null; pass: boolean; expected: string; lang: 'pl' | 'en' } {
@@ -310,8 +328,14 @@ export function Session({
     const pass = checked.pass && result?.verdict !== 'accent';
     const helped = hints > 0 || !!accentNudge;
     const close = result?.verdict === 'typo';
-    const rating: Rating = !pass ? 1 : close || helped ? 2 : 3;
+    // A right answer that took a long time is a shakier memory than one that came at once, so it comes back
+    // sooner. It still counts as right, and never against the lesson's score.
+    const pacing = paceOf(ex, expected);
+    const slow = pass && !!pacing && answeredSlowly(pacing, Date.now() - started.current);
+    const rating: Rating = !pass ? 1 : close || helped || slow ? 2 : 3;
     record(ex.cardId, pass, rating, entry.retry, ex.tag, helped);
+    // A wrong option chosen once is the best wrong option to offer again: remember it for this card.
+    if (!pass && (ex.kind === 'choose' || ex.kind === 'gap') && answer) noteConfusion(ex.cardId, answer);
     if (!pass && !entry.retry)
       setQueue((q) => {
         // Back in a few questions, but never inside the closing conversation (which starts with listening).
@@ -356,7 +380,9 @@ export function Session({
             ? `${en} Polish letters fixed.`
             : hints
               ? `${en} With a hint, so it'll come back sooner.`
-              : en
+              : slow
+                ? `${en} That took a moment, so it'll come back sooner.`
+                : en
         : result?.verdict === 'accent'
           ? 'Polish letters missing'
           : result?.verdict === 'form'

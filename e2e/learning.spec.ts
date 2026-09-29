@@ -309,6 +309,12 @@ test('a missing Polish letter is pointed out and must be fixed; hints help witho
   await solveLesson(page, 'u01-l3');
   await expect(page.locator('.missed')).toContainText(word.pl);
   await expect(page.locator('.missed')).toContainText(next.pl);
+
+  // And can be practised again straight away, while they are still fresh.
+  const second = page.getByRole('button', { name: /^Practise the \d+ you missed$/ });
+  await expect(second).toBeVisible();
+  await second.click();
+  await expect(page.locator('.player .instruction').first()).toBeVisible();
 });
 
 test('leaving a lesson part-way asks first, and closing a review really closes it', async ({ page }) => {

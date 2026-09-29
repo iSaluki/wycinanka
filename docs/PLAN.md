@@ -406,3 +406,76 @@ Deviations from the plan:
 - **Offline and guests**: guest progress is kept on the device; signed-in results wait in an outbox when offline.
 - **Stable card ids** from the text, with the old numbered ids kept, and a recorded list guarded by a test.
 - **CI** on every pull request; sign-in lockouts per network; a daily speech budget; service-worker caching fixed.
+
+### 10.3 Fourth release: the quality of the retrieval
+
+The third release closed the gaps the audit found in *what* the course covers. This one is about how hard the
+questions are, because a question that can be answered without knowing the answer teaches nothing — and, worse,
+tells the scheduler the card is stronger than it is. Measured against the course as it stood:
+
+| What was wrong | What it cost |
+|---|---|
+| Wrong answers were picked **at random** from a window of five lessons | Three unrelated words can be ruled out by topic, so a learner passes without reading the Polish. FSRS then reads that pass as recall and stretches the interval: the weakness is not just hidden, it is rewarded. |
+| Comprehension questions about a conversation drew all their options from **that same four-line conversation** | One recognised word settles the question. |
+| The 82 grammar spotlights were **read, never recalled** | A learner can pass every gap-fill by ear and still not know what decides the ending, which is exactly what they need for a word no drill showed them. |
+| A correct answer counted the same however long it took | Retrieval speed is the better signal of fluency, and the timer was already there, measured and thrown away. |
+| Finishing a lesson at 50% marked it done and moved on | The missed words came back in review, but the lesson's grammar was never re-taught. |
+| 148 of the 500 frequency words are **also lesson items**, on separate card ids | A word mastered in Unit 1 is presented as new, then reviewed twice on two schedules that know nothing about each other. |
+
+What was built:
+
+- **A confusability measure** (`src/shared/confusable.ts`): how easily two Polish words could be mistaken for
+  each other, from spelling distance, how alike they sound once the reading rules are applied (so *kot* / *kod*
+  and *morze* / *może* come out as near-identical), and how much of the start and end they share — Polish words
+  differ from each other mostly in their endings. Every multiple-choice question in the app now draws its wrong
+  answers from the hardest candidates rather than at random, preferring a word of the same gender or part of
+  speech, and preferring one this learner has chosen before. The wrong answers are **sampled** from a shortlist
+  of the hardest, so questions stay hard without being identical twice running.
+- **Pool widened to everything taught so far**, not the two lessons either side: a wrong answer must be a word
+  the learner could believe, and any earlier word is one they have met — which also means there are enough of
+  them to find one that is genuinely confusable. The sounds unit is excluded, since its items are spellings whose
+  "meanings" are rules.
+- **Conversation questions by lexical overlap**: the wrong meanings belong to lines built from the same words as
+  the line heard, drawn from the whole course, so the whole line has to be understood.
+- **"Why is it this form?"** (`whyExercise`): once a grammar drill is mature it alternates with a question asking
+  for the rule behind the ending, using the `why` text each drill already carries. Wrong answers are always rules
+  about *other* grammar — two rules about the accusative could both be true of one sentence, and a wrong answer
+  that is actually right teaches a learner to distrust the app. It keeps the drill's own card id, so no review
+  history is split.
+- **Hesitation-aware ratings** (`src/shared/pace.ts`): a right answer that took clearly longer than it should is
+  rated Hard rather than Good, so it comes back sooner. The allowances are deliberately generous, and an answer
+  that took minutes is treated as an interruption rather than as hesitation — the rule can only ever shorten an
+  interval, never stretch one.
+- **A second go while it is fresh**: below 70% (`MASTERY`), the finish screen offers a round on just the things
+  that were missed, and the course map marks the lesson as worth another go. Nothing is locked.
+- **One word, one schedule**: a word of the 500 that a lesson also teaches counts as learnt from that lesson
+  (`cardIdsForWord`), so the frequency deck doesn't teach it again, and the "all 500 words" badge counts it under
+  either card.
+- **Spare tiles that are near-misses** of a word the sentence needs, for the example sentences of the 500 words
+  and the phrase examples. The 351 lesson sentences keep the spare tiles written for them by hand.
+
+Guarded by `test/unit/confusable.test.ts`, `pace.test.ts`, `questions.test.ts` (which builds every question the
+course can ask, several times over, and measures that the chosen wrong answers are several times harder than
+random ones), `confusions.test.ts` and `context.test.ts`.
+
+#### Deliberately not done here
+
+- **A reading and listening library**, which is the biggest thing still missing. Everything the learner hears or
+  reads is a fragment: 351 sentences averaging 4.1 words, 367 conversation lines averaging 4.6, 3,132 running
+  words of Polish in the whole course, and only 55 of its 718 utterances contain a clause connector (*że,
+  który, bo, jeśli, gdy, żeby*). The longest text anywhere is 15 words. A learner can finish all 96 lessons
+  without ever having processed a Polish paragraph, which is the real distance between a strong A2 and B1. This
+  needs 80–200-word texts at natural speed with tappable transcripts and comprehension questions — content
+  work, and every fixed Polish string needs a recording (`npm run voice`), so it is a release of its own.
+- **Free production**: nothing yet asks the learner to say or write something that isn't checked against a fixed
+  string. The cheapest honest version is an open answer graded structurally — "answer in Polish: *Co robiłeś
+  wczoraj?*", checked for a past-tense verb agreeing with the learner's gender using `src/content/lexicon.ts`
+  and the word-by-word grader that already exists — followed by transformation drills generated from
+  `DECLENSIONS` ("say it about yesterday", "make it negative"), and only then a branching role-play.
+- **Splitting recognition from production** into two cards per word. One card still holds one memory strength for
+  both routes; today the format tracks maturity (recognition at 0–1 reviews, typed from 2 on), which is a
+  reasonable approximation. Hesitation-aware rating was the cheaper half of the same idea.
+- **53 words are taught but never used** in any sentence, conversation, drill or example, among them *dlaczego*,
+  *człowiek*, *dać*, *wziąć* and the imperatives *idź* and *weź* that Unit 23 exists to teach. They are listed in
+  `test/unit/uncontextualised.json`, and a test now stops the list growing. Fixing them means writing a sentence
+  for each, and a recording for each sentence.
