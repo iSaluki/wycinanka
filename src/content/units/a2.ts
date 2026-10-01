@@ -97,7 +97,7 @@ export const u11 = unit(
         ['Marek', 'Co robiłaś w weekend?', 'What did you do at the weekend?'],
         ['Kasia', 'Czytałam i oglądałam filmy. A ty?', 'I read and watched films. And you?'],
         ['Marek', 'Pracowałem.', 'I worked.'],
-        ['Kasia', 'Biedny!', 'Poor you!'],
+        ['Kasia', 'Biedaku!', 'Poor you!'],
       ],
     }),
     lesson('u11-l3', 'I went, I ate', 'Use common irregular past forms.', {
@@ -211,7 +211,7 @@ export const u12 = unit(
       ],
       drills: [
         ['Czy możesz ___ drzwi?', 'Can you open the door?', ['otworzyć', 'otwierać'], 'otworzyć', 'One single action → perfective.'],
-        ['Zawsze ___ klucze!', 'I always forget my keys!', ['zapominam', 'zapomnę'], 'zapominam', '"Always" → repeated → imperfective.'],
+        ['Zawsze ___ kluczy!', 'I always forget my keys!', ['zapominam', 'zapomnę'], 'zapominam', '"Always" → repeated → imperfective.', { key: 'd2' }],
         ['Kiedy ___ do domu?', 'When will you come back home?', ['wrócisz', 'wracasz'], 'wrócisz', 'Perfective present form = future.'],
       ],
       dialogue: [
@@ -645,7 +645,7 @@ export const u16 = unit(
         ['Czy ___ się podoba?', 'Do you like it?', ['ci', 'ty', 'cię'], 'ci', 'Dative "to you" is ci.'],
         ['Jest ___ zimno.', "I'm cold.", ['mi', 'ja', 'mnie'], 'mi'],
         ['Te buty ___ mi się.', 'I like these shoes.', ['podobają', 'podoba'], 'podobają', 'The things you like are the subject, so plural things → plural verb.'],
-        ['Ta zupa bardzo ___ mi.', 'I really like this soup.', ['smakuje', 'smakują'], 'smakuje'],
+        ['Ta zupa bardzo mi ___.', 'I really like this soup.', ['smakuje', 'smakują'], 'smakuje', undefined, { key: 'd4' }],
       ],
       spotlight: {
         title: 'Things please you',

@@ -34,7 +34,7 @@ export const SOUND_GROUPS: SoundGroup[] = [
     note: 'Let air through your nose. Before b/p they sound like "om/em"; before t/d/c like "on/en"; at the end of a word ę is usually plain e.',
     sounds: [
       { spelling: 'ą', ipa: 'ɔ̃', like: 'French "on" in "bon"', examples: [['są', 'they are'], ['mąż', 'husband']] },
-      { spelling: 'ę', ipa: 'ɛ̃', like: '"en" in French "vin", nasal', examples: [['ręka', 'hand'], ['mięso', 'meat']] },
+      { spelling: 'ę', ipa: 'ɛ̃', like: 'the nasal "in" of French "vin"', examples: [['ręka', 'hand'], ['mięso', 'meat']] },
     ],
   },
   {

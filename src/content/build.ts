@@ -4,10 +4,12 @@ import type { DialogueLine, Drill, Item, Lesson, Level, Sentence, Spotlight, Uni
 type ItemOpts = { altPl?: string[]; altEn?: string[]; hint?: string; g?: Gender; ex?: string[]; key?: string };
 /** `key`: keeps a sentence's id (and so learners' review cards) when its Polish is corrected. */
 type SentenceOpts = { altPl?: string[]; altEn?: string[]; extra?: string[]; key?: string };
+/** `key`: keeps a drill's id when its Polish is corrected, as for sentences. */
+type DrillOpts = { key?: string };
 
 export type ItemSpec = [pl: string, en: string, opts?: ItemOpts];
 export type SentenceSpec = [pl: string, en: string, opts?: SentenceOpts];
-export type DrillSpec = [text: string, en: string, options: string[], answer: string, why?: string];
+export type DrillSpec = [text: string, en: string, options: string[], answer: string, why?: string, opts?: DrillOpts];
 
 export function slug(s: string): string {
   return s
@@ -46,7 +48,8 @@ export function lesson(
     const n = legacy?.s.indexOf(pl) ?? -1;
     return n >= 0 ? `${id}:s${n + 1}` : `${id}:s-${slug(pl)}`;
   };
-  const drillId = (text: string, answer: string) => {
+  const drillId = (text: string, answer: string, key?: string) => {
+    if (key) return `${id}:${key}`;
     const n = legacy?.d.indexOf(`${text}|${answer}`) ?? -1;
     return n >= 0 ? `${id}:d${n + 1}` : `${id}:d-${slug(text.replace('___', answer))}`;
   };
@@ -54,8 +57,8 @@ export function lesson(
     const { key, ...rest } = o ?? {};
     return { id: sentenceId(pl, key), pl, en, ...rest };
   });
-  const drills: Drill[] = (spec.drills ?? []).map(([text, en, options, answer, why]) => ({
-    id: drillId(text, answer),
+  const drills: Drill[] = (spec.drills ?? []).map(([text, en, options, answer, why, o]) => ({
+    id: drillId(text, answer, o?.key),
     text,
     en,
     options,
