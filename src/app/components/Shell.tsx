@@ -22,6 +22,9 @@ const COMPACT = [...TABS, PROFILE];
 
 const NAV: Record<'rail' | 'compact' | 'tabs', NavItem[]> = { rail: RAIL, compact: COMPACT, tabs: TABS };
 
+/** Where the code lives: Wycinanka is open source (MIT). */
+const SOURCE_URL = 'https://github.com/iSaluki/wycinanka';
+
 /** The brand mark: an eight-petal wycinanka flower in black and red. */
 export function Mark() {
   return (
@@ -145,6 +148,12 @@ export function Shell({ children, aside = true, wide = false }: { children: Reac
             </div>
           )}
           {children}
+          <footer className="site-footer">
+            <span lang="pl">Kod źródłowy</span> · Wycinanka is open source:{' '}
+            <a href={SOURCE_URL} target="_blank" rel="noopener noreferrer">
+              source on GitHub
+            </a>
+          </footer>
         </main>
       </div>
       {aside && (

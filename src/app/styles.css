@@ -232,6 +232,19 @@ a {
   padding: 24px 18px calc(104px + env(safe-area-inset-bottom));
 }
 
+/* Below every Shell page, inside .main so it clears the phone tab bar. */
+.site-footer {
+  margin-top: 56px;
+  padding-top: 16px;
+  border-top: 1px solid var(--rule);
+  color: var(--ink-3);
+  font-size: 14px;
+}
+
+.site-footer a {
+  color: var(--ink-2);
+}
+
 .topbar {
   position: sticky;
   top: 0;

@@ -498,3 +498,12 @@ test('dictation: a word is heard, not shown, and must be spelt exactly', async (
   await expect(page.locator('.sheet.good')).toHaveCount(0);
   await expect(page.locator('.sheet')).toContainText(word);
 });
+
+test('every page in the app links to its source on GitHub', async ({ page }) => {
+  for (const path of ['/welcome', '/', '/learn', '/words', '/culture', '/profile']) {
+    await page.goto(path);
+    const link = page.locator('footer.site-footer').getByRole('link', { name: 'source on GitHub' });
+    await expect(link, path).toHaveAttribute('href', 'https://github.com/iSaluki/wycinanka');
+    await expect(link, path).toHaveAttribute('rel', /noopener/);
+  }
+});
