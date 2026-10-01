@@ -38,3 +38,13 @@ test('the welcome page has the tab bar too, and it leads into the app', async ({
   await expect(page).toHaveURL(/\/$/);
   await expect(page.getByRole('heading', { level: 1 })).toContainText(/Dzień dobry|Dobry wieczór/);
 });
+
+test('the source link in the footer can be reached above the tab bar', async ({ page }) => {
+  await page.goto('/learn');
+  const link = page.locator('footer.site-footer a');
+  await expect(link).toHaveAttribute('href', 'https://github.com/iSaluki/wycinanka');
+  await link.scrollIntoViewIfNeeded();
+  const linkBox = (await link.boundingBox())!;
+  const tabbarBox = (await page.locator('nav.tabbar').boundingBox())!;
+  expect(linkBox.y + linkBox.height).toBeLessThanOrEqual(tabbarBox.y);
+});
