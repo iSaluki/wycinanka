@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test';
 import { PICTURE_DECKS } from '../src/content/pictures';
 import { PLACEMENT } from '../src/content/placement';
 import { LESSONS, unitByKey } from '../src/content/course';
+import { READING } from '../src/content/reading';
 import { solveLesson, solveUntil } from './helpers';
 
 const uniqueName = () => `e2e_${Date.now().toString(36)}${Math.floor(Math.random() * 1000)}`;
@@ -123,6 +124,7 @@ test('reference pages render', async ({ page }) => {
     ['/tools', 'Narzędzia'],
     ['/culture', 'Kultura'],
     ['/culture/wigilia', 'Wigilia'],
+    ['/reading', 'Czytanie'],
   ]) {
     await page.goto(path);
     await expect(page.getByRole('heading', { level: 1, name: heading, exact: true })).toBeVisible();
@@ -130,6 +132,42 @@ test('reference pages render', async ({ page }) => {
   await page.goto('/grammar');
   await page.getByRole('button', { name: 'okno' }).click();
   await expect(page.locator('table.plain').first()).toContainText('okien');
+});
+
+test('a reading text is heard before it is read, and asked about after', async ({ page }) => {
+  const text = READING[0];
+  await page.goto('/reading');
+  await page.getByRole('link', { name: new RegExp(text.titlePl) }).click();
+  await expect(page.getByRole('heading', { level: 1, name: text.titlePl })).toBeVisible();
+
+  // Nothing of the Polish is on screen until it has been listened to and answered for the gist.
+  await page.getByRole('button', { name: 'Listen' }).click();
+  await expect(page.getByRole('button', { name: 'Play the whole text' })).toBeVisible();
+  await expect(page.getByText(text.lines[0].pl)).toHaveCount(0);
+  await page.getByRole('button', { name: "I've listened" }).click();
+
+  const answer = async (q: { q: string; answer: string }) => {
+    await expect(page.getByText(q.q, { exact: true })).toBeVisible();
+    await page.locator('.options button.option', { hasText: new RegExp(`^\\d?${q.answer.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`) }).click();
+    await page.getByRole('button', { name: /Next question|Now read it|Finish/ }).click();
+  };
+  for (const q of text.questions.filter((x) => x.stage === 'gist')) await answer(q);
+
+  // Now the text is there, in Polish, with the English still hidden behind each line.
+  await expect(page.getByText(text.lines[0].pl)).toBeVisible();
+  await expect(page.getByText(text.lines[0].en)).toHaveCount(0);
+  await page.locator('.reading-lines .reveal').first().click();
+  await expect(page.getByText(text.lines[0].en)).toBeVisible();
+  await page.getByRole('button', { name: 'Show all the English' }).click();
+  await expect(page.getByText(text.lines[1].en)).toBeVisible();
+
+  await page.getByRole('button', { name: 'Check what you understood' }).click();
+  for (const q of text.questions.filter((x) => x.stage === 'detail')) await answer(q);
+
+  // Read through, and the list remembers it.
+  await expect(page.getByRole('heading', { name: 'Przeczytane!' })).toBeVisible();
+  await page.getByRole('link', { name: 'All texts', exact: true }).click();
+  await expect(page.locator('.reading-link.done').first()).toContainText(text.titlePl);
 });
 
 test('culture notes open from the list and link on to the next one', async ({ page }) => {

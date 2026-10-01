@@ -460,13 +460,7 @@ random ones), `confusions.test.ts` and `context.test.ts`.
 
 #### Deliberately not done here
 
-- **A reading and listening library**, which is the biggest thing still missing. Everything the learner hears or
-  reads is a fragment: 351 sentences averaging 4.1 words, 367 conversation lines averaging 4.6, 3,132 running
-  words of Polish in the whole course, and only 55 of its 718 utterances contain a clause connector (*że,
-  który, bo, jeśli, gdy, żeby*). The longest text anywhere is 15 words. A learner can finish all 96 lessons
-  without ever having processed a Polish paragraph, which is the real distance between a strong A2 and B1. This
-  needs 80–200-word texts at natural speed with tappable transcripts and comprehension questions — content
-  work, and every fixed Polish string needs a recording (`npm run voice`), so it is a release of its own.
+- ~~**A reading and listening library**~~ — built in 10.4 below.
 - **Free production**: nothing yet asks the learner to say or write something that isn't checked against a fixed
   string. The cheapest honest version is an open answer graded structurally — "answer in Polish: *Co robiłeś
   wczoraj?*", checked for a past-tense verb agreeing with the learner's gender using `src/content/lexicon.ts`
@@ -479,3 +473,48 @@ random ones), `confusions.test.ts` and `context.test.ts`.
   *człowiek*, *dać*, *wziąć* and the imperatives *idź* and *weź* that Unit 23 exists to teach. They are listed in
   `test/unit/uncontextualised.json`, and a test now stops the list growing. Fixing them means writing a sentence
   for each, and a recording for each sentence.
+
+
+### 10.4 The reading and listening library
+
+The gap 10.3 measured and left open. Everything else the course teaches is a fragment — 351 sentences averaging
+4.1 words, 367 conversation lines averaging 4.6, and only 55 of its 718 utterances carrying a clause connector —
+so a learner could finish all 96 lessons without once holding a thread across two sentences.
+
+**Eight graded texts** (`src/content/reading.ts`), 596 words of connected Polish in 85 sentences, of which 39%
+carry a clause connector against the course's 7.7%. Three A1, one A2, four B1, each 8–11 sentences.
+
+The order of the stages is the pedagogy:
+
+1. **Heard once with nothing on screen**, straight through at natural speed, and answered for the gist.
+   Listening to Polish you cannot see is the one thing the course never asked for.
+2. **Read with the English hidden** behind each line, revealed a line at a time. A translation on the page turns
+   reading into decoding, so it is never shown by default.
+3. **Asked about in detail**, with the text still there to look back at.
+
+Each text is built from words the course has already taught — checked by a test against every Polish form in the
+content — with at most a dozen new ones glossed underneath and never tested, which is what comprehensible input
+means: nearly all known, a little beyond. A line is one sentence, or a short run of them that belong together, so each has its own
+recording and can be played on its own; two texts with no gendered forms are read by the second voice, which a test enforces both
+ways (a woman never reads *pojechałem*, and a text in a woman's forms is never left to the main voice).
+
+The comprehension questions are deliberately **not** review cards. They ask about one text, they are answered
+once, and there is nothing in them to bring back on a schedule; what a text leaves behind is the words it used,
+which have cards of their own. Whether a text has been read is kept on the device, like culture breaks.
+
+**It also closed two thirds of the contextualisation gap.** The texts were written to use the words the course
+taught but never used in a sentence: that list fell from **53 to 19** (`test/unit/uncontextualised.json`),
+including the imperatives *idź* and *weź* that Unit 23 exists to teach, and *dlaczego*, *człowiek*, *odlot*,
+*przylot*, *właściciel* and *wiadomość*. The contextualisation test now counts a reading text as context, which
+it is — the fullest the course has.
+
+#### What still needs a human
+
+**The Polish in these texts has not been read by a native speaker.** It is written from the course's own
+vocabulary and checked mechanically (every word form against the content lexicon, NFC, sentence length, one
+sentence per line), and the app's standard is that a learner trusts every line — so a native read-through is
+the one thing standing between this and a release. Nothing else in the course depends on it.
+
+Still open from 10.3: **free production** (nothing yet asks the learner to produce something not checked against
+a fixed string) and **splitting recognition from production** into separate cards. The remaining 19
+uncontextualised words need a sentence each, which is lesson content rather than a reading text.

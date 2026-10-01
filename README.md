@@ -41,6 +41,7 @@ Short lessons of about ten minutes mix new words, pictures, sentence building, s
 
 - **Review:** a daily spaced-repetition deck, a list of tricky words and revision by unit
 - **The 500 most frequent words**, learnt in batches and reviewed in example sentences
+- **Reading:** eight graded texts (A1–B1), heard first with nothing on screen, then read line by line and asked about in detail
 - **Picture flashcards:** 72 everyday objects in nine themed decks
 - **Speaking practice:** repeat after me, say it in Polish, tongue twisters, and role-playing lesson dialogues
 - **Sounds:** an alphabet chart, English-style respellings (*VRO-tswaf*) and a minimal-pair listening game

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { cardIdsForWord, LESSONS, lessonCardForWord } from '../../src/content/course';
 import { FREQUENCY } from '../../src/content/frequency';
+import { READING } from '../../src/content/reading';
 import { normalise } from '../../src/shared/grade';
 import known from './uncontextualised.json';
 
@@ -14,17 +15,22 @@ import known from './uncontextualised.json';
  * also needs a recording (`npm run voice`), so it is content work rather than a code change.
  */
 
-/** Every Polish word form the course uses in a sentence, a conversation, a drill or an example. */
+/**
+ * Every Polish word form the course uses in a sentence, a conversation, a drill, an example, or a reading text.
+ * A reading text counts: it is the fullest context the course has, and a word met in one has been met in use.
+ */
 function inContext(): Set<string> {
   const out = new Set<string>();
-  for (const l of LESSONS)
-    for (const text of [
+  const texts = [
+    ...LESSONS.flatMap((l) => [
       ...l.sentences.flatMap((s) => [s.pl, ...(s.altPl ?? [])]),
       ...(l.dialogue ?? []).map((d) => d.pl),
       ...l.drills.map((d) => d.text.replace('___', d.answer)),
       ...(l.spotlight?.examples ?? []).map(([pl]) => pl),
-    ])
-      for (const w of normalise(text).split(' ')) if (w) out.add(w);
+    ]),
+    ...READING.flatMap((t) => t.lines.map((l) => l.pl)),
+  ];
+  for (const text of texts) for (const w of normalise(text).split(' ')) if (w) out.add(w);
   return out;
 }
 

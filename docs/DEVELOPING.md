@@ -13,6 +13,7 @@ How the app is built, how to run and test it, and how it is deployed on Cloudfla
 | Audio | Every fixed Polish text pre-recorded with [Piper](https://github.com/OHF-Voice/piper1-gpl), free neural voices run locally (`scripts/voice.py`): *mc_speech* (male) for everything, *gosia* (female) for the texts `src/app/lib/voices.ts` gives it. Served as small MP3s; the browser's own Polish voice for text typed into the tools, or for everything if the learner prefers it |
 | Shared | FSRS scheduler, answer grader, validation and progress rules (`src/shared`), used by both browser and Worker |
 | Content | TypeScript data in `src/content`, validated by tests |
+| Reading texts | `src/content/reading.ts`, recorded sentence by sentence like the rest of the course |
 
 ## Develop
 
