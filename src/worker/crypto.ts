@@ -3,14 +3,17 @@
  *
  * Hash format: pbkdf2-sha256$<iterations>$<salt b64url>$<hash b64url>        (peppered)
  *              pbkdf2-sha256-np$<iterations>$<salt b64url>$<hash b64url>     (no pepper configured)
+ *              pbkdf2-sha256-w$<iterations>$<salt b64url>$<hmac b64url>      (unpeppered hash, wrapped with the pepper)
  *
  * The password is first HMAC-ed with a secret pepper held as a Worker secret (never stored in D1),
  * then stretched with PBKDF2-HMAC-SHA256. Workers caps PBKDF2 at 100,000 iterations, below OWASP's
  * 600,000 recommendation; the pepper means a leaked database alone cannot be cracked offline.
  *
  * The pepper is optional so a fresh deployment works before the secret is set. Hashes made without
- * one are marked and upgraded to peppered hashes at the next sign-in once PEPPER exists. A peppered
- * hash never verifies without the pepper (fail closed).
+ * one are marked and upgraded to peppered hashes at the next sign-in once PEPPER exists. Until then,
+ * housekeeping wraps them (HMAC of the stored hash, keyed by the pepper; see wrapHash), which needs no
+ * password, so accounts that never sign in again are protected too. A peppered or wrapped hash never
+ * verifies without the pepper (fail closed).
  */
 
 const enc = new TextEncoder();
@@ -62,6 +65,8 @@ export function clampIterations(n: number): number {
 export const MIN_PEPPER_LENGTH = 32;
 const PEPPERED = 'pbkdf2-sha256';
 const UNPEPPERED = 'pbkdf2-sha256-np';
+const WRAPPED = 'pbkdf2-sha256-w';
+const SCHEMES = new Set([PEPPERED, UNPEPPERED, WRAPPED]);
 
 let warned = false;
 /** The pepper to use, or null when none is configured. A too-short pepper is ignored rather than trusted. */
@@ -70,7 +75,7 @@ export function usablePepper(pepper: string | undefined): string | null {
   if (!warned) {
     warned = true;
     // An error, not a warning, so it stands out in the Worker's logs: without a pepper a leaked database can be
-    // attacked offline. Set it with `wrangler secret put PEPPER` (README → Add the pepper).
+    // attacked offline. Set it with `wrangler secret put PEPPER` (docs/DEVELOPING.md → Add the pepper).
     console.error(
       JSON.stringify({
         event: 'pepper_missing',
@@ -81,11 +86,14 @@ export function usablePepper(pepper: string | undefined): string | null {
   return null;
 }
 
-async function derive(password: string, salt: Uint8Array<ArrayBuffer>, iterations: number, pepper: string | null): Promise<Uint8Array> {
+async function hmac(pepper: string, data: Uint8Array<ArrayBuffer>): Promise<Uint8Array<ArrayBuffer>> {
+  const key = await crypto.subtle.importKey('raw', enc.encode(pepper), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  return new Uint8Array(await crypto.subtle.sign('HMAC', key, data));
+}
+
+async function derive(password: string, salt: Uint8Array<ArrayBuffer>, iterations: number, pepper: string | null): Promise<Uint8Array<ArrayBuffer>> {
   const pw = new Uint8Array(enc.encode(password.normalize('NFKC')));
-  const material = pepper
-    ? await crypto.subtle.sign('HMAC', await crypto.subtle.importKey('raw', enc.encode(pepper), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']), pw)
-    : pw;
+  const material = pepper ? await hmac(pepper, pw) : pw;
   const key = await crypto.subtle.importKey('raw', material, 'PBKDF2', false, ['deriveBits']);
   const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt, iterations }, key, HASH_BYTES * 8);
   return new Uint8Array(bits);
@@ -107,17 +115,31 @@ export interface VerifyResult {
 
 export async function verifyPassword(password: string, stored: string, pepper: string | undefined, iterations: number): Promise<VerifyResult> {
   const parts = stored.split('$');
-  if (parts.length !== 4 || (parts[0] !== PEPPERED && parts[0] !== UNPEPPERED)) return { ok: false, rehash: false };
+  if (parts.length !== 4 || !SCHEMES.has(parts[0])) return { ok: false, rehash: false };
   const usable = usablePepper(pepper);
-  const peppered = parts[0] === PEPPERED;
-  if (peppered && !usable) return { ok: false, rehash: false };
+  const scheme = parts[0];
+  if (scheme !== UNPEPPERED && !usable) return { ok: false, rehash: false };
   const iter = Number(parts[1]);
   if (!Number.isInteger(iter) || iter < MIN_ITERATIONS || iter > MAX_ITERATIONS) return { ok: false, rehash: false };
   const salt = fromB64url(parts[2]);
   const expected = fromB64url(parts[3]);
-  const actual = await derive(password, salt, iter, peppered ? usable : null);
+  let actual = await derive(password, salt, iter, scheme === PEPPERED ? usable : null);
+  if (scheme === WRAPPED) actual = await hmac(usable!, actual);
   const ok = timingSafeEqual(actual, expected);
-  return { ok, rehash: ok && (iter !== clampIterations(iterations) || peppered !== !!usable) };
+  // Wrapped hashes always upgrade: a plain peppered hash costs the same to check and is the format new ones use.
+  return { ok, rehash: ok && (iter !== clampIterations(iterations) || scheme !== (usable ? PEPPERED : UNPEPPERED)) };
+}
+
+/**
+ * Protects an unpeppered hash with the pepper without knowing the password: the stored hash is replaced by its HMAC
+ * under the pepper. Returns null when there is nothing to do (no usable pepper, or the hash is not unpeppered).
+ */
+export async function wrapHash(stored: string, pepper: string | undefined): Promise<string | null> {
+  const parts = stored.split('$');
+  if (parts.length !== 4 || parts[0] !== UNPEPPERED) return null;
+  const usable = usablePepper(pepper);
+  if (!usable) return null;
+  return `${WRAPPED}$${parts[1]}$${parts[2]}$${b64url(await hmac(usable, fromB64url(parts[3])))}`;
 }
 
 /** A well-formed hash of a random password, used to spend equal time on unknown usernames. */

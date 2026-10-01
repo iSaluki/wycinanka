@@ -9,7 +9,7 @@ import { app, cleanUp } from '../../src/worker/index';
 import { migrate } from '../../src/worker/migrate';
 import { MIGRATIONS } from '../../src/worker/migrations';
 import { sendReminders } from '../../src/worker/reminders';
-import { b64url } from '../../src/worker/crypto';
+import { b64url, hashPassword } from '../../src/worker/crypto';
 import { cleanTranscript, WHISPER } from '../../src/worker/routes/speech';
 
 const ORIGIN = 'https://wycinanka.test';
@@ -117,6 +117,22 @@ describe('housekeeping', () => {
     expect(await count('SELECT COUNT(*) AS n FROM auth_throttle WHERE key = ?1', 'stale-test')).toBe(0);
     expect(await count('SELECT COUNT(*) AS n FROM auth_throttle WHERE key = ?1', 'fresh-test')).toBe(1);
     expect((await c.call('GET', '/api/auth/me')).json.user.username).toBe(username);
+  });
+  it('wraps hashes made before the pepper was set, and they upgrade at the next sign-in', async () => {
+    const { username } = await signedUp();
+    const stored = async () => (await env.DB.prepare('SELECT password_hash FROM users WHERE username = ?1').bind(username).first<{ password_hash: string }>())!.password_hash;
+    const legacy = await hashPassword(PASSWORD, undefined, 20_000);
+    await env.DB.prepare('UPDATE users SET password_hash = ?1 WHERE username = ?2').bind(legacy, username).run();
+
+    await cleanUp(env);
+    const wrapped = await stored();
+    expect(wrapped).toMatch(/^pbkdf2-sha256-w\$/);
+    await cleanUp(env);
+    expect(await stored()).toBe(wrapped);
+
+    expect((await client().call('POST', '/api/auth/login', { username, password: 'not the password at all' })).status).toBe(401);
+    expect((await client().call('POST', '/api/auth/login', { username, password: PASSWORD })).status).toBe(200);
+    expect(await stored()).toMatch(/^pbkdf2-sha256\$/);
   });
 });
 
