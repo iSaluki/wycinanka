@@ -401,7 +401,7 @@ export const u21 = unit(
         ['Kasia', 'O której zaczyna się film?', 'What time does the film start?'],
         ['Tom', 'Wpół do ósmej.', 'Half past seven.'],
         ['Kasia', 'To spotkajmy się kwadrans po siódmej.', "Then let's meet at quarter past seven."],
-        ['Tom', 'Dobrze. Tylko nie bądź spóźniona!', "OK. Just don't be late!"],
+        ['Tom', 'Dobrze. Tylko się nie spóźnij!', "OK. Just don't be late!"],
       ],
     }),
   ],
@@ -447,7 +447,7 @@ export const u22 = unit(
       dialogue: [
         ['Piotr', 'Co robisz w wolnym czasie?', 'What do you do in your free time?'],
         ['Emma', 'Biegam i gram na gitarze. A ty?', 'I run and play the guitar. And you?'],
-        ['Piotr', 'Interesuję się fotografią. I w niedzielę gram w piłkę.', "I'm into photography. And I play football on Sundays."],
+        ['Piotr', 'Interesuję się fotografią. I w niedziele gram w piłkę.', "I'm into photography. And I play football on Sundays."],
         ['Emma', 'Super! Może kiedyś zagramy razem?', 'Great! Maybe we could play together some time?'],
       ],
     }),

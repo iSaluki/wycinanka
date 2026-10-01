@@ -610,7 +610,7 @@ export const u05 = unit(
         ['Marek', 'Ile masz lat?', 'How old are you?'],
         ['Emma', 'Mam dwadzieścia pięć lat. A ty?', 'I\'m twenty-five. And you?'],
         ['Marek', 'Trzydzieści.', 'Thirty.'],
-        ['Emma', 'Naprawdę? Nie wyglądasz!', 'Really? You don\'t look it!'],
+        ['Emma', 'Naprawdę? Nie wyglądasz na tyle!', 'Really? You don\'t look it!'],
       ],
     }),
     lesson('u05-l3', 'How much is it?', 'Ask prices and pay.', {

@@ -398,7 +398,7 @@ nagle | suddenly | adverb | Nagle zaczęło padać. | Suddenly it started to rai
 drugi | second, other | adjective | drugi raz | the second time
 często | often | adverb | Często tu jesteś? | Are you here often?
 kłopot | trouble | noun | Mam kłopot. | I'm in trouble.
-zacząć | to start | verb | Zaczynamy! | Let's start!
+zacząć | to start | verb | Zacznijmy! | Let's start!
 większość | most | noun | większość ludzi | most people
 trudno | it's hard | adverb | Trudno. | Oh well. (It's hard.)
 błąd | mistake | noun | To był błąd. | That was a mistake.
@@ -425,7 +425,7 @@ dłużej | longer | adverb | Zostań dłużej. | Stay longer.
 oboje | both | numeral | oboje rodzice | both parents
 najlepszy | best | adjective | Wszystkiego najlepszego! | All the best!
 odkąd | since | conjunction | odkąd tu mieszkam | since I've lived here
-łatwo | easily; it's easy | adverb | To nie jest łatwe. | It isn't easy.
+łatwo | easily; it's easy | adverb | Łatwo powiedzieć. | That's easy to say.
 wiek | age, century | noun | w moim wieku | at my age
 sporo | quite a lot | adverb | sporo pracy | quite a lot of work
 kupić | to buy | verb | Muszę kupić chleb. | I need to buy bread.
@@ -437,7 +437,7 @@ ich | their, them | pronoun | ich dom | their house
 niedługo | soon | adverb | Niedługo wrócę. | I'll be back soon.
 bać się | to be afraid | verb | Nie bój się. | Don't be afraid.
 strasznie | terribly | adverb | strasznie zimno | terribly cold
-głos | voice | noun | Mów głośniej. | Speak louder.
+głos | voice | noun | Masz ładny głos. | You have a nice voice.
 około | about, around | preposition | około piątej | at about five
 boleć | to hurt | verb | Boli mnie ząb. | I've got toothache.
 zwykle | usually | adverb | Zwykle piję herbatę. | I usually drink tea.

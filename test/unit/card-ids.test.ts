@@ -40,4 +40,8 @@ const CORRECTED: Record<string, string> = {
   'u01-l3:s1': 'Cześć, Kasiu!',
   // "Przepraszam, proszę" is not something Polish speakers say.
   'u02-l2:s2': 'Przepraszam, czy mogę?',
+  // Consistent with u23-l3, which teaches "Nie zapomnij kluczy!" and offers "klucze" as the wrong tile.
+  'u12-l2:d2': 'Zawsze ___ kluczy!|zapominam',
+  // The clitic goes before the verb: "bardzo mi smakuje", not "bardzo smakuje mi".
+  'u16-l1:d4': 'Ta zupa bardzo mi ___.|smakuje',
 };
