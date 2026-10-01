@@ -1,5 +1,7 @@
 # Wycinanka
 
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/iSaluki/learnpolish)
+
 *vi-chi-NAN-ka* — the Polish folk art of paper cutting.
 
 A free Polish course for British English speakers, from complete beginner to B1. Every lesson you finish cuts a new layer into your own paper rosette. Runs entirely on Cloudflare Workers + D1, within the free plan.
@@ -93,6 +95,12 @@ The app reports what goes wrong on learners' devices to `/api/report`, and the W
 
 Cloudflare adds scripts to pages on this zone: Bot Fight Mode's JavaScript Detections (inline, and it can't be switched off) and the Web Analytics beacon. Pages therefore run through the Worker (`run_worker_first` in `wrangler.jsonc`, `src/worker/pages.ts`), which gives each page a fresh CSP nonce; Cloudflare reads it from the header and puts it on the scripts it injects, so nothing inline is allowed in general. The beacon's hosts are allowed. Everything else is served straight from the assets with the policy in `public/_headers`; a test keeps the two in step.
 
+### Deploy your own copy
+
+The **Deploy to Cloudflare** button at the top copies this repository to your GitHub account and deploys it to your Cloudflare account. It creates a new D1 database for the `DB` binding and asks for the `PEPPER` secret (listed in `.dev.vars.example`): give it a random value of at least 32 characters, for example from `openssl rand -base64 48`, and keep a copy.
+
+Before deploying, or in your copy straight after, remove the `routes` line from `wrangler.jsonc`: it puts the Worker on `polish.saluki.cloud`, which only this project's Cloudflare account can use. Without it your copy runs on its `*.workers.dev` address, or you can put your own domain there. Also change `PUSH_CONTACT` to your own site or a `mailto:` address.
+
 ### Connect the repository (one time)
 
 1. In the Cloudflare dashboard, go to **Workers & Pages → Create → Import a repository**, and pick `iSaluki/learnpolish`.
@@ -105,7 +113,7 @@ Pull requests get [Worker Previews](https://developers.cloudflare.com/workers/pr
 
 In the Worker, open **Settings → Variables and Secrets → Add**, choose type **Secret**, name it `PEPPER` and paste a random value of at least 32 characters (for example from `openssl rand -base64 48`). Keep a copy somewhere safe. Once it is set it must not change, because peppered passwords can only be checked with the same pepper.
 
-Accounts created before the pepper was set keep working: their hashes are marked as unpeppered and are upgraded to peppered hashes the next time each person signs in.
+Accounts created before the pepper was set keep working: their hashes are marked as unpeppered. Within the hour after the pepper is set, housekeeping (`src/worker/housekeeping.ts`) wraps each of them with the pepper, which needs no password, so a leaked database can't be attacked offline even for accounts that never sign in again. Each is then replaced by an ordinary peppered hash the next time that person signs in.
 
 ### From the command line instead
 
@@ -155,3 +163,7 @@ npm run voice                   # records only what's new, deletes what's gone
 ```
 
 The first run downloads the voice model (about 60 MB) to `~/.cache/wycinanka-voice`. `src/app/lib/spoken.ts` lists every text that is recorded; each file in `public/voice/<voice>/` is named by a hash of its text, and `public/voice-index.json` lists them, so the app knows what it can play without a lookup table. `npm run test:unit` fails if any text is missing a recording. Text without one (a number typed into the tools, for example) falls back to the browser's voice.
+
+## Licence
+
+The code and original content are under the [MIT License](LICENSE). Third-party assets keep their own licences, listed in [LICENSE](LICENSE): the Wikimedia Commons photographs in `public/culture` (each credited in `src/content/culture.ts`, several CC BY-SA), the Twemoji pictures in `public/pictures` (CC BY 4.0), the recordings made with Piper voices trained on CC0 data, and the word frequency ordering from FrequencyWords (CC BY-SA 4.0).
