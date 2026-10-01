@@ -386,7 +386,7 @@ Deviations from the plan:
 - **Redesign**: a paper-cut (*wycinanka*) look on white paper with Łowicz stripe colours, Polish-first bilingual
   headings, Poltawski Nowy and Signika (both by Polish type designers).
 - **Deployment**: the Worker migrates D1 itself and the pepper is optional (hashes record whether they were
-  peppered), so connecting the repository in the Cloudflare dashboard deploys with no manual steps. See the README.
+  peppered), so connecting the repository in the Cloudflare dashboard deploys with no manual steps. See docs/DEVELOPING.md.
 
 ### 10.2 Speaking
 

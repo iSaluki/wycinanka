@@ -75,7 +75,7 @@ export function usablePepper(pepper: string | undefined): string | null {
   if (!warned) {
     warned = true;
     // An error, not a warning, so it stands out in the Worker's logs: without a pepper a leaked database can be
-    // attacked offline. Set it with `wrangler secret put PEPPER` (README → Add the pepper).
+    // attacked offline. Set it with `wrangler secret put PEPPER` (docs/DEVELOPING.md → Add the pepper).
     console.error(
       JSON.stringify({
         event: 'pepper_missing',
