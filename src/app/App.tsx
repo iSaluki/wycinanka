@@ -17,6 +17,7 @@ import { welcomed } from './lib/welcome';
 import { Words } from './pages/Words';
 import { Tools } from './pages/Tools';
 import { Practice } from './pages/Practice';
+import { Reading } from './pages/Reading';
 import { Pictures } from './pages/Pictures';
 import { Culture } from './pages/Culture';
 import { Phrases } from './pages/Phrases';
@@ -67,6 +68,8 @@ function Routes() {
   const practice = match('/practice/:kind/:id', path);
   if (practice) return <Practice key={path} kind={practice.kind} id={practice.id} />;
   if (path === '/tools' || match('/tools/:id', path)) return <Tools />;
+  const reading = match('/reading/:id', path);
+  if (reading) return <Reading key={reading.id} id={reading.id} />;
   const culture = match('/culture/:id', path);
   if (culture) return <Culture key={culture.id} id={culture.id} />;
   const cultureBreak = match('/course/culture/:id', path);
@@ -95,6 +98,8 @@ function Routes() {
       return <Phrases />;
     case '/speaking':
       return <Speaking />;
+    case '/reading':
+      return <Reading />;
     case '/culture':
       return <Culture />;
     case '/study':
