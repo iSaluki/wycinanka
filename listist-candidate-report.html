@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Listist candidate report: Wycinanka</title>
+<style>
+:root {
+  --bg: #f6f7f9; --surface: #ffffff; --fg: #1b2230; --muted: #5b6577; --rule: #dde1e8;
+  --accent: #2d5bd7; --accent-soft: #e6ecfb; --warn: #a35a00; --warn-soft: #fbefdc;
+  --bad: #b3261e; --bad-soft: #fbe6e4; --good: #1d7a46; --good-soft: #e3f3ea; --code-bg: #eef1f6;
+  --display: "Bricolage Grotesque", "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --body: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #11151c; --surface: #181e27; --fg: #e3e7ee; --muted: #9aa4b5; --rule: #2a3240;
+    --accent: #7ea2ff; --accent-soft: #1e2a45; --warn: #f0b35c; --warn-soft: #3a2b14;
+    --bad: #ff8a80; --bad-soft: #3d1c1a; --good: #6fd39b; --good-soft: #15301f; --code-bg: #212938;
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 15.5px; line-height: 1.6; margin: 0; padding: 40px 16px 72px; }
+.wrap { max-width: 920px; margin: 0 auto; display: grid; gap: 44px; }
+header { display: grid; gap: 14px; }
+.eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); }
+h1 { font-family: var(--display); font-size: clamp(30px, 5vw, 44px); line-height: 1.08; margin: 0; text-wrap: balance; letter-spacing: -0.01em; }
+h2 { font-family: var(--display); font-size: 24px; line-height: 1.2; margin: 0 0 6px; text-wrap: balance; }
+h3 { font-size: 16px; margin: 0; }
+p { margin: 0; max-width: 68ch; }
+.lede { font-size: 17.5px; }
+.muted { color: var(--muted); }
+section { display: grid; gap: 16px; }
+code, .id { font-family: var(--mono); font-size: .86em; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+.pin { font-family: var(--mono); font-size: 13px; color: var(--accent); }
+ul.plain { margin: 0; padding-left: 1.1em; display: grid; gap: 6px; max-width: 72ch; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+.stat { background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; padding: 14px 16px; display: grid; gap: 2px; }
+.stat b { font-family: var(--display); font-size: 30px; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.stat span { color: var(--muted); font-size: 13.5px; line-height: 1.35; }
+.rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.rule { border-top: 2px solid var(--accent); padding-top: 10px; display: grid; gap: 4px; min-width: 0; }
+.rule p { font-size: 14.5px; color: var(--muted); }
+.table-frame { overflow-x: auto; border: 1px solid var(--rule); border-radius: 8px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--rule); }
+th { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 600; white-space: nowrap; }
+tr:last-child td { border-bottom: 0; }
+td.n { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chip { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.chip.bad { background: var(--bad-soft); color: var(--bad); }
+.chip.warn { background: var(--warn-soft); color: var(--warn); }
+.chip.good { background: var(--good-soft); color: var(--good); }
+.chip.accent { background: var(--accent-soft); color: var(--accent); }
+.opps { display: grid; gap: 14px; }
+.opp { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 18px 20px; display: grid; gap: 10px; }
+.opp-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px; }
+.opp-head h3 { font-size: 18px; font-family: var(--display); }
+.opp .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+.opp .grid2 > div { min-width: 0; display: grid; gap: 4px; }
+.label { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 600; }
+.callout { border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 14px 16px; border-radius: 0 8px 8px 0; display: grid; gap: 6px; }
+footer { color: var(--muted); font-size: 13px; border-top: 1px solid var(--rule); padding-top: 14px; display: grid; gap: 6px; }
+a { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">Wycinanka · evaluation · 2026-10-06 · commit b1d355e · no code changed</div>
+    <h1>Listist is a weak fit for Wycinanka's option lists; its real gap is card-id identity outside lessons</h1>
+    <p class="lede">I found about 22 distinct closed lists. 11 of them are written down in three or more layers (validation schema, app code, display, content, docs). 5 show verified drift: values, labels or a stale copy. None of that drift is a live bug today: every disagreement is a gap or a stale document, not a failing request. The most valuable place for Listist-style discipline is not a dropdown. It is the identity of review cards. Lesson cards already have an append-only id ledger, but frequency-word, picture and phrase cards don't, and learners' FSRS history is stored against those ids. The one strong reference-data candidate is CEFR levels, which already exist as the public list <span class="pin">public:i18n.cefr-levels@v1</span>.</p>
+    <p class="muted">Sources: the Listist agent handbook (<code>/api/v1/begin</code>, fetched live 2026-10-06, consistent with the skill's summary); public catalogue search and tag queries. In the repo I searched <code>src/</code>, <code>migrations/</code>, <code>public/</code> scripts and manifest, <code>scripts/</code>, <code>test/</code>, <code>e2e/</code>, <code>docs/</code>, README, <code>index.html</code>, and git history using ripgrep and <code>git log -S</code>.</p>
+  </header>
+
+  <section>
+    <h2>Listist in this codebase's terms</h2>
+    <div class="rules">
+      <div class="rule"><h3>Keep each list once</h3><p>The speaker value <code>'m' | 'f'</code> is typed out inline 11 times: <code>schemas.ts:37</code>, <code>voices.ts:11</code>, <code>speaking.ts:35</code>, four times in <code>exercises.ts</code>, <code>Lesson.tsx:191</code>, <code>reading.ts:62,74</code> and <code>Profile.tsx:264</code>. CEFR level labels are copied in <code>Learn.tsx:14</code> and <code>Reading.tsx:29</code>.</p></div>
+      <div class="rule"><h3>Pin immutable versions</h3><p>The <code>cards</code> table stores a bare <code>card_id</code> with no content version. The meaning of an id is protected only by <code>test/unit/card-ids.json</code>, and only for lesson cards.</p></div>
+      <div class="rule"><h3>Values are identity</h3><p>Mostly respected: unit ids come from a fixed <code>key</code>, not position (<code>build.ts:72</code>). Exceptions: some card ids are derived from Polish text (<code>chunk-${slug(p)}</code>, <code>f:${slug(pl)}</code>), and the "A0" level is decided by position, <code>u.n === 0</code> (<code>badges.ts:53,89</code>, <code>Learn.tsx:47</code>).</p></div>
+      <div class="rule"><h3>Retire, never delete</h3><p><span class="chip good">Strength</span> <code>legacy-ids.ts</code> ("Never edit this file") and the <code>card-ids.json</code> ledger refuse removed or moved ids. Corrections keep their old ids through <code>key</code> (commit 49fd35b). There is no <code>replacedBy</code> equivalent: an accepted reset simply adds a new id.</p></div>
+      <div class="rule"><h3>People curate, agents read</h3><p>No agent writes option values. Whisper output (<code>speech.ts:17</code>) is only compared with expected text. Content corrections are made by people (and by AI-assisted commits) and reviewed in PRs.</p></div>
+      <div class="rule"><h3>Never auto-upgrade a pin</h3><p>The app bundles all content, so every deploy is a "head" upgrade for stored card ids. The ledger test is the only check that stops an upgrade from changing what an id means.</p></div>
+      <div class="rule"><h3>Look up raw strings</h3><p>No vocabulary import exists. The text normalisers (<code>grade.ts</code>, <code>speaking.ts:35</code>) grade Polish answers; they don't map raw strings to option values.</p></div>
+      <div class="rule"><h3>Do not invent values</h3><p>Values are typed inline in TSX (<code>Profile.tsx:153</code> goals <code>[10, 20, 30, 50]</code>, <code>Profile.tsx:250</code> themes) and must match <code>schemas.ts</code> by hand.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Numbers</h2>
+    <div class="stats">
+      <div class="stat"><b>~22</b><span>distinct closed lists (vocabularies and catalogues)</span></div>
+      <div class="stat"><b>11</b><span>defined in 3+ layers</span></div>
+      <div class="stat"><b>5</b><span>with verified drift</span></div>
+      <div class="stat"><b>0</b><span>live bugs caused by drift (6 gaps)</span></div>
+      <div class="stat"><b>11</b><span>inline copies of the most repeated list: speaker <code>'m' | 'f'</code></span></div>
+    </div>
+    <p class="muted">Counted by concept, not by file. Single-file unions used only for UI state (for example <code>Reading.tsx</code> <code>Stage</code> and <code>Speaking.tsx</code> <code>Phase</code>) are left out. The database has no CHECK constraints or enum types at all, so no constraint has been rebuilt across migrations. The counts are approximate.</p>
+  </section>
+
+  <section>
+    <h2>Live bugs from drift</h2>
+    <p>No verified live bug. The gaps below are worth tightening whatever is decided about Listist.</p>
+    <div class="table-frame">
+      <table>
+        <thead><tr><th>What could break</th><th>Copies that disagree</th><th>Effect</th><th>Verified</th></tr></thead>
+        <tbody>
+          <tr><td><span class="chip warn">Gap</span> Review history for non-lesson cards is unprotected</td><td><code>card-ids.test.ts:12-16</code> covers lesson items, sentences and drills only. <code>frequency.ts:520-523</code> (<code>f:</code> ids), <code>pictures.ts:31</code> (<code>pic-</code>) and <code>chunks.ts:35</code> (<code>chunk-</code>) build ids from text with no ledger.</td><td>Correcting a phrase's Polish, or reordering two words that differ only by diacritics (the later one gets <code>-2</code>), silently changes or swaps an id. Learners lose or inherit the wrong FSRS history.</td><td>Mechanism verified; no occurrence so far</td></tr>
+          <tr><td><span class="chip warn">Gap</span> Push result stored as free text</td><td><code>webpush.ts:101</code> <code>'sent' | 'gone' | 'failed'</code>; <code>0004_push_status.sql</code> <code>last_result TEXT</code> (no check); <code>reminders.ts:162</code> <code>lastResult?: string</code>; <code>Profile.tsx:60</code> compares with the literal <code>'failed'</code></td><td>Renaming a result in the worker would silently make the profile show "Last reminder sent" for failures.</td><td>Yes (no type link)</td></tr>
+          <tr><td><span class="chip warn">Gap</span> Client report kinds copied without a type link</td><td><code>schemas.ts:124</code> <code>z.enum</code>; <code>report.ts:8</code> <code>ReportKind</code>; <code>public/boot-watch.js:17</code> <code>'boot'</code></td><td>The values match today. Adding a kind on the client only would make <code>/api/report</code> reject it with a 400, and that report would be lost without notice.</td><td>Yes (in sync)</td></tr>
+          <tr><td><span class="chip warn">Gap</span> Two different <code>Gender</code> types; label map not type-checked</td><td><code>content/types.ts:2</code> <code>m|f|n|pl|mp</code>; <code>shared/numbers.ts:11</code> <code>m|f|n</code>; <code>common.tsx:177</code> <code>GENDER_LABEL: Record&lt;string, string&gt;</code></td><td>A new gender value would compile, and <code>Exercises.tsx:446</code> and <code>Pictures.tsx:143</code> would render an empty label.</td><td>Yes</td></tr>
+          <tr><td><span class="chip warn">Gap</span> "A0" depends on position</td><td><code>phonics.ts:10</code> declares u00 as <code>'A1'</code>; <code>badges.ts:53,89</code> and <code>Learn.tsx:47</code> treat <code>u.n === 0</code> as A0; <code>course.ts:24</code> assigns <code>n</code> by array position</td><td>Putting any unit ahead of u00 in <code>UNITS</code> would move the "Alfabet" badge and course-map heading onto that unit.</td><td>Yes (mechanism)</td></tr>
+          <tr><td><span class="chip warn">Gap</span> Stale schema in the plan</td><td><code>docs/PLAN.md:238-240</code> lists <code>users.level</code>, <code>users.daily_goal</code> and <code>sessions.last_seen</code>; <code>migrations/0001_init.sql</code> has none of them (settings live in JSON)</td><td>Misleads readers and anyone, human or agent, who plans from the doc.</td><td>Yes</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>Ranked candidates</h2>
+    <p class="muted">Scores run from 1 to 3 per column, and effort is inverted (3 means cheap). Change rates are low across the board: in <code>git log -S</code>, most of these lists appear in only 1 to 3 commits out of 62.</p>
+    <div class="table-frame">
+      <table>
+        <thead><tr><th>Rank</th><th>List</th><th>Class</th><th>Layers</th><th>Drift</th><th>Change rate</th><th>Consumers</th><th>Effort</th><th>Score</th></tr></thead>
+        <tbody>
+          <tr><td class="n">1</td><td>Review-card catalogue (lesson, word, picture and phrase ids)</td><td>catalogue</td><td class="n">3</td><td class="n">2</td><td class="n">3</td><td class="n">3</td><td class="n">1</td><td class="n">12</td></tr>
+          <tr><td class="n">2</td><td>CEFR levels (+ A0)</td><td>reference</td><td class="n">3</td><td class="n">2</td><td class="n">1</td><td class="n">2</td><td class="n">2</td><td class="n">10</td></tr>
+          <tr><td class="n">3</td><td>Grammatical gender</td><td>reference (linguistic)</td><td class="n">2</td><td class="n">2</td><td class="n">1</td><td class="n">2</td><td class="n">2</td><td class="n">9</td></tr>
+          <tr><td class="n">4</td><td>Push send result</td><td>product</td><td class="n">3</td><td class="n">2</td><td class="n">1</td><td class="n">1</td><td class="n">2</td><td class="n">9</td></tr>
+          <tr><td class="n">5</td><td>Speaker / voice <code>m|f</code></td><td>product</td><td class="n">3</td><td class="n">1</td><td class="n">1</td><td class="n">2</td><td class="n">2</td><td class="n">9</td></tr>
+          <tr><td class="n">6</td><td>Client report kind</td><td>product</td><td class="n">2</td><td class="n">1</td><td class="n">1</td><td class="n">2</td><td class="n">3</td><td class="n">9</td></tr>
+          <tr><td class="n">7</td><td>Settings options: theme, daily goal</td><td>product</td><td class="n">3</td><td class="n">1</td><td class="n">1</td><td class="n">1</td><td class="n">2</td><td class="n">8</td></tr>
+          <tr><td class="n">8</td><td>Part of speech (word list)</td><td>reference (linguistic)</td><td class="n">1</td><td class="n">1</td><td class="n">1</td><td class="n">1</td><td class="n">3</td><td class="n">7</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="opps">
+      <div class="opp">
+        <div class="opp-head"><h3>1. Review-card catalogue</h3><span class="chip accent">catalogue</span><span class="chip warn">Gap</span></div>
+        <div class="grid2">
+          <div><span class="label">Copies</span><p>Content: <code>build.ts:41-54</code>, <code>frequency.ts:520</code>, <code>pictures.ts:31</code>, <code>chunks.ts:35</code>. Registry: <code>course.ts:42-58</code> (<code>cardMap</code>). Ledger: <code>legacy-ids.ts</code>, <code>test/unit/card-ids.json</code> (1,400+ entries). DB: <code>cards.card_id</code>. Server check: <code>engine.ts:91</code> <code>isCardId</code>. Audio: <code>public/voice-index.json</code> (hash of text).</p></div>
+          <div><span class="label">Drift</span><p>The ledger covers lessons only. Word, picture and phrase ids depend on text and order. No version is stored with a card, and there is no "retired, replaced by" record. A reset just adds a new id, and the old card stays in the learner's deck as an unknown id that <code>engine.ts:91</code> refuses.</p></div>
+          <div><span class="label">What Listist changes</span><p>One versioned source for card ids, with retirement and <code>replacedBy</code>. Stored cards could carry the catalogue version. This only pays off if the catalogue gets consumers beyond this app's bundle.</p></div>
+          <div><span class="label">Existing public list</span><p>None found (course-specific).</p></div>
+          <div><span class="label">Proposed id</span><p><span class="pin">org:wycinanka:course.cards</span></p></div>
+          <div><span class="label">Rough cost</span><p>High. More than 1,400 ids, content authored in TypeScript, and an offline-first PWA that needs a bundled copy anyway. Extending the existing ledger idea to the other card kinds covers most of the value for less.</p></div>
+        </div>
+      </div>
+      <div class="opp">
+        <div class="opp-head"><h3>2. CEFR levels</h3><span class="chip accent">reference</span></div>
+        <div class="grid2">
+          <div><span class="label">Copies</span><p>Type: <code>content/types.ts:1</code>. Display: <code>Learn.tsx:14-19</code>, <code>Reading.tsx:29-33</code> (same Polish and English labels, copied). Badges: <code>badges.ts:23,52,64-67,89</code>. Placement labels: <code>placement.ts:26-31</code>. Unit declarations in <code>units/*.ts</code>. Docs: README, <code>FEATURES.md:5</code>.</p></div>
+          <div><span class="label">Drift</span><p>"A0" exists only in display and badges, and is decided by position. Content tags u00 as <code>'A1'</code>. Values are uppercase (<code>A1</code>), while the public list uses lowercase (<code>a1</code>).</p></div>
+          <div><span class="label">What Listist changes</span><p>One source for values and localised labels (en and pl), with A0 declared explicitly instead of inferred.</p></div>
+          <div><span class="label">Existing public list</span><p><span class="pin">public:i18n.cefr-levels@v1</span> (head v1): a1 to c2, with labels such as "A1 Beginner". It has no A0, so A0 would be a local extension or a person's request to add it. <code>common.language-proficiency@v1</code> also exists but covers a different concept.</p></div>
+          <div><span class="label">Proposed id</span><p><span class="pin">public:i18n.cefr-levels@v1</span></p></div>
+          <div><span class="label">Rough cost</span><p>Low to medium: 3 label maps and 1 type. Polish labels would need to exist in the list.</p></div>
+        </div>
+      </div>
+      <div class="opp">
+        <div class="opp-head"><h3>3. Grammatical gender</h3><span class="chip accent">reference</span></div>
+        <div class="grid2">
+          <div><span class="label">Copies</span><p><code>content/types.ts:2</code>, <code>shared/numbers.ts:11</code>, <code>common.tsx:177-183</code>, picture rows in <code>pictures.ts</code>.</p></div>
+          <div><span class="label">Drift</span><p>Two types share one name but hold different values (5 against 3). The label map is keyed by <code>string</code>.</p></div>
+          <div><span class="label">What Listist changes</span><p>One declared list with labels. The numerals subset would become an explicit, separate list or a documented subset.</p></div>
+          <div><span class="label">Existing public list</span><p>None found (searched "grammatical gender").</p></div>
+          <div><span class="label">Proposed id</span><p><span class="pin">org:wycinanka:pl.grammatical-gender</span></p></div>
+          <div><span class="label">Rough cost</span><p>Low. The type-level fix is cheaper than any Listist integration.</p></div>
+        </div>
+      </div>
+      <div class="opp">
+        <div class="opp-head"><h3>4. Push send result</h3><span class="chip accent">product</span></div>
+        <div class="grid2">
+          <div><span class="label">Copies</span><p><code>webpush.ts:101</code>, <code>reminders.ts</code> (worker) <code>:53,100-117</code>, <code>push_subscriptions.last_result</code>, <code>routes/push.ts:68-70</code>, <code>app/lib/reminders.ts:162</code>, <code>Profile.tsx:60</code>.</p></div>
+          <div><span class="label">Drift</span><p>Typed in the worker, free text in the database and the client.</p></div>
+          <div><span class="label">What Listist changes</span><p>Little. This is internal state between one worker and one page, not a shared vocabulary.</p></div>
+          <div><span class="label">Existing public list</span><p>None (not applicable).</p></div>
+          <div><span class="label">Proposed id</span><p>Not recommended.</p></div>
+          <div><span class="label">Rough cost</span><p>Not worth a Listist list. A shared type closes the gap.</p></div>
+        </div>
+      </div>
+      <div class="opp">
+        <div class="opp-head"><h3>5. Speaker / voice</h3><span class="chip accent">product</span></div>
+        <div class="grid2">
+          <div><span class="label">Copies</span><p>11 inline copies (see the rules above), plus the voice folders <code>mc-speech-2</code> and <code>gosia-1</code> in <code>scripts/voice.py:33-36</code> and <code>voice-index.json</code>.</p></div>
+          <div><span class="label">Drift</span><p>None in values. "Speaker" (learner's gender, <code>byłem</code>/<code>byłam</code>) and "voice" (recording) share <code>m|f</code> but are different concepts.</p></div>
+          <div><span class="label">What Listist changes</span><p>One declared list. In practice, one exported type does the same job here.</p></div>
+          <div><span class="label">Existing public list</span><p>None searched as a fit (it is product-specific).</p></div>
+          <div><span class="label">Proposed id</span><p>Not recommended.</p></div>
+          <div><span class="label">Rough cost</span><p>Low, but the benefit is also low.</p></div>
+        </div>
+      </div>
+      <div class="opp">
+        <div class="opp-head"><h3>6–8. Report kind, settings options, part of speech</h3><span class="chip accent">product / reference</span></div>
+        <div class="grid2">
+          <div><span class="label">Copies</span><p>Report kind: <code>schemas.ts:124</code>, <code>report.ts:8</code>, <code>boot-watch.js:17</code>. Theme: <code>schemas.ts:35</code>, <code>Profile.tsx:250-252</code>, <code>store.ts:46,94</code>, plus colours in <code>styles.css:11,58,85</code>, <code>index.html:9-10</code> and <code>manifest.webmanifest:11-12</code>. Daily goal: <code>schemas.ts:33</code>, <code>Profile.tsx:153</code>, <code>store.ts:44</code>, <code>PLAN.md:239</code>. Part of speech: <code>frequency.ts</code> (10 values, free <code>pos: string</code> at <code>types.ts:93</code>).</p></div>
+          <div><span class="label">Drift</span><p>Values are in sync. Part of speech is clean (10 consistent values) but unconstrained.</p></div>
+          <div><span class="label">What Listist changes</span><p>Marginal. These lists have one consumer each.</p></div>
+          <div><span class="label">Existing public list</span><p>None found for "part of speech" or "color scheme".</p></div>
+          <div><span class="label">Proposed id</span><p>Not recommended.</p></div>
+          <div><span class="label">Rough cost</span><p>More than the benefit.</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Catalogue identity</h2>
+    <div class="table-frame">
+      <table>
+        <thead><tr><th>Catalogue</th><th>Stable ids</th><th>Version</th><th>Old versions resolvable</th><th>Retirement</th><th>Stored references pin a version</th></tr></thead>
+        <tbody>
+          <tr><td>Lesson cards (items, sentences, drills)</td><td>Yes: ledger plus <code>key</code> overrides</td><td>No</td><td>No (old text kept only in the ledger)</td><td>Partial: never delete; reset by adding</td><td>No (<code>cards.card_id</code>)</td></tr>
+          <tr><td>Frequency words (<code>f:</code>)</td><td>Text- and order-derived</td><td>No</td><td>No</td><td>No</td><td>No</td></tr>
+          <tr><td>Pictures (<code>pic-</code>), phrases (<code>chunk-</code>)</td><td>Slug-derived; uniqueness tested, stability not</td><td>No</td><td>No</td><td>No</td><td>No</td></tr>
+          <tr><td>Units and lessons</td><td>Yes: <code>key</code> fixes <code>u06</code>; position is separate</td><td>No</td><td>n/a</td><td>No</td><td>No (<code>lesson_progress.lesson_id</code>, <code>settings.startUnit</code> is a key)</td></tr>
+          <tr><td>Badges</td><td>Yes (string ids in <code>badges.ts</code>)</td><td>No</td><td>n/a</td><td>No</td><td>No (<code>settings.badges</code> keyed by id)</td></tr>
+          <tr><td>Placement questions and bands</td><td>Yes (<code>p1</code> to <code>p37</code>, bands 0 to 6)</td><td>No</td><td>n/a</td><td>No</td><td><code>settings.placementBand</code>; the max of 6 is hard-coded in <code>schemas.ts:32</code> and <code>Placement.tsx:34</code></td></tr>
+          <tr><td>Recordings</td><td>Hash of the text</td><td>Folder per voice version (<code>mc-speech-2</code>)</td><td>No (old files deleted)</td><td>Bump the folder</td><td>n/a</td></tr>
+          <tr><td>Migrations</td><td>Yes</td><td>Yes (numbered)</td><td>Yes</td><td>n/a</td><td>n/a</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="muted"><span class="chip good">Strength</span> The card-id ledger (<code>card-ids.json</code>, <code>card-ids.test.ts</code>, <code>npm run ids</code>) and <code>legacy-ids.ts</code> are a real "retire, don't delete" practice. The <code>CORRECTED</code> map records intentional text changes under the same id. <span class="chip good">Strength</span> <code>src/worker/migrations.ts</code> mirrors <code>migrations/*.sql</code>, and <code>migrations.test.ts</code> fails on drift.</p>
+  </section>
+
+  <section>
+    <h2>Ad hoc lookups</h2>
+    <div class="table-frame">
+      <table>
+        <thead><tr><th>Where</th><th>What it maps</th><th>Replace with the lookup?</th></tr></thead>
+        <tbody>
+          <tr><td><code>shared/speaking.ts:35</code></td><td>Number forms (<code>jedna</code> to <code>jeden</code>) when matching speech-recognition output</td><td>No: answer grading, not vocabulary</td></tr>
+          <tr><td><code>shared/grade.ts:22</code></td><td>Diacritic folding to classify typos</td><td>No: answer grading</td></tr>
+          <tr><td><code>content/course.ts:93</code></td><td>Polish word to lesson item id (<code>itemByWord</code>)</td><td>No: internal content index</td></tr>
+          <tr><td><code>content/legacy-ids.ts</code></td><td>Old positional ids (<code>s2</code>, <code>d3</code>) kept for existing cards</td><td>Partly: it is an alias table, which is what Listist's aliases and <code>replacedBy</code> model</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>Agents and prompts</h2>
+    <p>No runtime agent or prompt writes option values. The only model at runtime is Whisper on Workers AI (<code>routes/speech.ts:17</code>), which transcribes speech that is then graded against fixed text. Nothing is stored. The repository has no prompt templates or tool definitions. Content corrections have been made with AI assistance through reviewed commits (for example 49fd35b). That is where an agent could change a card's text and so its meaning, and the ledger test is the guard. <code>docs/PLAN.md</code> names no planned AI features that would need validated option values.</p>
+  </section>
+
+  <section>
+    <h2>Where not to use Listist</h2>
+    <ul class="plain">
+      <li>Tenant and record data: usernames, sessions, push endpoints, per-user cards and activity.</li>
+      <li>Algorithm constants: FSRS rating <code>1..4</code> and card state <code>0|1|2</code> (<code>fsrs.ts:9-12</code>). They are governed by the algorithm. The labels in <code>Session.tsx:551-554</code> say "Forgot" where the source comment says "Again", which is cosmetic.</li>
+      <li>UI state machines: <code>Phase</code>, <code>Stage</code>, <code>Engine</code>, <code>InstallMode</code>, listen errors.</li>
+      <li>Design tokens: badge tones (<code>badges.ts:16</code> and the CSS variables), theme colours.</li>
+      <li>Single-source content enums already typed once: culture themes (<code>culture.ts:8,52</code>), speaking modes (<code>speaking.ts:32</code>, <code>Speaking.tsx:13</code>), password problems (<code>password.ts:21,33</code>).</li>
+      <li>Time zones: validated by pattern and IANA, not a closed list the app owns.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Decisions needed</h2>
+    <ul class="plain">
+      <li>Close the six gaps above directly, without Listist? Most of them are a matter of shared types.</li>
+      <li>Should frequency-word, picture and phrase card ids get the same append-only protection as lesson cards?</li>
+      <li>Is "A0" a real level for this course? If so, should it be declared as a value, or as an extension of the public CEFR list (request it from a person in the portal)?</li>
+      <li>Speaker gender and voice both use <code>m|f</code>: one list or two declared lists?</li>
+      <li>Is there any consumer of this course's content outside the bundled app (another app, an export, an agent)? Without one, Listist's version pinning adds little over the existing ledger.</li>
+      <li>Should <code>docs/PLAN.md</code> section 4.2 be updated or marked historical?</li>
+    </ul>
+  </section>
+
+  <footer>
+    <div><strong>Method and caveats.</strong> Read-only scan of commit <code>b1d355e</code> (2026-10-01) with ripgrep, using the skill's per-layer patterns adapted to TypeScript, zod, D1/SQLite and React, plus <code>git log -S</code> for change rates. The Listist handbook was fetched live on 2026-10-06 and matched the skill's summary. Public catalogue queries: <code>cefr</code>, <code>language level</code>, <code>part of speech</code>, <code>grammatical gender</code>, <code>grammatical case</code>, <code>polish</code>, <code>color scheme</code>, <code>time zone</code>, and tags <code>language</code>, <code>education</code>, <code>linguistics</code>. No code was sent. Dependencies weren't installed (analysis only), so tests weren't run, and claims about the ledger's scope come from reading <code>card-ids.test.ts</code> and <code>course.ts</code>. "Mechanism verified" means I traced the code path but found no case where it has happened yet. Recording file names and the 1,400-entry ledger were sampled, not read in full.</div>
+  </footer>
+
+</div>
+</body>
+</html>
